@@ -288,8 +288,9 @@ std::list<PartEdgePtr> CallCtxSensPart::inEdges() {
   list<PartEdgePtr> baseEdges = getParent()->inEdges();
   list<PartEdgePtr> ccsEdges;
   
-  // Consider all the CallCtxSensPartEdges along all of this part's outgoing edges. Since this is a forward
-  // analysis, they are maintained separately
+  // Since this is a forward analysis, only outgoing edges below a node are maintained separately.
+  // Thus, consider all of this part's predecessors and add the CallCtxSensPartEdges along the 
+  // outgoing edges that lead to this part.
   for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++) {
     // The NodeState at the current predecessor
     NodeState* inState = NodeState::getNodeState(analysis, (*be)->source());

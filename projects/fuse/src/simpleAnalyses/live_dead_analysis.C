@@ -27,7 +27,8 @@ void LiveDeadMemAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge,
   // If this part is the return statement of main(), make sure that its return value is live
   if(SgReturnStmt* returnStmt = part->maySgNodeAny<SgReturnStmt>()) {
     SgFunctionDefinition* funcD = SageInterface::getEnclosingFunctionDefinition(returnStmt);
-    if(funcD == SageInterface::findMain(SageInterface::getGlobalScope(returnStmt))->get_definition()) {
+    if(SageInterface::findMain(SageInterface::getGlobalScope(returnStmt)) &&
+       (funcD == SageInterface::findMain(SageInterface::getGlobalScope(returnStmt))->get_definition())) {
       // Get the memory location of the return statement's operand. Note that although this is a backward
       // analysis, the edge passed to OperandExpr2MemLoc() is the edge that comes into part. This is because
       // this edge denotes the set of executions that terminates at the return statement part and executions

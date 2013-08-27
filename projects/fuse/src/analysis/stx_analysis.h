@@ -31,7 +31,9 @@ class SyntacticAnalysis : virtual public UndirDataflow
   static boost::shared_ptr<SyntacticAnalysis> _instance;
 
   public:
-  SyntacticAnalysis() {}
+  SyntacticAnalysis() {
+    initGlobalDeclarations();
+  }
   static SyntacticAnalysis* instance();
   
   // Returns a shared pointer to a freshly-allocated copy of this ComposedAnalysis object
@@ -56,6 +58,10 @@ class SyntacticAnalysis : virtual public UndirDataflow
   CodeLocObjectPtr Expr2CodeLoc(SgNode* e, PartEdgePtr pedge);
   static CodeLocObjectPtr Expr2CodeLocStatic(SgNode* e, PartEdgePtr pedge);
   bool implementsExpr2CodeLoc() { return true; }
+  
+  // Detects declarations of global variables, stores them in globalDeclarations
+  static std::set<SgVariableDeclaration*> globalDeclarations;
+  void initGlobalDeclarations();
   
   // Return the starting Parts of the application
   std::set<PartPtr> GetStartAStates_Spec();

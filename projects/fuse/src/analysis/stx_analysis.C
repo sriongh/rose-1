@@ -18,56 +18,7 @@ using namespace dbglog;
 
 namespace fuse {
 
-int stxAnalysisDebugLevel=2;
-
-/***************************************
- ***** function <-> call detection *****
- ***************************************/
-
-// Maps each function to all the SgFunctionCallExps that call it.
-map<Function, set<SgFunctionCallExp*> > func2AllCalls;
-// Flag that indicates whether func2AllCalls has been initialized.
-bool func2AllCalls_initialized=false;
-
-class func2AllCallsFunctor
-{
-  public:
-  typedef void* result_type;
-  
-  void* operator()(SgNode* n) {
-    if(SgFunctionCallExp* call=isSgFunctionCallExp(n)) {
-      Function callee(call);
-      func2AllCalls[callee].insert(call);
-    }
-    return NULL;
-  }
-};
-
-// Determines the association between functions and their possible call sites.
-void init_func2AllCalls()
-{
-  if(!func2AllCalls_initialized) {
-    NodeQuery::querySubTree(SageInterface::getProject(), func2AllCallsFunctor());
-    func2AllCalls_initialized=true;
-    
-    if(stxAnalysisDebugLevel>=3) {
-      scope reg("func2AllCalls", scope::medium, stxAnalysisDebugLevel, 3);
-      for(map<Function, set<SgFunctionCallExp*> >::iterator i=func2AllCalls.begin(); i!=func2AllCalls.end(); i++) {
-        dbg << i->first.get_name().getString() << " =&gt; "<<endl;
-        indent(stxAnalysisDebugLevel, 1);
-        for(set<SgFunctionCallExp*>::iterator j=i->second.begin(); j!=i->second.end(); j++)
-          dbg << SgNode2Str(*j) << endl;
-      }
-    }
-  }
-}
-
-// Returns the set of all the function calls that may call the given function
-const set<SgFunctionCallExp*>& func2Calls(Function func)
-{ 
-  init_func2AllCalls();
-  return func2AllCalls[func];
-}
+int stxAnalysisDebugLevel=3;
 
 /****************************************
  ***** Function structure detection *****
@@ -121,9 +72,10 @@ class FuncEntryExitFunctor
       if(// This is not a declaration defined in a templated class 
          // According to rose/src/backend/unparser/languageIndependenceSupport/modified_sage.C:1308
          // "It should be impossible to reach this code since SgTemplateInstantiationDefn is not a class, function or member function type"
-         !isSgTemplateInstantiationDefn(decl->get_parent()) &&
+         //!isSgTemplateInstantiationDefn(decl->get_parent()) &&
          // And this is not a declaration of a template function (we only care about the instantiations of such functions)
-         !isSgTemplateFunctionDeclaration(decl) && !isSgTemplateMemberFunctionDeclaration(decl)) {
+         !isSgTemplateFunctionDeclaration(decl) && 
+         !isSgTemplateMemberFunctionDeclaration(decl)) {
         CFGNode Entry;
         CFGNode Exit;
          
@@ -258,6 +210,80 @@ CFGNode getExit2Entry(CFGNode exit) {
   initFuncEntryExit();
   assert(isFuncExit(exit));
   return Exit2Entry[exit];
+}
+
+/***************************************
+ ***** function <-> call detection *****
+ ***************************************/
+
+// Maps each function to all the SgFunctionCallExps that call it.
+map<Function, set<SgFunctionCallExp*> > func2AllCalls;
+// Flag that indicates whether func2AllCalls has been initialized.
+bool func2AllCalls_initialized=false;
+
+// Given a function call, returns the set of all functions that it may invoke
+set<Function> getAllCalleeFuncs(SgFunctionCallExp* call) {
+  initFuncEntryExit();
+  
+  set<Function> callees;
+  
+  Function callee(call);
+  // If the function being called is statically known
+  if(callee.isKnown())
+     callees.insert(call);
+  // Otherwise, find all the functions with the same type as this function call.
+  // They are all possible referents of the call
+  // !!! NOTE: This should be updated to compute type compatibility rather than strict equality !!!
+  else {
+    for(map<Function, CFGNode>::iterator f=Func2Entry.begin(); f!=Func2Entry.end(); f++) {
+      if(f->first.get_type() == call->get_function()->get_type())
+        callees.insert(f->first);
+    }
+  }
+  
+  return callees;
+}
+
+class func2AllCallsFunctor
+{
+  public:
+  typedef void* result_type;
+  
+  void* operator()(SgNode* n) {
+    if(SgFunctionCallExp* call=isSgFunctionCallExp(n)) {
+      set<Function> callees = getAllCalleeFuncs(call);
+      for(set<Function>::iterator c=callees.begin(); c!=callees.end(); c++)
+        func2AllCalls[*c].insert(call);
+    }
+    return NULL;
+  }
+};
+
+// Determines the association between functions and their possible call sites.
+void init_func2AllCalls()
+{
+  
+  if(!func2AllCalls_initialized) {
+    NodeQuery::querySubTree(SageInterface::getProject(), func2AllCallsFunctor());
+    func2AllCalls_initialized=true;
+    
+    if(stxAnalysisDebugLevel>=3) {
+      scope reg("func2AllCalls", scope::medium, stxAnalysisDebugLevel, 3);
+      for(map<Function, set<SgFunctionCallExp*> >::iterator i=func2AllCalls.begin(); i!=func2AllCalls.end(); i++) {
+        dbg << i->first.get_name().getString() << " =&gt; "<<endl;
+        indent(stxAnalysisDebugLevel, 1);
+        for(set<SgFunctionCallExp*>::iterator j=i->second.begin(); j!=i->second.end(); j++)
+          dbg << SgNode2Str(*j) << endl;
+      }
+    }
+  }
+}
+
+// Returns the set of all the function calls that may call the given function
+const set<SgFunctionCallExp*>& func2Calls(Function func)
+{ 
+  init_func2AllCalls();
+  return func2AllCalls[func];
 }
 
 /*****************************
@@ -479,11 +505,11 @@ CodeLocObjectPtr SyntacticAnalysis::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge)
 CodeLocObjectPtr SyntacticAnalysis::Expr2CodeLocStatic(SgNode* n, PartEdgePtr pedge)
 { return boost::make_shared<StxCodeLocObject>(n, pedge); }
 
-// Return the anchor Parts of a given function
-std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
-{ 
-  // Return the entry points into all the global VariableDeclarations
-  set<PartPtr> startStates;
+// Detects declarations of global variables, stores them in globalDeclarations
+set<SgVariableDeclaration*> SyntacticAnalysis::globalDeclarations;
+void SyntacticAnalysis::initGlobalDeclarations() {
+  static bool initialized = false;
+  if(initialized) return;
   
   Rose_STL_Container<SgNode*> globalScopes = NodeQuery::querySubTree(SageInterface::getProject(), V_SgGlobal);
   for(Rose_STL_Container<SgNode*>::iterator gs=globalScopes.begin(); gs!=globalScopes.end(); gs++) {
@@ -492,34 +518,30 @@ std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
     const SgDeclarationStatementPtrList& decls = isSgGlobal(*gs)->get_declarations();
     for(SgDeclarationStatementPtrList::const_iterator d=decls.begin(); d!=decls.end(); d++) {
       if(!(*d)->get_file_info()->isCompilerGenerated()) {
-        //scope s(txt()<<"declaration: "<<SgNode2Str(*d)<<" parent="<<(*d)->get_parent());
+        scope s(txt()<<"declaration: "<<SgNode2Str(*d)<<" parent="<<(*d)->get_parent(), scope::medium, stxAnalysisDebugLevel, 3);
 
         if(isSgVariableDeclaration(*d)) {
           //dbg << "definition: "<<(isSgVariableDeclaration(*d)->get_definition()? SgNode2Str(isSgVariableDeclaration(*d)->get_definition()): "NULL")<<endl;
-
-          startStates.insert(makePtr<StxPart>((*d)->cfgForBeginning(), this, filter));
-          /*const SgInitializedNamePtrList& vars = isSgVariableDeclaration(*d)->get_variables();
-          for(SgInitializedNamePtrList::const_iterator v=vars.begin(); v!=vars.end(); v++) {
-            indent ind;
-            { scope nameS(txt()<<"Name: "<<SgNode2Str(*v));
-            for(CFGIterator it((*v)->cfgForBeginning()); it!=CFGIterator::end(); it++) {
-              dbg << "it="<<CFGNode2Str(*it)<<endl;
-              if(isSgVariableDeclaration((*it).getNode()) && (*it).getIndex()==1) break;
-            } }
-
-            { scope initS(txt()<<"Initializer: "<<CFGNode2Str((*v)->get_initializer()->cfgForBeginning()));
-            //VirtualCFG::interestingCfgToDot((*v)->get_initializer(), "cfg.dot") ;
-
-              for(CFGIterator it((*v)->get_initializer()->cfgForBeginning()); it!=CFGIterator::end(); it++) {
-                dbg << "it="<<CFGNode2Str(*it)<<endl;
-                if(isSgVariableDeclaration((*it).getNode()) && (*it).getIndex()==1) break;
-              }
-            }
-          }*/
+          if(stxAnalysisDebugLevel>=3) {
+            dbg << "begin="<<CFGNode2Str((*d)->cfgForBeginning())<<endl;
+            dbg << "end="<<CFGNode2Str((*d)->cfgForEnd())<<endl;
+          }
+          globalDeclarations.insert(isSgVariableDeclaration(*d));
         }
       }
     }
   }
+  
+  initialized = true;
+}
+
+// Return the anchor Parts of a given function
+std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
+{ 
+  // Return the entry points into all the global VariableDeclarations
+  set<PartPtr> startStates;
+  for(set<SgVariableDeclaration*>::iterator d=SyntacticAnalysis::globalDeclarations.begin(); d!=SyntacticAnalysis::globalDeclarations.end(); d++)
+    startStates.insert(makePtr<StxPart>((*d)->cfgForBeginning(), this, filter));
   
   // If there are no global VariableDeclarations, the analysis entry points are the entries
   // into the non-static functions
@@ -527,6 +549,13 @@ std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
     addFunctionEntries(startStates, this);
   
   return startStates;
+}
+
+// Returns whether the given function can be called from outside the current compilation unit
+bool isExternallyCallable(const Function& func) {
+  return !SageInterface::isStatic(func.get_declaration()) &&
+         !func.get_declaration()->get_file_info()->isCompilerGenerated() && 
+         func.get_definition()->getAttribute("fuse:UnknownSideEffects")==NULL;
 }
 
 // Adds the entry points into all the non-static functions (can be called from the outside) to 
@@ -537,13 +566,8 @@ void SyntacticAnalysis::addFunctionEntries(set<ArgPartPtr>& states, SyntacticAna
   for(map<Function, CFGNode>::iterator f=Func2Entry.begin(); f!=Func2Entry.end(); f++) {
 /*      dbg << f->first.get_name().getString()<<"() declaration="<<f->first.get_declaration()<<"="<<CFGNode2Str(f->first.get_declaration())<<", static="<<SageInterface::isStatic(f->first.get_declaration())<<", compgen="<<f->first.get_declaration()->get_file_info()->isCompilerGenerated()<<endl;
       dbg << f->first.get_name().getString()<<"() definition="<<f->first.get_definition()<<"="<<CFGNode2Str(f->first.get_definition())<<", compgen="<<f->first.get_definition()->get_file_info()->isCompilerGenerated()<<", unknown="<<f->first.get_definition()->getAttribute("fuse:UnknownSideEffects")<<endl;*/
-    
-    if(!SageInterface::isStatic(f->first.get_declaration()) &&
-       !f->first.get_declaration()->get_file_info()->isCompilerGenerated() && 
-       f->first.get_definition()->getAttribute("fuse:UnknownSideEffects")==NULL) {
-      
+    if(isExternallyCallable(f->first))
       states.insert(makePtr<StxPart>(f->second, analysis, analysis->filter));
-    }
   }
 }
 
@@ -740,6 +764,7 @@ map<StxPartEdgePtr, bool> makeClosureDF(const vector<CFGEdge>& orig, // raw in o
 
 map<StxPartEdgePtr, bool> StxPart::getOutEdges()
 {
+  scope sRet(txt()<<"StxPart::getOutEdges() ret="<<CFGNode2Str(n), scope::medium, stxAnalysisDebugLevel, 2);
   map<StxPartEdgePtr, bool> vStx;
   SgFunctionCallExp* call;
   
@@ -753,35 +778,20 @@ map<StxPartEdgePtr, bool> StxPart::getOutEdges()
     for(set<StxPartPtr>::iterator e=entries.begin(); e!=entries.end(); e++)
       vStx[makePtr<StxPartEdge>(n, (*e)->n, analysis)] = true;
   // If current node is a function call, connect the call to the SgFunctionParameterList of the called function.
-  // !!! NOTE: we should be connecting it to all the functions that match the calling signature
   } else if((call = isSgFunctionCallExp(n.getNode())) && n.getIndex()==2) {
-    Function callee(call);
+    set<Function> callees = getAllCalleeFuncs(call);
     
     if(stxAnalysisDebugLevel>=2) {
-      dbg << "StxPart::getOutEdges() callee="<<callee.str()<<" callee.get_definition()="<<callee.get_definition()<<" callee.get_declaration()="<<callee.get_declaration()<<endl;
       dbg << "type = "<<SgNode2Str(isSgFunctionCallExp(n.getNode())->get_type())<<", funcCall->get_function()="<<(isSgFunctionCallExp(n.getNode())->get_function()? SgNode2Str(isSgFunctionCallExp(n.getNode())->get_function()): "NULL")<<endl;
       dbg << "function = "<<SgNode2Str(isSgFunctionCallExp(n.getNode())->get_function())<<" function type="<<SgNode2Str(isSgFunctionCallExp(n.getNode())->get_function()->get_type())<<endl;
-      if(callee.isKnown()) dbg << "callee = "<<callee.str()<<" declaration="<<callee.get_declaration()<<"="<<SgNode2Str(callee.get_declaration())<<endl;
-      for(map<Function, CFGNode>::iterator f=Func2Entry.begin(); f!=Func2Entry.end(); f++) {
-        if(f->first.get_type() == isSgFunctionCallExp(n.getNode())->get_function()->get_type()) {
-          scope s(txt()<<"Same Type! "<<f->first.str());
-        }
-      }
+      scope sCallees("Callees", scope::low);
+      for(set<Function>::iterator c=callees.begin(); c!=callees.end(); c++)
+        dbg << c->str()<<" declaration="<<c->get_declaration()<<"="<<SgNode2Str(c->get_declaration())<<endl;
     }
     
-    // If the function is known
-    if(callee.isKnown())
-      vStx[makePtr<StxPartEdge>(n, getFunc2Entry(callee), analysis)] = true;
-    // Otherwise, find all the functions with the same type as this function call.
-    // They are all possible referents of the call
-    // !!! NOTE: This should be updated to compute type compatibility rather than strict equality !!!
-    else {
-      for(map<Function, CFGNode>::iterator f=Func2Entry.begin(); f!=Func2Entry.end(); f++) {
-        if(f->first.get_type() == isSgFunctionCallExp(n.getNode())->get_function()->get_type())
-          vStx[makePtr<StxPartEdge>(n, f->second, analysis)] = true;
-      }
-    }
-      
+    for(set<Function>::iterator c=callees.begin(); c!=callees.end(); c++)
+      vStx[makePtr<StxPartEdge>(n, getFunc2Entry(*c), analysis)] = true;
+    
     // If the callee function has a definition, connect this function call directly to the function's entry point
     /*if(callee.get_definition()) {
       assert(callee.get_params());
@@ -844,11 +854,13 @@ map<StxPartEdgePtr, bool> StxPart::getOutEdges()
   // If the current node is a return statement, connect it to the function's exit SgFunctionDefinition node
   } else if(SgReturnStmt* ret = isSgReturnStmt(n.getNode())) {
     Function func(SageInterface::getEnclosingFunctionDeclaration(ret));
-    map<StxPartEdgePtr, bool> vStx;
-    //vStx[makePtr<StxPartEdge>(n, getFuncEndCFG(func.get_definition()), analysis)] = true;
+    if(stxAnalysisDebugLevel>=2) {
+      dbg << "returning from func="<<func.str()<<endl;
+      dbg << "Exit node="<<CFGNode2Str(getFunc2Exit(func))<<endl;
+    }
     vStx[makePtr<StxPartEdge>(n, getFunc2Exit(func), analysis)] = true;
   //} else if(isSgFunctionParameterList(n.getNode())) {
-    } else if(isFuncEntry(n)) {
+  } else if(isFuncEntry(n)) {
     // If this is the synthesized entry node to a function without a body, return the edge to its corresponding exit node
     /*if(isFuncEntry(n)) {
       vStx[makePtr<StxPartEdge>(n, getEntry2Exit(n),  analysis)] = true;
@@ -858,12 +870,13 @@ map<StxPartEdgePtr, bool> StxPart::getOutEdges()
   } else {
     return makeClosureDF(n.outEdges(), &CFGNode::outEdges, &CFGPath::target, &mergePaths, filter, analysis);
   }
+  dbg << "#vStx="<<vStx.size()<<endl;
   return vStx;
 }
 
 list<PartEdgePtr> StxPart::outEdges() {
   ostringstream oss; 
-  dbg << "n=>"<<CFGNode2Str(n)<<endl;
+  //dbg << "n=>"<<CFGNode2Str(n)<<endl;
   scope reg(txt()<<"StxPart::outEdges() part="<<str(), scope::medium, stxAnalysisDebugLevel, 2);
   
   map<StxPartEdgePtr, bool> vStx = getOutEdges();
@@ -871,6 +884,8 @@ list<PartEdgePtr> StxPart::outEdges() {
   list<PartEdgePtr> v;
   for(map<StxPartEdgePtr, bool>::iterator i=vStx.begin(); i!=vStx.end(); i++)
     v.push_back(dynamicPtrCast<PartEdge>(i->first));
+  
+  dbg << "#v="<<v.size()<<endl;
   
   return v;
 }
@@ -892,20 +907,19 @@ map<StxPartEdgePtr, bool> StxPart::getInEdges()
   if((call = isSgFunctionCallExp(n.getNode())) && n.getIndex()==3) {
     Function callee(call);
     
-    if(stxAnalysisDebugLevel>=2) dbg << "StxPart::getInEdges() Return side of Call: callee="<<callee.str()<<endl;
-    vStx[makePtr<StxPartEdge>(getFunc2Exit(callee), n, analysis)] = true;
-    
+    if(stxAnalysisDebugLevel>=2) dbg << "StxPart::getInEdges() Return side of Call: callee="<<callee.str()<<" known="<<callee.isKnown()<<endl;
     
     // If the function is known
-    if(callee.isKnown())
-      vStx[makePtr<StxPartEdge>(n, getFunc2Exit(callee), analysis)] = true;
+    if(callee.isKnown()) {
+      if(stxAnalysisDebugLevel>=2) dbg << "exit="<<CFGNode2Str(getFunc2Exit(callee))<<endl;
+      vStx[makePtr<StxPartEdge>(getFunc2Exit(callee), n, analysis)] = true;
     // Otherwise, find all the functions with the same type as this function call.
     // They are all possible referents of the call
     // !!! NOTE: This should be updated to compute type compatibility rather than strict equality !!!
-    else {
+    } else {
       for(map<Function, CFGNode>::iterator f=Func2Exit.begin(); f!=Func2Exit.end(); f++) {
         if(f->first.get_type() == isSgFunctionCallExp(n.getNode())->get_function()->get_type())
-          vStx[makePtr<StxPartEdge>(n, f->second, analysis)] = true;
+          vStx[makePtr<StxPartEdge>(f->second, n, analysis)] = true;
       }
     }
     
@@ -938,9 +952,26 @@ map<StxPartEdgePtr, bool> StxPart::getInEdges()
       CFGNode callNode(*c, 2);
       vStx[makePtr<StxPartEdge>(callNode, n, analysis, filter)]=1;
     }
+    
+    // If this function can be called from the outside, add incoming edges from all the global
+    // declarations
+    if(isExternallyCallable(func)) {
+      // Return the entry points into all the global VariableDeclarations
+      set<PartPtr> startStates;
+      for(set<SgVariableDeclaration*>::iterator d=SyntacticAnalysis::globalDeclarations.begin(); d!=SyntacticAnalysis::globalDeclarations.end(); d++)
+        vStx[makePtr<StxPartEdge>((*d)->cfgForEnd(), n, analysis, filter)]=1;
+    }
   } else {
-    if(stxAnalysisDebugLevel>=2) dbg << "Internal Node"<<endl;
-    return makeClosureDF(n.inEdges(), &CFGNode::inEdges, &CFGPath::source, &mergePathsReversed, filter, analysis);
+    // If this is the starting point of a declaration of a global variable, do not add any incoming edges
+    if(isSgVariableDeclaration(n.getNode()) && n.getIndex()==0 &&
+       SyntacticAnalysis::globalDeclarations.find(isSgVariableDeclaration(n.getNode())) != SyntacticAnalysis::globalDeclarations.end())
+    {
+      if(stxAnalysisDebugLevel>=2) dbg << "Beginning of declaration of global variable"<<endl;
+      return vStx;
+    } else {
+      if(stxAnalysisDebugLevel>=2) dbg << "Internal Node"<<endl;
+      return makeClosureDF(n.inEdges(), &CFGNode::inEdges, &CFGPath::source, &mergePathsReversed, filter, analysis);
+    }
   }
   return vStx;
 }

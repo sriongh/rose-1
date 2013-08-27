@@ -1226,10 +1226,7 @@ void ChainComposer::runAnalysis()
       set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
       ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
       ats2dot(fName.str(), "ATS", startStates, endStates);
-      /*ostringstream dotStr;
-      ats2dot(dotStr, "ATS", startStates, endStates);
-      dbglog::graph::genGraph(dotStr.str());*/
-      //ats2dot_bw(fName.str()+".BW", "ATS", startState, endStates);
+      ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
     }
     
     cout << "ChainComposer Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("") << endl;
@@ -1270,10 +1267,7 @@ dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
     set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
     ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
     ats2dot(fName.str(), "ATS", startStates, endStates);
-    /*ostringstream dotStr;
-    ats2dot(dotStr, "ATS", startStates, endStates);
-    dbglog::graph::genGraph(dotStr.str());*/
-    //ats2dot_bw(fName.str()+".BW", "ATS", startState, endStates);
+    ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
   }
   
   if(testAnalysis) {

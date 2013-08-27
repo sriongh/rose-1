@@ -64,7 +64,7 @@ void CFGIterator::advance(bool fwDir, bool pushAllChildren)
     // pop the next CFG node from the front of the list
     CFGNode cur = remainingNodes.front();
     remainingNodes.pop_front();
-    dbg << "cur="<<CFGNode2Str(cur)<<endl;
+    //dbg << "cur="<<CFGNode2Str(cur)<<endl;
     
     if(pushAllChildren)
     {
