@@ -56,6 +56,7 @@ include_HEADERS =\
 	analysis/analysis_tester.h \
 	analysis/compose.h \
 	analysis/composed_analysis.h \
+	analysis/comp_shared_ptr.h \
         analysis/data_structures.h \
 	analysis/factor_trans_system.h \
 	analysis/graphIterator.h \
@@ -82,37 +83,61 @@ include_HEADERS =\
 	simpleAnalyses/VariableStateTransfer.h \
 	state/nodeState.h
 
+EXTRA_DIST = \
+	dbglog/dbgLogGraphTester.C \
+	dbglog/dbgLogTester.C \
+	dbglog/index.html \ # used by the dbglog system
+	src/factor_trans_systemTest.C \
+	img/divDL.gif \
+	img/divGO.gif
+
 FUSE_TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
 
 # for .C files
 FUSE_C_TESTS = \
-	$(FUSE_TESTS_DIR)/compositionalTestInput1.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput1b.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput2.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput2b.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput3.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput4.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput5b.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput6.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput7.C \
-	$(FUSE_TESTS_DIR)/compositionalTestInput.jisheng.C \
-	$(FUSE_TESTS_DIR)/cp_test1.C 
+	compositionalTestInput1.C \
+	compositionalTestInput1b.C \
+	compositionalTestInput2.C \
+	compositionalTestInput2b.C \
+	compositionalTestInput3.C \
+	compositionalTestInput4.C \
+	compositionalTestInput5.C \
+	compositionalTestInput5b.C \
+	compositionalTestInput6.C \
+	compositionalTestInput7.C \
+	compositionalTestInput.jisheng.C \
+	cp_test1.C 
 
 # for .cpp files
 FUSE_CPP_TESTS = \
-	$(FUSE_TESTS_DIR)/simplePtrTest.cpp \
-	$(FUSE_TESTS_DIR)/sas13Fig1Example.cpp
+	simplePtrTest.cpp \
+	sas13Fig1Example.cpp
 
-FUSE_C_CHECKS = ${FUSE_C_TESTS:.C=.C-o}
-FUSE_CPP_CHECKS = ${FUSE_CPP_TESTS:.cpp=.cpp-o}
+#FUSE_C_CHECKS = ${FUSE_C_TESTS:.C=.C-o}
+#FUSE_CPP_CHECKS = ${FUSE_CPP_TESTS:.cpp=.cpp-o}
+#$(FUSE_C_CHECKS): fuse $(FUSE_TESTS_DIR)/$(@:.C=.C-o)
+#	./fuse -c --edg:no_warnings $(@:.C-o=.C)
 
-$(FUSE_C_CHECKS): fuse $(FUSE_TESTS_DIR)/$(@:.C=.C-o)
-	./fuse -c --edg:no_warnings $(@:.C-o=.C)
+#$(FUSE_CPP_CHECKS):fuse $(FUSE_TESTS_DIR)/$(@:.cpp=.cpp-o)
+#	./fuse -c --edg:no_warnings $(@:.cpp-o=.cpp)
 
-$(FUSE_CPP_CHECKS):fuse $(FUSE_TESTS_DIR)/$(@:.cpp=.cpp-o)
-	./fuse -c --edg:no_warnings $(@:.cpp-o=.cpp)
+FUSE_C_CHECKS = $(addprefix fuse_C_, $(addsuffix .passed, $(FUSE_C_TESTS)))
+FUSE_CPP_CHECKS = $(addprefix fuse_cpp_, $(addsuffix .passed, $(FUSE_CPP_TESTS)))
 
-check-local: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
+TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
+FUSE_FLAGS = 
+FUSE = ./fuse
+
+
+$(FUSE_C_CHECKS): fuse_C_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
+$(FUSE_CPP_CHECKS): fuse_cpp_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
+
+.PHONY: check-fuse
+check-fuse: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
 
 CXX_TESTDIR = $(top_srcdir)/tests/CompileTests/Cxx_tests
 
@@ -267,10 +292,8 @@ CXX_TESTS_HANGING =
 #	./fuse -c --edg:no_warnings $(ROSE_FLAGS) $(FUSE_FLAGS) -I$(top_srcdir)/tests/CompileTests/Cxx_tests $(CXX_TESTDIR)/$(@:.C-o=.C)
 
 
-TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
-FUSE_FLAGS = "-fuse:\"lc(cp)\""
-FUSE = ./fuse
-
+# command to run fuse ./fuse -fuse:"lc(cp)"
+# runs constant propagation on all cxx_ tests
 CXX_FUSE_TESTS = $(addprefix cxx_, $(addsuffix .passed, $(CXX_TESTS_REQUIRED_TO_PASS)))
 $(CXX_FUSE_TESTS): cxx_%.passed: $(CXX_TESTDIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 	@$(RTH_RUN) CMD="./fuse -fuse:\"lc(cp)\" -I$(CXX_TESTDIR) -c $<" $(TEST_EXIT_STATUS) $@
@@ -278,9 +301,7 @@ $(CXX_FUSE_TESTS): cxx_%.passed: $(CXX_TESTDIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 .PHONY: check-cxx
 check-cxx: $(CXX_FUSE_TESTS)
 
-clean-local:
-	rm -rf *.dot *.png dbg/
+check-local: check-fuse check-cxx
 
-EXTRA_DIST = \
-	img/divDL.gif \
-	img/divGO.gif
+clean-local:
+	rm -rf *.dot *.png dbg/ *.passed *.failed *.out *.err
