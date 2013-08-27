@@ -296,11 +296,13 @@ std::vector<CFGEdge> SgBasicBlock::cfgOutEdges(unsigned int idx) {
 std::vector<CFGEdge> SgBasicBlock::cfgInEdges(unsigned int idx) {
   std::vector<CFGEdge> result;
   addIncomingFortranGotos(this, idx, result);
+  //cout << "SgBasicBlock::cfgInEdges("<<idx<<") this->get_statements().size()="<<this->get_statements().size()<<endl;
   if (idx == 0) {
     makeEdge(getNodeJustBeforeInContainer(this), CFGNode(this, idx), result);
   } else if (idx <= this->get_statements().size()) {
     makeEdge(this->get_statements()[idx - 1]->cfgForEnd(), CFGNode(this, idx), result);
   } else ROSE_ASSERT (!"Bad index for SgBasicBlock");
+//cout << "    #result="<<result.size()<<endl;
   return result;
 }
 

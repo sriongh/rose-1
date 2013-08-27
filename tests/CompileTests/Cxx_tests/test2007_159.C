@@ -16,5 +16,6 @@ my_nested_label:
           x=2;
       }
      goto my_nested_label;
+x++;
  // goto my_label;
    }

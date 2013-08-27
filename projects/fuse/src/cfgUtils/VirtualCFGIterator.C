@@ -55,30 +55,37 @@ bool CFGIterator::isRemaining(const CFGNode n)
 void CFGIterator::advance(bool fwDir, bool pushAllChildren)
 {
   assert(initialized);
-  /*cout << "CFGIterator::advance(fwDir="<<fwDir<<", pushAllChildren="<<pushAllChildren<<") #remainingNodes="<<remainingNodes.size()<<endl;
-  cout<<"  visited=\n";
+  /*scope s(txt()<<"CFGIterator::advance(fwDir="<<fwDir<<", pushAllChildren="<<pushAllChildren<<") #remainingNodes="<<remainingNodes.size());
+  dbg<<"  visited=\n";
   for(set<CFGNode>::iterator it=visited.begin(); it!=visited.end(); it++)
-    cout << "      "<<cfgUtils::CFGNode2Str(*it)<<"\n";*/
+    dbg << "      "<<CFGNode2Str(*it)<<"\n";*/
   if(remainingNodes.size()>0)
   {
     // pop the next CFG node from the front of the list
     CFGNode cur = remainingNodes.front();
     remainingNodes.pop_front();
-    //cout << "#remainingNodes="<<remainingNodes.size()<<" cur="<<cfgUtils::CFGNode2Str(cur)<<endl;
+    dbg << "cur="<<CFGNode2Str(cur)<<endl;
     
     if(pushAllChildren)
     {
       // find its followers (either successors or predecessors, depending on value of fwDir), push back 
       // those that have not yet been visited
       vector<CFGEdge> nextE;
-      if(fwDir) nextE = cur.outEdges();
-      else      nextE = cur.inEdges();
-      //cout << "    #nextE="<<nextE.size()<<endl;
+      if(fwDir) {
+        /* // Do not proceed forward if we've reached the end of a function
+        if(!(isSgFunctionDefinition(cur.getNode()) && cur.getIndex()==3))*/
+        nextE = cur.outEdges();
+      } else      {
+        /* // Do not proceed backward if we've reached the end of a function
+        if(!(isSgFunctionParameterList(cur.getNode()) && cur.getIndex()==0)) */
+        nextE = cur.inEdges();
+      }
+      //dbg << "    #nextE="<<nextE.size()<<endl;
       for(vector<CFGEdge>::iterator it=nextE.begin(); it!=nextE.end(); it++)
       {
         CFGNode nextN = (fwDir ? it->target() : nextN = it->source());
-        /*cout << "    nextN="<<cfgUtils::CFGNode2Str(nextN)<<endl;
-        cout << "      CFGIterator::advance "<<(fwDir?"descendant":"predecessor")<<": "<<
+        /*dbg << "    nextN="<<CFGNode2Str(nextN)<<endl;
+        dbg << "      CFGIterator::advance "<<(fwDir?"descendant":"predecessor")<<": "<<
                "visited="<<(visited.find(nextN) != visited.end())<<
                " remaining="<<isRemaining(nextN)<<"\n";*/
         

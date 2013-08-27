@@ -644,10 +644,25 @@ namespace VirtualCFG {
    // return node->cfgOutEdges(index);
   }
 
+std::string CFGNode2Str(CFGNode n)
+{
+  ostringstream oss;
+  if(isSgNullStatement(n.getNode()))
+    oss << "[" << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  else if(isSgStringVal(n.getNode()))
+    oss << "[" << isSgStringVal(n.getNode())->get_value()<<" | "<<n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  else
+    oss << "[" << n.getNode()->unparseToString() << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  return oss.str();
+}
+
+
   vector<CFGEdge> CFGNode::inEdges() const {
     ROSE_ASSERT (node);
+//cout << "CFGNode::inEdges("<<CFGNode2Str(*this)<<")\n";
     
     vector<CFGEdge> result = node->cfgInEdges(index);
+//cout << "  #result="<<result.size()<<endl;
    for ( vector<CFGEdge>::const_iterator i = result.begin(); i!= result.end(); i++)
    {
       CFGEdge e = *i;

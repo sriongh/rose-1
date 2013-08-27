@@ -24,6 +24,8 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   public:
   Composer* composer;
   
+  ComposedAnalysis();
+  
   // Informs this analysis about the identity of the Composer object that composes
   // this analysis with others
   void setComposer(Composer* composer)
@@ -94,9 +96,15 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   // Returns whether the given pair of AbstractObjects are equal at the given PartEdge
   
   private:
+  // Keep track of whether GetStartAStates and GetEndAStates have already been called and their
+  // results cached.
+  bool startStatesInitialized;
+  bool endStatesInitialized;
+    
   // Cached copies of the results of GetStartAState and GetEndAState
   std::set<PartPtr> StartAStates;
   std::set<PartPtr> EndAStates;
+  
   std::map<PartEdgePtr, PartEdgePtr> new2oldPEdge;  
   
   public:
@@ -108,6 +116,7 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   std::set<PartPtr> GetStartAStates();
   std::set<PartPtr> GetEndAStates();
   
+  public:
   // Specific Composers implement these two functions
   virtual std::set<PartPtr> GetStartAStates_Spec() { throw NotImplementedException(); }
   virtual std::set<PartPtr> GetEndAStates_Spec()   { throw NotImplementedException(); }

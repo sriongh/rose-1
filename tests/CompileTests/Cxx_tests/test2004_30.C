@@ -9,9 +9,9 @@
    #define EXPORT export
 #endif
 
-#define TEST_INLINING       1
+#define TEST_INLINING       0
 #define TEST_CONST_MEMBERS  1
-#define TEST_STATIC_MEMBERS 1
+#define TEST_STATIC_MEMBERS 0
 
 #if 1
 // working

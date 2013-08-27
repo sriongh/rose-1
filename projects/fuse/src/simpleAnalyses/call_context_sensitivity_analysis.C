@@ -5,7 +5,7 @@ using namespace dbglog;
 namespace fuse
 {
 
-int callContextSensitivityDebugLevel=0;
+int callContextSensitivityDebugLevel=2;
 
 /* ###########################
    ##### CallPartContext #####
@@ -737,13 +737,13 @@ bool CallCtxSensLattice::updateMapKey(
 {
   // Incorporate information in this->outgoing key PartPtrs about any recursion that may have been discovered
   if((!iThis->first->recursive && iThat->first->recursive) ||
-     (!iThis->first->lastCtxtFunc.isInitialized() && iThat->first->lastCtxtFunc.isInitialized())) {
+     (!iThis->first->lastCtxtFunc.isKnown() && iThat->first->lastCtxtFunc.isKnown())) {
     CallCtxSensPartPtr thisPart = iThis->first;
     set<CallCtxSensPartPtr> thisPartSet = iThis->second;
     thisMap.erase(thisPart);
 
     thisPart->recursive |= iThat->first->recursive;
-    if(!thisPart->lastCtxtFunc.isInitialized()) 
+    if(!thisPart->lastCtxtFunc.isKnown()) 
       thisPart->lastCtxtFunc = thisPart->lastCtxtFunc;
 
     thisMap[thisPart] = thisPartSet;
@@ -766,12 +766,12 @@ bool CallCtxSensLattice::updateSetElement(
 {
   // Incorporate information about any recursion that may have been discovered
   if((!(*jThis)->recursive && (*jThat)->recursive) ||
-     (!(*jThis)->lastCtxtFunc.isInitialized() && (*jThat)->lastCtxtFunc.isInitialized())) {
+     (!(*jThis)->lastCtxtFunc.isKnown() && (*jThat)->lastCtxtFunc.isKnown())) {
     CallCtxSensPartPtr thisPart = *jThis;
     thisSet.erase(thisPart);
 
     thisPart->recursive |= (*jThat)->recursive;
-    if(thisPart->lastCtxtFunc.isInitialized())
+    if(thisPart->lastCtxtFunc.isKnown())
       thisPart->lastCtxtFunc = thisPart->lastCtxtFunc;
 
     thisSet.insert(thisPart);
@@ -1231,7 +1231,7 @@ bool CallContextSensitivityAnalysis::isFuncExitAmbiguous(PartEdgePtr edge, set<C
         return true;
       }
       
-      /*assert((*e)->source()->outEdges().size()>=1);
+      assert((*e)->source()->outEdges().size()>=1);
       
       // Multiple functions call this one
       list<PartEdgePtr> srcOut=(*e)->source()->outEdges();

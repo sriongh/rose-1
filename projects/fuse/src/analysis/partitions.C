@@ -213,6 +213,7 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
 {
   scope reg("setArgParamMap", scope::medium, analysisDebugLevel, 1);
   Function func(call);
+  dbg << "call="<<SgNode2Str(call)<<endl;
   dbg << "callEdge="<<callEdge->str()<<endl;
   
   PartPtr callPart = callEdge->source();
@@ -220,27 +221,55 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
   
   // Part that corresponds to the function, which for now is set to be the start of its definition
   //PartPtr funcStartPart = analysis->getComposer()->GetFunctionStartPart(func, analysis);
+  /*
+  dbg << "call args="<<call->get_args()<<endl;
+  dbg << "func params="<<(func.get_params()? SgNode2Str(func.get_params()): "NULL")<<endl;
+  dbg << "func args="<<func.get_args()<<endl;
+  dbg << "func declaration="<<(func.get_declaration()? SgNode2Str(func.get_declaration()): "NULL")<<endl;
+  dbg << "func definition="<<(func.get_definition()? SgNode2Str(func.get_definition()): "NULL")<<endl;
+  
+  std::set<CFGNode> funcNodes = callEdge->target()->CFGNodes();
+  { scope s(txt()<<"nodes of "<<callEdge->target()->str());
+  for(std::set<CFGNode>::iterator f=funcNodes.begin(); f!=funcNodes.end(); f++) {
+    dbg << SgNode2Str(f->getNode())<<endl;
+    if(isSgFunctionParameterList(f->getNode())) {
+      Function func(SageInterface::getEnclosingFunctionDefinition(f->getNode()));
+      dbg << "func params="<<(func.get_params()? SgNode2Str(func.get_params()): "NULL")<<endl;
+      dbg << "func args="<<func.get_args()<<endl;
+      dbg << "func declaration="<<(func.get_declaration()? SgNode2Str(func.get_declaration()): "NULL")<<endl;
+      dbg << "func definition="<<(func.get_definition()? SgNode2Str(func.get_definition()): "NULL")<<endl;
+    }
+  }}
+    
+  */
   
   SgExpressionPtrList args = call->get_args()->get_expressions();
+  
+  std::set<CFGNode> funcNodes = callEdge->target()->CFGNodes();
+  assert(funcNodes.size()==1);
+  assert(isSgFunctionParameterList(funcNodes.begin()->getNode()));
+  const SgInitializedNamePtrList& params = isSgFunctionParameterList(funcNodes.begin()->getNode())->get_args();
   //SgInitializedNamePtrList params = funcArgToParamByRef(call);
-  SgInitializedNamePtrList* params = func.get_args();
-  assert(params);
-  /*cout << "callPart="<<callPart->str()<<endl;
-  cout << "call="<<cfgUtils::SgNode2Str(call)<<endl;
-  cout << "args="<<endl;
-  for(SgExpressionPtrList::iterator a=args.begin(); a!=args.end(); a++)
-    cout << "    "<<cfgUtils::SgNode2Str(*a)<<endl;
-  cout << "params="<<endl;
-  for(SgInitializedNamePtrList::iterator p=params->begin(); p!=params->end(); p++)
-    cout << "    "<<cfgUtils::SgNode2Str(*p)<<", type="<<cfgUtils::SgNode2Str((*p)->get_type())<<endl;
-  assert(args.size() == params->size());*/
+  //SgInitializedNamePtrList* params = func.get_args();
 
+  if(args.size()!=params.size()) {
+    cout << "callPart="<<callPart->str()<<endl;
+    cout << "call="<<SgNode2Str(call)<<endl;
+    cout << "args="<<SgNode2Str(call->get_args())<<endl;
+    for(SgExpressionPtrList::iterator a=args.begin(); a!=args.end(); a++)
+      cout << "    "<<SgNode2Str(*a)<<endl;
+    cout << "params="<<SgNode2Str(funcNodes.begin()->getNode())<<"="<<endl;
+    for(SgInitializedNamePtrList::const_iterator p=params.begin(); p!=params.end(); p++)
+      cout << "    "<<SgNode2Str(*p)<<", type="<<SgNode2Str((*p)->get_type())<<endl;
+  }
+  assert(args.size() == params.size());
+  
   //dbg << "setArgParamMap() #args="<<args.size()<<" #params="<<params->size()<<"\n";
   // the state of the callee's variables at the call site
   SgExpressionPtrList::iterator itA;
-  SgInitializedNamePtrList::iterator itP;
-  for(itA = args.begin(), itP = params->begin(); 
-      itA!=args.end() && itP!=params->end(); 
+  SgInitializedNamePtrList::const_iterator itP;
+  for(itA = args.begin(), itP = params.begin(); 
+      itA!=args.end() && itP!=params.end(); 
       itA++, itP++)
   {
     scope iter("iter", scope::low, analysisDebugLevel, 1);

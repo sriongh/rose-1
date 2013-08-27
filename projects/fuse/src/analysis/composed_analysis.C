@@ -26,6 +26,11 @@ int composedAnalysisDebugLevel=1;
  ***** ComposedAnalysis *****
  ****************************/
 
+ComposedAnalysis::ComposedAnalysis() {
+  startStatesInitialized = false;
+  endStatesInitialized = false;
+}
+
 /*// Returns whether the given AbstractObject is live at the given PartEdge
 // This version is a wrapper for calling type-specific versions of isLive without forcing the caller to
 // care about the type of object
@@ -100,7 +105,6 @@ bool ComposedAnalysis::mustEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, P
 // Return the anchor Parts of a given function
 std::set<PartPtr> ComposedAnalysis::GetStartAStates()
 {
-  static bool startStatesInitialized = false;
   // If the result of this function has not yet been computed
   if(!startStatesInitialized) {
     // Get the result and cache it
@@ -112,7 +116,6 @@ std::set<PartPtr> ComposedAnalysis::GetStartAStates()
 
 std::set<PartPtr> ComposedAnalysis::GetEndAStates()
 {
-  static bool endStatesInitialized = false;
   // If the result of this function has not yet been computed
   if(!endStatesInitialized) { 
     // Get the result and cache it

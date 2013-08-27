@@ -87,6 +87,47 @@ SgExpression* unwrapCasts(SgExpression* e)
   else return e;
 }
 
+// Creates the SgValueExp that denotes the contents of the given expression, returning NULL if this is not possible.
+// The caller must deallocate the returned object
+SgValueExp* getSGValueExp(SgExpression* e) {
+  SgTreeCopy tc;
+  if(isSgValueExp(e))
+    return isSgValueExp(e->copy(tc));
+  if(isSgCastExp(e))
+    return getSGValueExp(isSgCastExp(e)->get_operand());
+  if(isSgUnaryAddOp(e))
+    return getSGValueExp(isSgUnaryAddOp(e)->get_operand());
+  if(isSgMinusOp(e)) {
+    SgValueExp* val = getSGValueExp(isSgMinusOp(e)->get_operand());
+    switch(val->variantT()) {
+      case V_SgBoolValExp: break;
+      case V_SgCharVal:                isSgCharVal(val)->set_value(0 - isSgCharVal(val)->get_value()); break;
+      case V_SgDoubleVal:              isSgDoubleVal(val)->set_value(0 - isSgDoubleVal(val)->get_value()); break;
+      case V_SgEnumVal:                isSgEnumVal(val)->set_value(0 - isSgEnumVal(val)->get_value()); break;
+      case V_SgFloatVal:               isSgFloatVal(val)->set_value(0 - isSgFloatVal(val)->get_value()); break;
+      case V_SgIntVal:                 isSgIntVal(val)->set_value(0 - isSgIntVal(val)->get_value()); break;
+      case V_SgLongDoubleVal:          isSgLongDoubleVal(val)->set_value(0 - isSgLongDoubleVal(val)->get_value()); break;
+      case V_SgLongIntVal:             isSgLongIntVal(val)->set_value(0 - isSgLongIntVal(val)->get_value()); break;
+      case V_SgLongLongIntVal:         isSgLongLongIntVal(val)->set_value(0 - isSgLongLongIntVal(val)->get_value()); break;
+      case V_SgShortVal:               isSgShortVal(val)->set_value(0 - isSgShortVal(val)->get_value()); break;
+      case V_SgUnsignedCharVal:        isSgUnsignedCharVal(val)->set_value(0 - isSgUnsignedCharVal(val)->get_value()); break;
+      case V_SgUnsignedIntVal:         isSgUnsignedIntVal(val)->set_value(0 - isSgUnsignedIntVal(val)->get_value()); break;
+      case V_SgUnsignedLongLongIntVal: isSgUnsignedLongLongIntVal(val)->set_value(0 - isSgUnsignedLongLongIntVal(val)->get_value()); break;
+      case V_SgUnsignedLongVal:        isSgUnsignedLongVal(val)->set_value(0 - isSgUnsignedLongVal(val)->get_value()); break;
+      case V_SgUnsignedShortVal:       isSgUnsignedShortVal(val)->set_value(0 - isSgUnsignedShortVal(val)->get_value()); break;
+      case V_SgWcharVal:               isSgWcharVal(val)->set_value(0 - isSgWcharVal(val)->get_value()); break;
+      case V_SgStringVal:   cerr << "ERROR: cannot negate strings!"; break;
+      case V_SgComplexVal:  cerr << "ERROR: don't know how to negate complex numbers!"; break;
+      case V_SgUpcMythread: cerr << "ERROR: don't know how to negate UPC myThread numbers!"; break;
+      case V_SgUpcThreads:  cerr << "ERROR: don't know how to negate UPC Threads!"; break;
+      default: cout << "ERROR: Unknown value type in negation!";
+    }
+    return val;
+  }
+  
+  return NULL;
+}
+
 // returns the CFGNode that represents that start of the CFG of the given function's body
 CFGNode getFuncStartCFG(SgFunctionDefinition* func)
 {

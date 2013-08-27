@@ -226,8 +226,25 @@ public:
   }
 
   // XXX: This needs to be handled by an inter-procedural analysis
+  // XXX: Right now, we take the meet of all of the elements of the
+  // initializer. This could be enhanced with an improved memory
+  // abstraction to treat each element individually.
   void visit(SgConstructorInitializer *sgn)
-  { }
+  {
+    LatticePtr res = getLattice(sgn);
+    SgExpressionPtrList &inits = sgn->get_args()->get_expressions();
+    if (inits.size() > 0) {
+      LatticePtr initsCopy(dynamic_cast<LatticeType*>(getLattice(inits[0])->copy()));
+      //res->copy(getLattice(inits[0]).get());
+      modified = true;
+      for (size_t i = 1; i < inits.size(); ++i)
+        updateModified(initsCopy->meetUpdate(getLatticeOperand(sgn, inits[i]).get()));
+        //res->meetUpdate(getLattice(inits[i]).get());
+      setLattice(sgn, initsCopy);
+    }
+    else
+        setLattice(sgn, res);
+  }
 
   // XXX: I don't even know what this is - Phil
   void visit(SgDesignatedInitializer *sgn)

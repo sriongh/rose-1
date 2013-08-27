@@ -27,7 +27,7 @@ void ats2dot(std::string fName, std::string graphName, set<PartPtr>& startParts,
   out.close();
   
   ostringstream cmd;
-  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png";
+  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png&";
   system(cmd.str().c_str());
 }
 
@@ -38,7 +38,7 @@ void ats2dot_bw(std::string fName, std::string graphName, set<PartPtr>& startPar
   out.close();
   
   ostringstream cmd;
-  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png";
+  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png&";
   system(cmd.str().c_str());
 }
 
@@ -409,7 +409,6 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
     
     if(state.getPartEdge()->source() && state.getPartEdge()->target())
       printEdge(edgesStr, partInfo, state.getPartEdge(), false, "  ");
-    
     /*list<PartEdgePtr> outEdges = part->outEdges();
     indent ind;
     for(list<PartEdgePtr>::iterator e=outEdges.begin(); e!=outEdges.end(); e++) {
@@ -582,7 +581,7 @@ void printEdge(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdge
         booleanFalse = booleanFalse && !ValueObject::SgValue2Bool(v->second);
       }
     }
-
+    
     assert(!(booleanTrue && booleanFalse));
     if(booleanTrue)  color = "blue3";
     if(booleanFalse) color = "crimson";
