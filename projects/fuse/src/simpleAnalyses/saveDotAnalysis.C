@@ -18,6 +18,18 @@ void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr 
 // Edge printer
 void printEdge(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, bool isInEdge, string indent);
   
+std::string escapeDOT(std::string s)
+{
+  string out;
+  for(unsigned int i=0; i<s.length(); i++) {
+         if(s[i] == '"')  out += "\\\"";
+    else if(s[i] == '\n') out += "\\n";
+    else if(s[i] == '%')  out += "\\%";
+    else                  out += s[i];
+  }
+  return out;
+}
+
 // ---------------------------------------------
 // Generates a DOT graph that represents the given partition graph
 
@@ -186,10 +198,7 @@ void Ctxt2PartsMap::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& partI
     o << indent << "  style=filled;"<<endl;
     o << indent << "  rankdir=LR;"<<endl;
     string label = c->first.get()->str();
-    //cout << indent << "  i="<<i<<", label="<<label<<endl;
-    //std::replace(label.begin(), label.end(), string("\n"), string("\\n"));
-    boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
+    o << indent << "  label = \""<<escapeDOT(label)<<"\";"<<endl;
     c->second->map2dot(o, partInfo, subsubgraphName.str(), indent+"    ");
     o << indent << "}"<<endl;
   }
@@ -271,9 +280,7 @@ void Ctxt2PartsMap_Leaf::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& 
     o << indent << "  rankdir=TD;"<<endl;
     //o << "    ordering=out;"<<endl;
     string label = c->first.get()->str();
-    //std::replace(label.begin(), label.end(), string("\n"), string("\\n"));
-    boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
+    o << indent << "  label = \""<<escapeDOT(label)<<"\";"<<endl;
     // Sets of all the outgoing and incoming function call states
     set<PartPtr> funcCallsOut, funcCallsIn;
     
@@ -560,7 +567,7 @@ void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr 
   // Add the last line in labelStr to labelMulLineStr
   labelMultLineStr += labelStr.substr(i, labelStr.length()-i);
   
-  o << labelMultLineStr <<"\", color=\"" << nodeColor << "\", fillcolor=\"white\", style=\"" << nodeStyle << "\", shape=\"" << nodeShape << "\"];\n";
+  o << escapeDOT(labelMultLineStr) <<"\", color=\"" << nodeColor << "\", fillcolor=\"white\", style=\"" << nodeStyle << "\", shape=\"" << nodeShape << "\"];\n";
 }
 
 // Edge printer
@@ -589,7 +596,7 @@ void printEdge(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdge
   }
   
   o << indent << getPartUID(partInfo, e->source()) << " -> " << getPartUID(partInfo, e->target()) << 
-       " [label=\"" << escapeString(values.str()) << "\","<<
+       " [label=\"" << escapeDOT(values.str()) << "\","<<
        " style=\"" << (isInEdge ? "dotted" : "solid") << "\", " << 
        " color=\"" << color << "\"];\n";
 }

@@ -311,7 +311,12 @@ void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
                           Composer* composer, ComposedAnalysis* analysis)
 {
   scope reg("setArgByRef2ParamMap", scope::medium, analysisDebugLevel, 1);
-  Function func(call);
+  std::set<CFGNode> exitNodes;
+  assert(callEdge->source()->mustFuncExit(exitNodes));
+  // For now we can only handle 1 CFGNode per Part
+  assert(exitNodes.size()==1);
+  assert(isSgFunctionDefinition(exitNodes.begin()->getNode()));
+  Function func(isSgFunctionDefinition(exitNodes.begin()->getNode()));
   
   PartPtr callPart = callEdge->source();
   PartPtr funcStartPart = callEdge->target();
@@ -322,6 +327,10 @@ void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
 
   SgExpressionPtrList args = call->get_args()->get_expressions(); 
   SgInitializedNamePtrList* params = func.get_args();
+  if(!params) {
+    cout << "callEdge="<<callEdge->str()<<endl;
+    cout << "func="<<func.str();
+  }
   assert(params);
 
   SgExpressionPtrList::iterator itArgs;
