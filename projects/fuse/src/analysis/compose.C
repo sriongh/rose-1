@@ -5,14 +5,15 @@
 //#include "printAnalysisStates.h"
 #include "saveDotAnalysis.h"
 #include "stx_analysis.h"
-#include "widgets.h"
+#include "dbglog.h"
 #include <set>
 
 using namespace std;
 using namespace dbglog;
 namespace fuse
 {
-int composerDebugLevel=1;
+// int composerDebugLevel=1;
+DEBUG_LEVEL(composerDebugLevel, 1);
 
 //--------------------
 //----- Composer -----
@@ -203,7 +204,7 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
                                    FuncCaller<RetObject, FuncCallerArgs>& caller, bool verbose) {
   ostringstream label;
   scope reg(txt()<<"ChainComposer::callServerAnalysisFunc() "<<caller.funcName()<<" #doneAnalyses="<<doneAnalyses.size()<<" client="<<(client? client->str(): "NULL"), scope::medium,
-            composerDebugLevel, (verbose? 1: composerDebugLevel+1));
+          attrGE("composerDebugLevel", (verbose? 1: composerDebugLevel()+1)));
   assert(doneAnalyses.size()>0);
   //assert(serverCache.find(client) != serverCache.end());
   list<ComposedAnalysis*> doneAnalyses_back;
@@ -231,8 +232,8 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
   list<ComposedAnalysis*>::reverse_iterator a=doneAnalyses.rbegin();
   while(doneAnalyses.size() >= 0) {
     scope reg(txt()<<caller.funcName() << "  : " << (*a)->str(""), scope::medium, 
-              composerDebugLevel, (verbose? 1: composerDebugLevel+1));
-    if(composerDebugLevel >= (verbose? 1: composerDebugLevel+1)) {
+              attrGE("composerDebugLevel", (verbose? 1: composerDebugLevel()+1)));
+    if(composerDebugLevel() >= (verbose? 1: composerDebugLevel()+1)) {
       dbg << args.str() << endl;
       dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdgePtr")<<endl;
     }
@@ -258,10 +259,10 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
       /*dbg << "Final State of doneAnalysis="<<endl;
       for(list<ComposedAnalysis*>::iterator a=doneAnalyses.begin(); a!=doneAnalyses.end(); a++)
         dbg << "    "<<(*a)->str("        ")<<endl;*/
-      if(composerDebugLevel>=1 && verbose) dbg << "Returning "<<caller.retStr(v)<<endl;
+      if(composerDebugLevel()>=1 && verbose) dbg << "Returning "<<caller.retStr(v)<<endl;
       return v;
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1 && verbose) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<caller.funcName()<<" Not Implemented by "<<curAnalysis->str()<<". Advancing to "<<(*a)->str("")<<endl;
+      if(composerDebugLevel()>=1 && verbose) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<caller.funcName()<<" Not Implemented by "<<curAnalysis->str()<<". Advancing to "<<(*a)->str("")<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we keep looking further back in the chain
     }
@@ -269,11 +270,11 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
     // If the current caller object is concerned with PartEdges and the current analysis implements partition graphs, 
     // convert the current PartEdge that it implemented to the corresponding PartEdge of its precessor on which the 
     // current PartEdge is based.
-    if(composerDebugLevel>=1 && verbose) dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<" curAnalysis->implementsPartGraph()="<<curAnalysis->implementsPartGraph()<<endl;
+    if(composerDebugLevel()>=1 && verbose) dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<" curAnalysis->implementsPartGraph()="<<curAnalysis->implementsPartGraph()<<endl;
     if(pedge && curAnalysis->implementsPartGraph())
     { pedge = curAnalysis->convertPEdge(pedge); 
       //pedge = pedge->getParent();
-      if(composerDebugLevel>=1 && verbose) dbg << "Updated: pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<endl;
+      if(composerDebugLevel()>=1 && verbose) dbg << "Updated: pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<endl;
     }
   }
   
@@ -337,16 +338,16 @@ ValueObjectPtr ChainComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAna
 // Variant of Expr2Val that inquires about the value of the memory location denoted by the operand of the 
 // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
 ValueObjectPtr ChainComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
-  scope reg("ChainComposer::OperandExpr2Val()", scope::medium, composerDebugLevel, 2);
-  if(composerDebugLevel>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
+  scope reg("ChainComposer::OperandExpr2Val()", scope::medium, attrGE("composerDebugLevel", 2));
+  if(composerDebugLevel()>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
   
   // Get the part edges of the execution prefixes that terminate at the operand before continuing directly 
   // to SgNode n in the given part edge
   list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  if(composerDebugLevel>=2) dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
+  if(composerDebugLevel()>=2) dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
   for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
     indent ind;
-    if(composerDebugLevel>=2) dbg << (*opE)->str("    ")<<endl;
+    if(composerDebugLevel()>=2) dbg << (*opE)->str("    ")<<endl;
   }
   
   if(opPartEdges.size()>0) {
@@ -424,13 +425,13 @@ MemLocObjectPtr ChainComposer::Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, Comp
 // the part denotes the set of prefixes that terminate at SgNode n.
 MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client)
 {
-  scope reg("ChainComposer::OperandExpr2MemLoc()", scope::medium, composerDebugLevel, 2);
-  if(composerDebugLevel>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
+  scope reg("ChainComposer::OperandExpr2MemLoc()", scope::medium, attrGE("composerDebugLevel", 2));
+  if(composerDebugLevel()>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
   
   // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
   // to SgNode n in the given part
   list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  if(composerDebugLevel>=2) {
+  if(composerDebugLevel()>=2) {
     dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
     for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
       indent ind;
@@ -451,7 +452,7 @@ MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, Pa
   // Iterate over all the part edges to get the expression and memory MemLocObjects for operand within those parts
   for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
     MemLocObjectPtr p = Expr2MemLoc_ex(operand, *opE, client);
-    if(composerDebugLevel>=2) {
+    if(composerDebugLevel()>=2) {
       dbg << "opE="<<opE->get()->str()<<endl;
       dbg << "p(expr="<<isExprObj(p)<<")="<<p->str()<<endl;
     }
@@ -510,17 +511,17 @@ MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, Pa
   // else
   //   assert(0);
 
-  scope reg2("Returning", scope::low, composerDebugLevel, 1);
+  scope reg2("Returning", scope::low, attrGE("composerDebugLevel", 1));
   if(opPartEdges.size()>0) {
     // Create a MemLocObjectPtr that includes UnionMemLocObjects that combine all the memory
     if(mem4All) {
       UnionMemLocObjectPtr ret = UnionMemLocObject::create(partMLsMem);
-      if(composerDebugLevel>=1) dbg << ret->str()<<endl;
+      if(composerDebugLevel()>=1) dbg << ret->str()<<endl;
       return boost::static_pointer_cast<MemLocObject>(ret);
     }
     else {
       assert(expr4All);
-      if(composerDebugLevel>=1) dbg << (partMLsExpr? partMLsExpr->str() : "NULL")<<endl;
+      if(composerDebugLevel()>=1) dbg << (partMLsExpr? partMLsExpr->str() : "NULL")<<endl;
       return partMLsExpr;
     }
   } else
@@ -927,13 +928,13 @@ bool ChainComposer::OperandIsLiveMemLoc(SgNode* n, SgNode* operand, MemLocObject
   //assert(0);
   // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
   // to SgNode n in the given part
-  scope reg(txt()<<"ChainComposer::OperandIsLiveMemLoc(n="<<SgNode2Str(n)<<", operand="<<SgNode2Str(operand)<<")", scope::medium);
-  dbg << "pedge="<<pedge->str("    ")<<endl;
+  /*scope reg(txt()<<"ChainComposer::OperandIsLiveMemLoc(n="<<SgNode2Str(n)<<", operand="<<SgNode2Str(operand)<<")", scope::medium, attrGE("composerDebugLevel", 3));
+  dbg << "pedge="<<pedge->str("    ")<<endl;*/
   list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  dbg << "#opPartEdges="<<opPartEdges.size()<<endl;
+  //dbg << "#opPartEdges="<<opPartEdges.size()<<endl;
   for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    indent ind;
-    dbg << "opE="<<opE->get()->str("    ")<<endl;
+    /*indent ind;
+    dbg << "opE="<<opE->get()->str("    ")<<endl;*/
     if(isLiveMemLoc(ml, *opE, client)) return true;
   }
   return false;
@@ -1221,7 +1222,7 @@ void ChainComposer::runAnalysis()
   
   int i=1;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++, i++) {
-    if((lastAnalysis || doneAnalyses.size()>0) && composerDebugLevel>=1) {
+    if((lastAnalysis || doneAnalyses.size()>0) && composerDebugLevel()>=1) {
       set<PartPtr> startStates = GetStartAStates(lastAnalysis);
       set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
       ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
@@ -1231,12 +1232,12 @@ void ChainComposer::runAnalysis()
     
     cout << "ChainComposer Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("") << endl;
     ostringstream label; 
-    if(composerDebugLevel>=1) {
+    if(composerDebugLevel()>=1) {
       label << "ChainComposer Running Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("");
       lastAnalysisName = (*a)->str();
       lastAnalysis = *a;
     }
-    scope reg(label.str(), scope::high, composerDebugLevel, 1);
+    scope reg(label.str(), scope::high, attrGE("composerDebugLevel", 1));
     
     /*
     // Initialize a map for this analysis in the serverCacheMap
@@ -1246,8 +1247,8 @@ void ChainComposer::runAnalysis()
     currentAnalysis = *a;
     (*a)->runAnalysis();
     
-    /*if(composerDebugLevel >= 3) {
-      scope reg("Final State", scope::medium, composerDebugLevel, 3);
+    /*if(composerDebugLevel() >= 3) {
+      scope reg("Final State", scope::medium, attrGE("composerDebugLevel", 3));
       std::vector<int> factNames;
       std::vector<int> latticeNames;
       latticeNames.push_back(0);
@@ -1261,7 +1262,7 @@ void ChainComposer::runAnalysis()
     currentAnalysis = NULL;
   }
 
-  if(lastAnalysis && composerDebugLevel>=1) {
+  if(lastAnalysis && composerDebugLevel()>=1) {
     set<PartPtr> startStates = GetStartAStates(lastAnalysis);
 dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
     set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
@@ -1271,7 +1272,7 @@ dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
   }
   
   if(testAnalysis) {
-    scope s("---", scope::high, composerDebugLevel, 1);
+    scope s("---", scope::high, attrGE("composerDebugLevel", 1));
     //UnstructuredPassInterDataflow inter_up(testAnalysis);
     /*ContextInsensitiveInterProceduralDataflow inter_up(testAnalysis, getCallGraph());
     inter_up.runAnalysis();*/
@@ -1477,14 +1478,14 @@ void LooseParallelComposer::runAnalysis()
   // Run all the analyses without any interactions between them
   int i=1;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++, i++) {
-    scope reg(txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, composerDebugLevel, 1);
+    scope reg(txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, attrGE("composerDebugLevel", 1));
     
     (*a)->runAnalysis();
     
     dbg << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Analysis finished" << endl;
     
-    /*if(composerDebugLevel >= 3) {
-      scope reg(Final State", scope::medium, composerDebugLevel, 3);
+    /*if(composerDebugLevel() >= 3) {
+      scope reg(Final State", scope::medium, attrGE("composerDebugLevel", 3));
       std::vector<int> factNames;
       std::vector<int> latticeNames;
       latticeNames.push_back(0);
@@ -1512,14 +1513,14 @@ ValueObjectPtr   LooseParallelComposer::Expr2Val(SgNode* n, PartEdgePtr pedge)
   list<ValueObjectPtr> vals;
   
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+    scope reg(txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
     
     try {
       ValueObjectPtr val = (*a)->Expr2Val(n, getEdgeForAnalysis(pedge, *a));
       dbg << "Returning "<<val->str("")<<endl;
       vals.push_back(val);
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2Val() Not Implemented."<<endl;
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2Val() Not Implemented."<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we ask the remaining analyses
       continue;
@@ -1539,14 +1540,14 @@ MemLocObjectPtr  LooseParallelComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge
   list<MemLocObjectPtr> mls;
   
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+    scope reg(txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
     
     try {
       MemLocObjectPtr ml = (*a)->Expr2MemLoc(n, getEdgeForAnalysis(pedge, *a));
-      if(composerDebugLevel >= 1) { dbg << "Returning "<<ml->str("")<<endl; }
+      if(composerDebugLevel() >= 1) { dbg << "Returning "<<ml->str("")<<endl; }
       mls.push_back(ml);
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2MemLoc() Not Implemented."<<endl;
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2MemLoc() Not Implemented."<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we ask the remaining analyses
       continue;
@@ -1563,14 +1564,14 @@ CodeLocObjectPtr LooseParallelComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedg
   list<CodeLocObjectPtr> cls;
   
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+    scope reg(txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
     try {
       CodeLocObjectPtr cl = (*a)->Expr2CodeLoc(n, getEdgeForAnalysis(pedge, *a));
-      if(composerDebugLevel >= 1) dbg << "Returning "<<cl->str("")<<endl;
+      if(composerDebugLevel() >= 1) dbg << "Returning "<<cl->str("")<<endl;
       cls.push_back(cl);
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2CodeLoc() Not Implemented."<<endl;
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2CodeLoc() Not Implemented."<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we ask the remaining analyses
       continue;
@@ -1622,14 +1623,14 @@ set<PartPtr> LooseParallelComposer::GetStartAState_Spec()
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         PartPtr part = (*a)->GetStartAState();
-        if(composerDebugLevel >= 1) dbg << "Returning "<<part->str("")<<endl;
+        if(composerDebugLevel() >= 1) dbg << "Returning "<<part->str("")<<endl;
         parts[*a] = part;
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetStartAState() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetStartAState() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1695,7 +1696,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         //set<PartPtr> curParts = (*a)->GetEndAStates();
@@ -1740,7 +1741,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
           // Parts in curParts will not be included in the intersection and we don't need to do anything to ensure this.
         }
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<funcName<<"() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<funcName<<"() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1760,7 +1761,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   } else {
     assert(intersection.size()>0);
     
-    if(composerDebugLevel >= 1) {
+    if(composerDebugLevel() >= 1) {
       dbg << "Returning ";
       for(map<PartPtr, map<ComposedAnalysis*, PartPtr> >::iterator i=intersection.begin(); i!=intersection.end(); i++) {
         indent ind();
@@ -1790,7 +1791,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         set<PartPtr> curParts = (*a)->GetEndAStates();
@@ -1825,7 +1826,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
           // Parts in curParts will not be included in the intersection and we don't need to do anything to ensure this.
         }
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetEndAState() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetEndAState() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1844,7 +1845,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   } else {
     assert(parts.size()>0);
     
-    if(composerDebugLevel >= 1) {
+    if(composerDebugLevel() >= 1) {
       dbg << "Returning ";
       for(set<PartPtr>::iterator i=parts.begin(); i!=parts.end(); i++) {
         if(i==parts.begin()) dbg << ", ";

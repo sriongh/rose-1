@@ -57,8 +57,10 @@ class atsGraph : public dbglog::graph {
   // partAnchors - maps each Part in the ATS to the anchors that point to blocks associated with it
   // dirAligned - true if the edges between anchors are pointing in the same direction as the ATS flow of control
   //    and false if they point in the opposite direcction
-  atsGraph(PartPtr startPart, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel=0, int targetDebugLevel=0);
-  atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel=0, int targetDebugLevel=0);
+  atsGraph(PartPtr startPart, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned);
+  atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned);
+  atsGraph(PartPtr startPart, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp);
+  atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp);
   ~atsGraph();
   
   // Generates and returns the dot graph code for this graph

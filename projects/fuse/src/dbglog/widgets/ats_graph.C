@@ -1,18 +1,21 @@
 #include "sage3basic.h"
-#include "widgets.h"
 #include "ats_graph.h"
+#include "compose.h"
 #include "saveDotAnalysis.h"
 #include "partitions.h"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
+#include "dbglog.h"
 
 using namespace std;
 using namespace dbglog;
 
 namespace fuse {
 
-int ats2DotDebugLevel=0;
+//int ats2DotDebugLevel=0;
+DEBUG_LEVEL(ats2DotDebugLevel, 0);
+
 /***************************************
  *** ATS Graph Visualizer for dbglog ***
  ***************************************/
@@ -93,7 +96,7 @@ partStr getPartStr(std::map<PartPtr, partDotInfoPtr>& partInfo, PartPtr p, bool 
 // partInfo: maps Parts to the information required to display them in the dot graph
 // subgraphName: name of the subgraph that contains the current level in the map
 void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, partDotInfoPtr>& partInfo, std::string subgraphName, std::string indent) const {
-  scope reg(txt()<<"Ctxt2PartsMap_Leaf_atsGraph::map2dot() subgraphName="<<subgraphName<<" #m="<<m.size(), scope::medium, ats2DotDebugLevel, 2);
+  scope reg(txt()<<"Ctxt2PartsMap_Leaf_atsGraph::map2dot() subgraphName="<<subgraphName<<" #m="<<m.size(), scope::medium, attrGE("ats2DotDebugLevel", 2));
   
   if(m.size()==0) return;
   
@@ -113,7 +116,7 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
     
     // Iterate over all the states in this context, printing them and recording the function calls
     for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
-      if(ats2DotDebugLevel>=2) dbg << "part="<<p->get()->str();
+      if(ats2DotDebugLevel()>=2) dbg << "part="<<p->get()->str();
       
       if(partInfo.find(*p) == partInfo.end()) continue;
       
@@ -359,20 +362,30 @@ class Ctxt2PartsMap_Leaf_Generator_atsGraph : public Ctxt2PartsMap_Leaf_Generato
 // partAnchors - maps each Part in the ATS to the anchors that point to blocks associated with it
 // dirAligned - true if the edges between anchors are pointing in the same direction as the ATS flow of control
 //    and false if they point in the opposite direcction
-atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel, int targetDebugLevel) :
-  graph(curDebugLevel, targetDebugLevel), partAnchors(partAnchors), dirAligned(dirAligned)
+atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned) :
+  graph(), partAnchors(partAnchors), dirAligned(dirAligned)
 {
   if(!active) return;
 
   startParts.insert(startPart);
 }
 
-atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel, int targetDebugLevel) :
-  graph(curDebugLevel, targetDebugLevel), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned) :
+  graph(), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+{ }
+
+atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp) :
+  graph(onoffOp), partAnchors(partAnchors), dirAligned(dirAligned)
 {
   if(!active) return;
 
+  startParts.insert(startPart);
 }
+
+atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp) :
+  graph(onoffOp), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+{ }
+
 
 atsGraph::~atsGraph() {
   if(!active) return;
@@ -382,7 +395,7 @@ atsGraph::~atsGraph() {
     partInfo[pa->first] = boost::make_shared<partDotInfo_atsGraph>(partID, pa->second);
     
     PartPtr p = pa->first;
-    if(ats2DotDebugLevel>=2) dbg << "Adding "<<p->str()<<endl;
+    if(ats2DotDebugLevel()>=2) dbg << "Adding "<<p->str()<<endl;
   }
   
   for(map<PartPtr, list<anchor> >::iterator pa=partAnchors->begin(); pa!=partAnchors->end(); pa++) {
@@ -400,7 +413,7 @@ atsGraph::~atsGraph() {
     if(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(pi->second)->anchors.size()==0) {
       boost::dynamic_pointer_cast<partDotInfo_atsGraph>(pi->second)->anchors.push_back(anchor());
       PartPtr p = pi->first;
-      if(ats2DotDebugLevel>=2) dbg << "Blank mapping to "<<p->str()<<endl;
+      if(ats2DotDebugLevel()>=2) dbg << "Blank mapping to "<<p->str()<<endl;
     }
   }
   
@@ -412,7 +425,7 @@ atsGraph::~atsGraph() {
 // Generates and returns the dot graph code for this graph
 string atsGraph::genDotGraph()
 {
-  scope s("dot", scope::medium, ats2DotDebugLevel, 1);
+  scope s("dot", scope::medium, attrGE("ats2DotDebugLevel", 1));
   
   ostringstream o;
   
@@ -463,12 +476,12 @@ string atsGraph::genDotGraph()
   }
   
   {
-  scope se("Edges", scope::medium, ats2DotDebugLevel, 1);
+  scope se("Edges", scope::medium, attrGE("ats2DotDebugLevel", 1));
   for(set<graphEdge>::iterator e=uniqueEdges.begin(); e!=uniqueEdges.end(); e++) {
   //for(map<anchor, set<anchor> >::iterator from=uniqueEdges.begin(); from!=uniqueEdges.end(); from++) {
   //for(set<anchor>::iterator to=from->second.begin(); to!=from->second.end(); to++) {
     graphEdge edge = *e;
-    if(ats2DotDebugLevel>=1) dbg << "edge "<<edge.getFrom().str()<<" => "<<edge.getTo().str()<<endl;
+    if(ats2DotDebugLevel()>=1) dbg << "edge "<<edge.getFrom().str()<<" => "<<edge.getTo().str()<<endl;
     printAnchorEdge_atsGraph(o, edge.getFrom(), anchor2Parts[edge.getFrom()], 
                                 edge.getTo(),   anchor2Parts[edge.getTo()], "  ");
     

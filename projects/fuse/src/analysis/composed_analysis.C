@@ -21,7 +21,8 @@ using namespace dbglog;
 
 namespace fuse
 {
-int composedAnalysisDebugLevel=1;
+//int composedAnalysisDebugLevel=1;
+DEBUG_LEVEL(composedAnalysisDebugLevel, 1);
   
 /****************************
  ***** ComposedAnalysis *****
@@ -187,13 +188,13 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
   // Make sure that we've been paired with a valid inter-procedural dataflow analysis
   //assert(dynamic_cast<InterProceduralDataflow*>(interAnalysis));
 
-  //ostringstream funcNameStr; if(composedAnalysisDebugLevel>=1) funcNameStr << "Analysis Function "<<func.get_name().getString()<<"()";
-  scope reg("ComposedAnalysis", scope::medium, composedAnalysisDebugLevel);
+  //ostringstream funcNameStr; if(composedAnalysisDebugLevel()>=1) funcNameStr << "Analysis Function "<<func.get_name().getString()<<"()";
+  scope reg("ComposedAnalysis", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   
   // Quit out if this is an undirected analysis (i.e. doesn't need the fixed-point algorithm)
   if(getDirection() == none) return;
   
-  /*if(composedAnalysisDebugLevel>=1) {
+  /*if(composedAnalysisDebugLevel()>=1) {
       dbg << "analyzeFromDirectionStart="<<analyzeFromDirectionStart<<" calleesUpdated=";
       for(set<Function>::iterator f=calleesUpdated.begin(); f!=calleesUpdated.end(); f++)
           dbg << f->get_name().getString()<<", ";
@@ -209,12 +210,12 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
   // Re-analyze it from scratch
   set<PartPtr> startingParts = getInitialWorklist();
   set<PartPtr> ultimateParts = getUltimate();
-  if(composedAnalysisDebugLevel>=2) {
+  if(composedAnalysisDebugLevel()>=2) {
     //dbg << "#startingParts="<<startingParts.size()<<" #ultimateParts="<<ultimateParts.size()<<endl;
     for(set<PartPtr>::iterator i=startingParts.begin(); i!=startingParts.end(); i++) dbg << "starting="<<i->get()->str()<<endl;
     for(set<PartPtr>::iterator i=ultimateParts.begin(); i!=ultimateParts.end(); i++) dbg << "ultimate="<<i->get()->str()<<endl;
     //for(set<PartPtr>::iterator start=startingParts.begin(); start!=startingParts.end(); start++) {
-      //scope reg(txt()<<"Starting from "<<(*start)->str(), scope::medium, composedAnalysisDebugLevel, 1);
+      //scope reg(txt()<<"Starting from "<<(*start)->str(), scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   }
   
   // Initialize the starting states
@@ -241,9 +242,9 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
   map<PartPtr, anchor> nextTransferAnchors;
   
   // graph widget that visualizes the flow of the worklist algorithm
-  atsGraph worklistGraph((getDirection() == fw? startingParts: ultimateParts), partAnchors, getDirection() == fw, composedAnalysisDebugLevel, 1);
+  atsGraph worklistGraph((getDirection() == fw? startingParts: ultimateParts), partAnchors, getDirection() == fw, attrGE("composedAnalysisDebugLevel", 1));
   
-  /*{ scope itreg("Initial curNodeIt", scope::medium, composedAnalysisDebugLevel, 1);
+  /*{ scope itreg("Initial curNodeIt", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
     dbg << curNodeIt->str()<<endl; }*/
   
   while(curNodeIt && *curNodeIt!=dataflowPartEdgeIterator::end())
@@ -251,18 +252,18 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
     PartPtr part = curNodeIt->getPart();
     
     //set<anchor> toAnchorsSet; for(set<pair<anchor, PartPtr> >::iterator a=toAnchors[part].begin(); a!=toAnchors[part].end(); a++) toAnchorsSet.insert(a->first);
-    scope reg(txt()<<"Cur AState "<<part->str(), toAnchors[part], scope::medium, composedAnalysisDebugLevel, 1);
-    if(composedAnalysisDebugLevel>=1) { 
+    scope reg(txt()<<"Cur AState "<<part->str(), toAnchors[part], scope::medium, attrGE("composedAnalysisDebugLevel", 1));
+    if(composedAnalysisDebugLevel()>=1) { 
       // If we have previously invoked this transfer function on this Abstract State, attach the link from it to this scope
       if(nextTransferAnchors.find(part) != nextTransferAnchors.end())
          reg.attachAnchor(nextTransferAnchors[part]);
-      if(composedAnalysisDebugLevel>=1 && fromAnchors.size()>0) { 
-        scope backedges("Incoming Edges", scope::low, composedAnalysisDebugLevel, 1); 
+      if(composedAnalysisDebugLevel()>=1 && fromAnchors.size()>0) { 
+        scope backedges("Incoming Edges", scope::low, attrGE("composedAnalysisDebugLevel", 1)); 
         for(set<pair<anchor, PartPtr> >::iterator a=fromAnchors[part].begin(); a!=fromAnchors[part].end(); a++) 
           dbg << a->first.linkImg(a->second.get()->str())<<endl;
       }
       
-      { scope nextprev("", scope::min, composedAnalysisDebugLevel, 1); 
+      { scope nextprev("", scope::min, attrGE("composedAnalysisDebugLevel", 1)); 
       // If we've previously visited this Abstract State, set up a link to it
       if(lastTransferAnchors.find(part) != lastTransferAnchors.end())
         dbg << lastTransferAnchors[part].linkImg("Last visit");
@@ -289,7 +290,7 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
       visited.insert(part);
     }
 
-    if(composedAnalysisDebugLevel>=1) { dbg << "state="<<endl<<state->str()<<endl; }
+    if(composedAnalysisDebugLevel()>=1) { dbg << "state="<<endl<<state->str()<<endl; }
 
     map<PartEdgePtr, vector<Lattice*> >& dfInfoAnte = getLatticeAnte(state);
     // Create a local map for the post dataflow information. It will be deallocated 
@@ -302,8 +303,8 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
     for(set<CFGNode>::iterator c=v.begin(); c!=v.end(); c++) {
       SgNode* sgn = c->getNode();
 
-      ostringstream nodeNameStr; if(composedAnalysisDebugLevel>=(v.size()==1 ? 10: 1)) nodeNameStr << "Current CFGNode "<<part->str()<<endl;
-      scope reg(nodeNameStr.str(), scope::medium, composedAnalysisDebugLevel, (v.size()==1 ? 10: 1));
+      ostringstream nodeNameStr; if(composedAnalysisDebugLevel()>=(v.size()==1 ? 10: 1)) nodeNameStr << "Current CFGNode "<<part->str()<<endl;
+      scope reg(nodeNameStr.str(), scope::medium, attrGE("composedAnalysisDebugLevel", (v.size()==1 ? 10: 1)));
 
       // =================== Copy incoming lattices to outgoing lattices ===================
       // For the case where dfInfoPost needs to be created fresh, this shared pointer dfInfoPostPtr will ensure that 
@@ -315,12 +316,12 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
 
       //printf("                 dfInfoAnte.size()=%d, dfInfoPost.size()=%d, this=%p\n", dfInfoAnte.size(), dfInfoPost.size(), this);
       if(c==v.begin()) {
-        if(composedAnalysisDebugLevel>=1) {
+        if(composedAnalysisDebugLevel()>=1) {
            dbg << "==================================  "<<endl;
            dbg << "  Copying incoming Lattice :"<<endl;
-           {indent ind(composedAnalysisDebugLevel, 1); dbg <<NodeState::str(dfInfoAnte); }
+           {indent ind(attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(dfInfoAnte); }
            dbg << "  To outgoing Lattice: "<<endl;
-           {indent ind(composedAnalysisDebugLevel, 1); dbg <<NodeState::str(dfInfoPost); }
+           {indent ind(attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(dfInfoPost); }
         }
 
         // Over-write the post information with the ante information, creating it if it doesn't exist yet
@@ -335,7 +336,7 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
         dfInfoPostPtr = boost::make_shared<map<PartEdgePtr, vector<Lattice*> > >();
         dfInfoPost = *dfInfoPostPtr.get();
 
-        if(composedAnalysisDebugLevel>=1) {
+        if(composedAnalysisDebugLevel()>=1) {
           dbg << "=================================="<<endl;
           dbg << "Creating outgoing state from incoming state"<<endl;
         }
@@ -347,28 +348,28 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
       modified = transferDFState(part, *c, sgn, *state, dfInfoPost, ultimateParts) || modified;
       // >>>>>>>>>>>>>>>>>>> TRANSFER FUNCTION >>>>>>>>>>>>>>>>>>>
 
-      if(composedAnalysisDebugLevel>=1) {
-        {scope s("Transferred: outgoing Lattice=", scope::low, composedAnalysisDebugLevel, 1); dbg <<NodeState::str(dfInfoPost)<<endl; }
-        {scope s("state=", scope::low, composedAnalysisDebugLevel, 1); dbg <<state->str()<<endl; }
+      if(composedAnalysisDebugLevel()>=1) {
+        {scope s("Transferred: outgoing Lattice=", scope::low, attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(dfInfoPost)<<endl; }
+        {scope s("state=", scope::low, attrGE("composedAnalysisDebugLevel", 1)); dbg <<state->str()<<endl; }
         dbg << "Transferred: "<<(modified? "<font color=\"#990000\">Modified</font>": "<font color=\"#000000\">Not Modified</font>")<<endl;
       }
 
       // If this is not the first CFGNode within this Part, merge its outgoing lattices with the outgoing
       // lattices produced by the transfer function's execution on the prior CFGNodes in this Part
       if(c!=v.begin()) {
-        if(composedAnalysisDebugLevel>=1) {
+        if(composedAnalysisDebugLevel()>=1) {
           dbg << "==================================  "<<endl;
           dbg << "Merging lattice for prior CFGNodes:"<<endl;
-          {indent ind(composedAnalysisDebugLevel, 1); dbg <<NodeState::str(getLatticePost(state)); }
+          {indent ind(attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(getLatticePost(state)); }
           dbg << "With lattice  for the current CFGNodes:"<<endl;
-          {indent ind(composedAnalysisDebugLevel, 1); dbg <<NodeState::str(dfInfoPost); }
+          {indent ind(attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(dfInfoPost); }
         }
         assert(getLatticePost(state).begin()->first == NULLPartEdge);
         modified = NodeState::unionLatticeMaps(getLatticePost(state), dfInfoPost) || modified;
 
-        if(composedAnalysisDebugLevel>=1) {
+        if(composedAnalysisDebugLevel()>=1) {
           dbg << "Merged within Part: Lattice"<<endl;
-          {indent ind(composedAnalysisDebugLevel, 1); dbg <<NodeState::str(getLatticePost(state)); }
+          {indent ind(attrGE("composedAnalysisDebugLevel", 1)); dbg <<NodeState::str(getLatticePost(state)); }
         }
       }
     } // for(vector<CFGNode>::iterator c=v.begin(); c!=v.end(); c++) {
@@ -389,7 +390,7 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
     
     (*curNodeIt)++;
     
-    /*{ scope itreg("curNodeIt", scope::medium, composedAnalysisDebugLevel, 1);
+    /*{ scope itreg("curNodeIt", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
     dbg << curNodeIt->str()<<endl; }*/
   } // while(curNodeIt!=dataflowPartEdgeIterator::end())
   //} // for(list<PartPtr>::iterator start=startingParts.begin(); start!=startingParts.end(); start++) {
@@ -398,11 +399,11 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
   // since they will not be visited by the worklist algorithm
   /*
   for(set<PartPtr>::iterator u=ultimateParts.begin(); u!=ultimateParts.end(); u++) {
-    scope reg(txt()<<"Ultimate AState "<<(*u).get()->str(), toAnchors[*u], scope::medium, composedAnalysisDebugLevel, 1);
+    scope reg(txt()<<"Ultimate AState "<<(*u).get()->str(), toAnchors[*u], scope::medium, attrGE("composedAnalysisDebugLevel", 1));
     (*partAnchors)[*u].push_back(reg.getAnchor());
   }*/
   
-  if(composedAnalysisDebugLevel>=1) dbg << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ComposedAnalysis::runAnalysis" << endl;
+  if(composedAnalysisDebugLevel()>=1) dbg << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ComposedAnalysis::runAnalysis" << endl;
 }
 
 // Execute the analysis transfer function, updating its dataflow info.
@@ -411,7 +412,7 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
 bool ComposedAnalysis::transferDFState(PartPtr part, CFGNode cn, SgNode* sgn, NodeState& state, 
                                        map<PartEdgePtr, vector<Lattice*> >& dfInfo, const set<PartPtr>& ultimateParts)
 {
-  scope reg("Transferring", scope::medium, composedAnalysisDebugLevel, 1);
+  scope reg("Transferring", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   bool modified = false;
 /*        if (isSgFunctionCallExp(sgn))
     //transferFunctionCall(func, part, *c, state);
@@ -448,7 +449,7 @@ bool ComposedAnalysis::transferDFState(PartPtr part, CFGNode cn, SgNode* sgn, No
   if(dfInfo.size()==1 && (dfInfo.find(NULLPartEdge) != dfInfo.end())) {
     // Adjust dfInfo to make one copy of the value for each descendant edge
 
-    if(composedAnalysisDebugLevel>=1) {
+    if(composedAnalysisDebugLevel()>=1) {
       dbg << "Descendant edges: #descEdges="<<descEdges.size()<<endl;
       /*for(list<PartEdgePtr>::iterator e=descEdges.begin(); e!=descEdges.end(); e++)
       { indent ind; dbg << ":" << (*e)->str() << endl; }*/
@@ -481,7 +482,7 @@ bool ComposedAnalysis::transferDFState(PartPtr part, CFGNode cn, SgNode* sgn, No
         // provided as the argument)*/
         remapML((getDirection()==fw? part->inEdgeFromAny(): part->outEdgeToAny()), dfInfo[*e]);
         
-        { scope mpsReg("Remapped DFState", scope::low, composedAnalysisDebugLevel, 1);
+        { scope mpsReg("Remapped DFState", scope::low, attrGE("composedAnalysisDebugLevel", 1));
         for(vector<Lattice*>::iterator df=dfInfo[*e].begin(); df!=dfInfo[*e].end(); df++)
           dbg << (*df)->str()<<endl; }
       }
@@ -536,7 +537,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
   list<PartPtr>   descendants = getDescendants(part);
   list<PartEdgePtr> descEdges = getEdgesToDescendants(part);
   
-  scope reg(txt() << " Propagating/Merging the outgoing  Lattice to all descendant nodes("<<descEdges.size()<<")", scope::medium, composedAnalysisDebugLevel, 1);
+  scope reg(txt() << " Propagating/Merging the outgoing  Lattice to all descendant nodes("<<descEdges.size()<<")", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   
   // Iterate over all descendants
   list<PartPtr>::iterator d;
@@ -551,7 +552,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
     dbg << "*d="<<(*d? (*d)->str(): "NULLPart")<<endl;
     assert(nextPart);
     
-    scope regDesc(txt() << "Descendant: "<<nextPart->str(), scope::low, composedAnalysisDebugLevel, 1);
+    scope regDesc(txt() << "Descendant: "<<nextPart->str(), scope::low, attrGE("composedAnalysisDebugLevel", 1));
     
     // Add an anchor to toAnchors from the current Abstract State to its current descendant
     anchor toAnchor;
@@ -565,7 +566,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
        (getDirection()==bw && part->mayOutgoingFuncCall(matches))) {
       // This should only happen on parts with a single outgoing edge. If not, we should refactor this code to do the unioning once for all edges.
       assert(descEdges.size()==1);
-      scope mpReg("Replacing State at Matching Parts", scope::medium, composedAnalysisDebugLevel, 1);
+      scope mpReg("Replacing State at Matching Parts", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
       
       // The set of Parts that contain the outgoing portion of the function call for this incoming portion or
       // vice versa
@@ -573,13 +574,13 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
       
       vector<Lattice*> unionLats;
       
-      {scope mpsReg("matchingParts", scope::medium, composedAnalysisDebugLevel, 1);
+      {scope mpsReg("matchingParts", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
       //for(set<PartPtr>::iterator mp=matchingParts.begin(); mp!=matchingParts.end(); mp++)
         //dbg << mp->get()->str()<<endl; }
       
       assert(matchingParts.size()>0);
       for(set<PartPtr>::iterator mp=matchingParts.begin(); mp!=matchingParts.end(); mp++) {
-        scope mpsReg2(mp->get()->str(), scope::low, composedAnalysisDebugLevel, 1);
+        scope mpsReg2(mp->get()->str(), scope::low, attrGE("composedAnalysisDebugLevel", 1));
         NodeState* mpState = NodeState::getNodeState(this, *mp);
         dbg << "mpState="<<mpState->str()<<endl;
         map<PartEdgePtr, vector<Lattice*> >& mpDFInfo = (getDirection()==fw? getLatticeAnte(mpState) : getLatticePost(mpState));
@@ -593,7 +594,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
         }
       }}
       
-      { scope mpsReg("unionLats", scope::low, composedAnalysisDebugLevel, 1);
+      { scope mpsReg("unionLats", scope::low, attrGE("composedAnalysisDebugLevel", 1));
       for(vector<Lattice*>::iterator ul=unionLats.begin(); ul!=unionLats.end(); ul++)
         dbg << (*ul)->str()<<endl; }
       
@@ -606,7 +607,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
         delete oldDF;
       }
       
-      { scope mpsReg("Replaced DFState", scope::low, composedAnalysisDebugLevel, 1);
+      { scope mpsReg("Replaced DFState", scope::low, attrGE("composedAnalysisDebugLevel", 1));
       for(vector<Lattice*>::iterator df=dfInfo[*de].begin(); df!=dfInfo[*de].end(); df++)
         dbg << (*df)->str()<<endl; }
     }
@@ -619,7 +620,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
       initialized.insert(nextPart);
     }
     
-    if(composedAnalysisDebugLevel>=1) dbg << "nextState="<<nextState->str()<<endl;
+    if(composedAnalysisDebugLevel()>=1) dbg << "nextState="<<nextState->str()<<endl;
 
     // Make sure that dfInfo has a key for this descendant
     assert(dfInfo.find(*de) != dfInfo.end());
@@ -631,13 +632,13 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
     
     // Propagate the Lattices below this node to its descendant
     modified = propagateStateToNextNode(dfInfoNext, part, getLatticeAnte(nextState), nextPart);
-    if(composedAnalysisDebugLevel>=1){
+    if(composedAnalysisDebugLevel()>=1){
       dbg << "Propagated/merged: "<<(modified? "<font color=\"#990000\">Modified</font>": "<font color=\"#000000\">Not Modified</font>")<<endl;
       dbg << "<hline>";
     }
     // If the next node's state gets modified as a result of the propagation, or the next node has not yet been
     // visited, add it to the processing queue.
-    if(composedAnalysisDebugLevel>=1) 
+    if(composedAnalysisDebugLevel()>=1) 
       dbg << "Final modified="<<modified<<", visited="<<(visited.find(nextPart)!=visited.end())<<" nextPart="<<nextPart->str()<<endl;
     if(modified || visited.find(nextPart)==visited.end())
       curNodeIt->add(nextPartEdge);
@@ -731,7 +732,7 @@ dataflowPartEdgeIterator* BWDataflow::getIterator()
 // Remaps the given Lattice across the scope transition (if any) of the given edge, updating the lat vector
 // with pointers to the updated Lattice objects and deleting old Lattice objects as needed.
 void FWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
-  scope reg("FWDataflow::remapML", scope::medium, composedAnalysisDebugLevel, 1);
+  scope reg("FWDataflow::remapML", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   for(unsigned int i=0; i<lat.size(); i++) {
     dbg << "lat["<<i<<"]="<<(lat[i]? lat[i]->str(): "NULL")<<endl;
     Lattice* newL = lat[i]->getPartEdge()->forwardRemapML(lat[i], fromPEdge);
@@ -747,7 +748,7 @@ void FWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
 // Remaps the given Lattice across the scope transition (if any) of the given edge, updating the lat vector
 // with pointers to the updated Lattice objects and deleting old Lattice objects as needed.
 void BWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
-  scope reg("BWDataflow::remapML", scope::medium, composedAnalysisDebugLevel, 1);
+  scope reg("BWDataflow::remapML", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   for(unsigned int i=0; i<lat.size(); i++) {
     dbg << "lat["<<i<<"]->getPartEdge()="<<lat[i]->getPartEdge()->str()<<endl;
     Lattice* newL = lat[i]->getPartEdge()->backwardRemapML(lat[i], fromPEdge);
@@ -781,7 +782,7 @@ bool printDataflowInfoPass::transfer(PartPtr part, CFGNode cn, NodeState& state,
   dbg << "-----#############################--------\n";
   dbg << "Node: ["<<part->str()<<"\n";
   dbg << "State:\n";
-  indent ind(composedAnalysisDebugLevel, 1); 
+  indent ind(attrGE("composedAnalysisDebugLevel", 1)); 
   dbg << state.str(analysis)<<endl;
   
   return dynamic_cast<BoolAndLattice*>(dfInfo[NULLPartEdge][0])->set(true);

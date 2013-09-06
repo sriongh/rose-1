@@ -7,7 +7,8 @@
 using namespace std;
 using namespace dbglog;
 namespace fuse {
-int nodeStateDebugLevel=2;
+//int nodeStateDebugLevel=2;
+DEBUG_LEVEL(nodeStateDebugLevel, 1);
 
 // Records that this analysis has initialized its state at this node
 void NodeState::initialized(Analysis* init)
@@ -216,7 +217,7 @@ Lattice* NodeState::getLattice_ex(const LatticeMap& dfMap, Analysis* analysis,
   std::map<PartEdgePtr, std::vector<Lattice*> >::const_iterator w;
 
   if(dfMap.find((Analysis*)analysis) == dfMap.end()) {
-    scope reg("NodeState::getLattice_ex: Analysis not found!", scope::medium, 1, 1);
+    scope reg("NodeState::getLattice_ex: Analysis not found!", scope::medium);
     dbg << "dfMap.find("<<analysis<<")!=dfMap.end() = "<<(dfMap.find((Analysis*)analysis) != dfMap.end())<<" dfMap.size()="<<dfMap.size()<<endl;
     for(LatticeMap::const_iterator i=dfMap.begin(); i!=dfMap.end(); i++)
     { dbg << "i="<<i->first<<endl; }
@@ -369,7 +370,7 @@ void NodeState::unionLattices(set<Analysis*>& unionSet, Analysis* master)
 bool NodeState::unionLatticeMaps(map<PartEdgePtr, vector<Lattice*> >& to, 
                                  const map<PartEdgePtr, vector<Lattice*> >& from)
 {
-  scope reg("NodeState::unionLatticeMaps()", scope::medium, 2, nodeStateDebugLevel);
+  scope reg("NodeState::unionLatticeMaps()", scope::medium, attrGE("saveDotAnalysisDebugLevel", 2));
   // All the analyses in unionSet must have the same number of edges
   assert(to.size() == from.size());
 
@@ -385,7 +386,7 @@ bool NodeState::unionLatticeMaps(map<PartEdgePtr, vector<Lattice*> >& to,
     vector<Lattice*>::iterator       lTo;
     vector<Lattice*>::const_iterator lFrom;
     for(lTo=eTo->second.begin(), lFrom=eFrom->second.begin(); lTo!=eTo->second.end(); lTo++, lFrom++) {
-      if(nodeStateDebugLevel>=2) dbg << "(*lTo)->finiteLattice()="<<(*lTo)->finiteLattice()<<endl;
+      if(nodeStateDebugLevel()>=2) dbg << "(*lTo)->finiteLattice()="<<(*lTo)->finiteLattice()<<endl;
       if((*lTo)->finiteLattice())
         modified = (*lTo)->meetUpdate(*lFrom) || modified;
       else {
@@ -717,7 +718,7 @@ void NodeState::copyLatticesOW(map<PartEdgePtr, vector<Lattice*> >& dfInfoTo,   
       // Adjust the Lattice's part edge to correspond to its new edge
       lTo->setPartEdge(toDepartEdge);
     dfInfoTo[toDepartEdge].push_back(lTo);
-    indent ind(1, 1);
+    //indent ind();
     //dbg << "lTo="<<lTo->str()<<endl;
   }
 }

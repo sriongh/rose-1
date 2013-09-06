@@ -22,7 +22,26 @@
 // ------------------------------
 
 namespace fuse {
-extern int composerDebugLevel;
+//extern int composerDebugLevel;
+  
+/* Class for declaring the debug level used in various code modules. It ensures that at start-up time 
+   (before main() runs) a dbglog attribute with a given name and value is created and it persists
+   until the end of the analysis (exit of main()). */
+class debugLevel {
+  void* debugAttribute;
+  int level;
+  public:
+  debugLevel(const char* name, int level) : level(level) {
+    debugAttribute = attr_enter(name, (long)level);
+  }
+  ~debugLevel() { attr_exit(debugAttribute); }
+  int operator()() const { return level; }
+};
+
+// Declaration of a debug level with a given name and a given value
+#define DEBUG_LEVEL(debugLevelName, debugLevelVal) \
+static debugLevel debugLevelName(#debugLevelName, debugLevelVal);
+  
 class Composer;
 
 // Represents the state of our knowledge about some fact

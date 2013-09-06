@@ -20,7 +20,7 @@
  */
 
 namespace fuse {
-extern int liveDeadAnalysisDebugLevel;
+//extern int liveDeadAnalysisDebugLevel;
 
 // Virtual class that allows users of the LiveDeadVarsAnalysis to mark certain variables as 
 // being used inside a function call if the function's body is not available.

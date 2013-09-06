@@ -9,7 +9,8 @@ using namespace std;
 using namespace dbglog;
 
 namespace fuse {
-int constantPropagationAnalysisDebugLevel = 1;
+//int constantPropagationAnalysisDebugLevel = 1;
+DEBUG_LEVEL(constantPropagationAnalysisDebugLevel, 1);
 
 // **********************************************************************
 //              ConstantPropagationLattice
@@ -557,7 +558,7 @@ ConstantPropagationAnalysisTransfer::visit(SgLongIntVal *sgn)
 void
 ConstantPropagationAnalysisTransfer::visit(SgIntVal *sgn)
    {
-   //scope reg("ConstantPropagationAnalysisTransfer::visit(SgIntVal)", scope::low, constantPropagationAnalysisDebugLevel, 1);
+   //scope reg("ConstantPropagationAnalysisTransfer::visit(SgIntVal)", scope::low, attrGE("constantPropagationAnalysisDebugLevel", 1));
    assert(sgn);
    //CPValueObjectPtr resLat = getLattice(sgn);
    CPValueObjectPtr resLat(new CPValueObject(sgn->get_value(), part->inEdgeFromAny()));
@@ -749,7 +750,8 @@ ConstantPropagationAnalysisTransfer::ConstantPropagationAnalysisTransfer(
           map<PartEdgePtr, vector<Lattice*> >& dfInfo, 
           Composer* composer, ConstantPropagationAnalysis* analysis)
    : VariableStateTransfer<CPValueObject>(state, dfInfo, boost::make_shared<CPValueObject>(part->inEdgeFromAny()), 
-                                          composer, analysis, part, cn, constantPropagationAnalysisDebugLevel)
+                                          composer, analysis, part, cn, 
+                                          constantPropagationAnalysisDebugLevel, "constantPropagationAnalysisDebugLevel")
    {
    }
 
@@ -799,7 +801,7 @@ ConstantPropagationAnalysis::getTransferVisitor(PartPtr part, CFGNode cn, NodeSt
 
 ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedge)
 {
-  if(constantPropagationAnalysisDebugLevel>=1) dbg << "ConstantPropagationAnalysis::Expr2Val(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")"<<endl;
+  if(constantPropagationAnalysisDebugLevel()>=1) dbg << "ConstantPropagationAnalysis::Expr2Val(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")"<<endl;
   // If pedge doesn't have wildcards
   if(pedge->source() && pedge->target()) {
     NodeState* state = NodeState::getNodeState(this, pedge->source());
@@ -813,7 +815,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
     
     // MemLocObjectPtrPair p = composer->Expr2MemLoc(n, pedge, this);
     MemLocObjectPtr p = composer->Expr2MemLoc(n, pedge, this);
-    if(constantPropagationAnalysisDebugLevel>=2) {
+    if(constantPropagationAnalysisDebugLevel()>=2) {
       indent ind;
       dbg << "&nbsp;&nbsp;&nbsp;&nbsp;p="<<p->str()<<endl;
       dbg << "cpMap Below="<<cpMap<<"="<<cpMap->str()<<endl;
@@ -844,7 +846,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
       
       // MemLocObjectPtrPair p = composer->Expr2MemLoc(n, pedge, this);
       MemLocObjectPtr p = composer->Expr2MemLoc(n, pedge, this);
-      if(constantPropagationAnalysisDebugLevel>=2) {
+      if(constantPropagationAnalysisDebugLevel()>=2) {
         indent ind;
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;p="<<p->str()<<endl;
         dbg << "cpMap="<<cpMap<<"="<<cpMap->str()<<endl;
@@ -863,13 +865,13 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
   // If the source of this edge is a wildcard
   } else if(pedge->target()) {
     NodeState* state = NodeState::getNodeState(this, pedge->target());
-    if(constantPropagationAnalysisDebugLevel>=2) dbg << "state="<<state->str()<<endl;
+    if(constantPropagationAnalysisDebugLevel()>=2) dbg << "state="<<state->str()<<endl;
     AbstractObjectMap* cpMap = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, NULLPartEdge, 0));
     assert(cpMap);
     
     // MemLocObjectPtrPair p = composer->Expr2MemLoc(n, pedge, this);
     MemLocObjectPtr p = composer->Expr2MemLoc(n, pedge, this);
-    if(constantPropagationAnalysisDebugLevel>=2) {
+    if(constantPropagationAnalysisDebugLevel()>=2) {
       indent ind;
       dbg << "&nbsp;&nbsp;&nbsp;&nbsp;p="<<p->str()<<endl;
       dbg << "cpMap="<<cpMap<<"="<<cpMap->str()<<endl;

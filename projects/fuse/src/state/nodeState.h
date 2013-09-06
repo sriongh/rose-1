@@ -16,7 +16,7 @@ class NodeState;
 
 namespace fuse {
 class ComposedAnalysis;
-extern int nodeStateDebugLevel;
+//extern int nodeStateDebugLevel;
 
 /************************************************
  ***         NodeFact       ***

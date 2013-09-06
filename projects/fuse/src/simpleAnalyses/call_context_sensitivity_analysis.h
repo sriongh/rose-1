@@ -12,7 +12,7 @@ namespace fuse
 
 // This is an analysis that adds the sensitivity to calling contexts to the Abstract Transition System it runs on,
   
-extern int callContextSensitivityDebugLevel;
+//extern int callContextSensitivityDebugLevel;
 
 /* ###########################
    ##### CallCtxSensPart #####

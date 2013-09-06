@@ -7,8 +7,6 @@
 #include "latticeFull.h"
 
 
-extern int divAnalysisDebugLevel;
-
 namespace fuse {
 /***********************
  *** SaveDotAnalysis ***

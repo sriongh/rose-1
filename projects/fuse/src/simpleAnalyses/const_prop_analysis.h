@@ -19,7 +19,7 @@ namespace fuse
 // that consists of the universal set, a single constant value and an empty set. It 
 // maintains a map of memory locations to these value abstractions.
 
-extern int constantPropagationAnalysisDebugLevel;
+//extern int constantPropagationAnalysisDebugLevel;
 
 class CPValueObject : public FiniteLattice, public ValueObject
 {

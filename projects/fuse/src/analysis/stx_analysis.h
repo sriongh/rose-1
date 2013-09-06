@@ -10,7 +10,7 @@
 
 namespace fuse {
   
-extern int stxAnalysisDebugLevel;
+//extern int stxAnalysisDebugLevel;
 /*****************************
  ***** SyntacticAnalysis *****
  *****************************/

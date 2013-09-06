@@ -29,7 +29,7 @@ namespace fuse {
  *    multiplications they perform before they roll backwards by dividing the current value by a fixed number of factors.
  */
 
-extern int factorTransSystemDebugLevel;
+//extern int factorTransSystemDebugLevel;
   
 class FactorTransState;
 typedef CompSharedPtr<FactorTransState> FactorTransStatePtr;

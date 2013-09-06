@@ -20,7 +20,7 @@
 
 namespace fuse 
 {
-  extern int AbstractObjectSetDebugLevel;
+//  extern int AbstractObjectSetDebugLevel;
   
 // Set container for AbstractMemoryObject pointers
 // use: for storing sets of AbstractMemoryObject pointers

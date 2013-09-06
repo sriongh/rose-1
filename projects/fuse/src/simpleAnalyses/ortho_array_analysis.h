@@ -9,7 +9,7 @@ namespace fuse
  ***** OrthoArrayMemLocObject *****
  ***********************************/
 
-extern int orthoArrayAnalysisDebugLevel;
+//extern int orthoArrayAnalysisDebugLevel;
 class OrthogonalArrayAnalysis;
   
 // This is an analysis that interprets array expressions of the form a[i] by orthogonally 

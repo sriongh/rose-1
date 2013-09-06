@@ -1,7 +1,7 @@
 #ifndef ABSTRACT_OBJECT_H
 #define ABSTRACT_OBJECT_H
 
-#include "widgets.h"
+#include "dbglog.h"
 #include "partitions.h"
 #include "CallGraphTraverse.h"
 #include <string>

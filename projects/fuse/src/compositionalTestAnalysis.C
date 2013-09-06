@@ -12,10 +12,12 @@
 #include <ctype.h>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/xpressive/regex_actions.hpp>
+#include "dbglog.h"
 
 using namespace std;
 using namespace fuse;
 using namespace boost::xpressive;
+using namespace dbglog;
 
 // Regex expressions for the composition command, defined globally so that they can be used inside main 
 // (where they're initialized) as well as inside output_nested_results()
@@ -111,8 +113,10 @@ struct output_nested_results
 
 int main(int argc, char** argv)
 {
+  initializeDebug(argc, argv);
+  
   printf("========== S T A R T ==========\n");
-    
+  
   Rose_STL_Container<string> args = CommandlineProcessing::generateArgListFromArgcArgv(argc, argv);
   // Strip the dataflow analysis options
   

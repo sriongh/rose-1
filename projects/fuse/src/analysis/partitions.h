@@ -4,12 +4,12 @@
 //#include <boost/lambda/lambda.hpp>
 //#include <boost/lambda/bind.hpp>
 #include "cfgUtils.h"
-#include "widgets.h"
+#include "dbglog.h"
 #include "comp_shared_ptr.h"
 
 namespace fuse {
 
-extern int partitionsDebugLevel;
+//extern int partitionsDebugLevel;
 
 // ----------------
 // ----- Part -----

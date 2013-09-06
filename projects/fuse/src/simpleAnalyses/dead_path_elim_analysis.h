@@ -13,7 +13,7 @@ namespace fuse
 // This is an analysis that implements the partition graph, ensuring that all dead paths are eliminated and not
 // shown to client analyses.
 
-extern int deadPathElimAnalysisDebugLevel;
+//extern int deadPathElimAnalysisDebugLevel;
 
 class DeadPathElimTransfer;
 class DeadPathElimAnalysis;

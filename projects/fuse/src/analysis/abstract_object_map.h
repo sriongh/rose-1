@@ -24,7 +24,7 @@
 #include <iostream>
 
 namespace fuse {
-  extern int AbstractObjectMapDebugLevel;
+  //extern int AbstractObjectMapDebugLevel;
   
   using namespace boost;
   using namespace std;

@@ -1,6 +1,7 @@
 #include "sage3basic.h"
 #include "saveDotAnalysis.h"
 #include "partitions.h"
+#include "compose.h"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
@@ -11,7 +12,8 @@ namespace fuse {
  *** SaveDotAnalysis ***
  ***********************/
 
-int saveDotAnalysisDebugLevel=1;
+//int saveDotAnalysisDebugLevel=1;
+DEBUG_LEVEL(saveDotAnalysisDebugLevel, 1);
 
 // Helper function to print Part information
 void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr part, string indent);
@@ -374,7 +376,7 @@ class Ctxt2PartsMap_Leaf_Generator_Base : public Ctxt2PartsMap_Leaf_Generator {
 
 std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   // Maps parts to their unique IDs
@@ -389,14 +391,14 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
   Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
   for(fw_partEdgeIterator state(startParts); state!=fw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
     }
     
     list<list<PartContextPtr> > key = part->getContext()->getDetailedPartContexts();
-    if(saveDotAnalysisDebugLevel>=1) dbg << "#key="<<key.size()<<endl;
+    if(saveDotAnalysisDebugLevel()>=1) dbg << "#key="<<key.size()<<endl;
     if(key.size()==0) {
       DummyContext d;
       key.push_back(d.getSubPartContexts());
@@ -470,7 +472,7 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
 
 std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot_bw", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot_bw", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   //dbg << "#endParts="<<endParts.size()<<endl;
@@ -487,8 +489,8 @@ std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& 
   
   for(bw_partEdgeIterator state(endParts); state!=bw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "state="<<state.str()<<endl;
       dbg << "*state="<<part->str()<<" context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
