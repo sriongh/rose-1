@@ -326,81 +326,80 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
   // Big picture of this implementation
   // How the multiple inheritance results in the classes here
   //
-  //                      Scalar            LabeledAggregate        Array       Pointer  Function
-  // -----------------------------------------------------------------------------
-  // Expression Objects | ScalarExp          LabAggreExp 
-  // Named objects      | ScalarNamedObj    
-  // Aliased Objects    | ScalarAliasedObj  LabeledAggregateAliasedObj ArrayAliasedObj  PointerAliasedObj
-
-  // Parent class of sub-types of StxMemLocObjects: NamedObj, ExprObj and AliasedObj
+  // Parent class of sub-types of StxMemRegionObjects: NamedObj, ExprObj and AliasedObj
   class NamedObj;
   class ExprObj;
   class AliasedObj;
-  class StxMemLocObjectKind;
-  typedef boost::shared_ptr<StxMemLocObjectKind> StxMemLocObjectKindPtr;
-  class StxMemLocObjectKind: public virtual MemLocObject
+
+  class StxMemRegionObjectKind: public dbglog::printable
   {
-  public:
-    StxMemLocObjectKind(SgNode* n): MemLocObject(n) {} 
-    StxMemLocObjectKind(const StxMemLocObjectKind& that): MemLocObject((const MemLocObject&)that) {} 
+    SgNode *n;
+    public:
+    StxMemRegionObjectKind(SgNode* n): n(n) {} 
+    StxMemRegionObjectKind(const StxMemRegionObjectKind& that): n(that.n) {} 
+    
     // Casts this object to a NamedObj, ExprObj or AliasedObj, returning 
     // the pointer if it is one of these kinds or NULL otherwise
     NamedObj*   isNamedObj();
     ExprObj*    isExprObj();
     AliasedObj* isAliasedObj();
     
-    /*// Returns whether this object may/must be equal to o within the given Part p
-    // These methods are called by composers and should not be called by analyses.
-    bool mayEqualML (StxMemLocObjectPtr that, PartEdgePtr pedge);
-    bool mustEqualML(StxMemLocObjectPtr that, PartEdgePtr pedge);
-    
-    // Returns true if this object is live at the given part and false otherwise.
-    // This method is called by composers and should not be called by analyses.
-    virtualbool isLiveML(PartEdgePtr pedge);*/
-    
     // Allocates a copy of this object and returns a pointer to it
-    MemLocObjectPtr copyML() const { return copyMLK(); }
+    virtual StxMemRegionObjectKindPtr copyMLK() const=0;
     
-    // Allocates a copy of this object and returns a pointer to it
-    virtual StxMemLocObjectKindPtr copyMLK() const=0;
+    bool mayEqualMR (StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
+    bool mustEqualMR(StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
+
+    // Returns whether the two abstract objects denote the same set of concrete objects
+    bool equalSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
+
+    // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+    // by the given abstract object.
+    bool subSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
+
+    // Returns true if this MemRegionObject is in-scope at the given part and false otherwise
+    bool isLiveMR(PartEdgePtr pedge);
+
+    bool isFull(PartEdgePtr pedge);
+    bool isEmpty(PartEdgePtr pedge);
     
-    // Computes the meet of this and that and saves the result in this
-    // returns true if this causes this to change and false otherwise
-    bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) { assert(0); return false; }
-    
-    // Returns the type of the MemLoc this object denotes
+    // Returns the type of the MemRegion this object denotes
     SgType* getType() const;
     
     //std::string strp(PartEdgePtr pedge, std::string indent="");
     
     // A dummy virtual destructor to enable dynamic casting
-    virtual ~StxMemLocObjectKind() {}
-  };
+    virtual ~StxMemRegionObjectKind() {}
+  }; // class StxMemRegionObjectKind
+  typedef boost::shared_ptr<StxMemRegionObjectKind> StxMemRegionObjectKindPtr;
   
-  
-  class StxMemLocObject;
-  typedef boost::shared_ptr<StxMemLocObject> StxMemLocObjectPtr;
-  class StxMemLocObject: public virtual MemLocObject
+  class StxMemRegionObject: public MemRegionObject
   {
     protected:
     SgType* type;
-    StxMemLocObjectKindPtr kind;
+    // An MemRegionObject is a thin wrapper for a NamedObj, ExprObj or AliasedObj.
+    // kind points to one of these three options and allows us to change a given
+    // object from one kind of StxMemRegionObject to another (e.g. as a result of a 
+    // meetUpdate()) dynamically.
+    StxMemRegionObjectKindPtr kind;
     
     public:
-    StxMemLocObject(SgNode* n, SgType* t, StxMemLocObjectKindPtr kind);
+    StxMemRegionObject(SgNode* n, SgType* t, StxMemRegionObjectKindPtr kind);
     
-    // equal() should be called by mayEqualML and mustEqualML of any derived classes
+    StxMemRegionObjectKindPtr getKind() { return kind; }
+    
+    // equal() should be called by mayEqualMR and mustEqualMR of any derived classes
     // to ensure that the in-scope or out-of-scope issues are taken into account. 
-    // If equal() returns defEqual or disjSet then mayEqualML and mustEqualML should 
-    // return true and false, respectively. If equal() returns mayOverlap, mayEqualML and 
-    // mustEqualML should continue more refined processing.
+    // If equal() returns defEqual or disjSet then mayEqualMR and mustEqualMR should 
+    // return true and false, respectively. If equal() returns mayOverlap, mayEqualMR and 
+    // mustEqualMR should continue more refined processing.
     typedef enum {defEqual, disjSet, mayOverlap} eqType;
-    eqType equal(StxMemLocObjectPtr that_arg, PartEdgePtr pedge);
+    eqType equal(StxMemRegionObjectPtr that_arg, PartEdgePtr pedge);
     
-    // Returns whether this object may/must be equal to o within the given Part p
+    // Returns whether this object may/must be equal to o within the given PartEdge pedge
     // These methods are called by composers and should not be called by analyses.
-    bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
-    bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+    bool mayEqualMR (MemRegionObjectPtr o, PartEdgePtr pedge);
+    bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
     
     // Returns whether the two abstract objects denote the same set of concrete objects
     bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
@@ -411,11 +410,11 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
     
     // Returns true if this object is live at the given part and false otherwise.
     // This method is called by composers and should not be called by analyses.
-    bool isLiveML(PartEdgePtr pedge);
+    bool isLiveMR(PartEdgePtr pedge);
     
     // Computes the meet of this and that and saves the result in this
     // returns true if this causes this to change and false otherwise
-    bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
+    bool meetUpdateMR(MemLocObjectPtr that, PartEdgePtr pedge);
     
     // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
     bool isFull(PartEdgePtr pedge);
@@ -426,76 +425,15 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
     //virtual bool isLive(PartEdgePtr pedge) const=0;
     
     // Allocates a copy of this object and returns a pointer to it
-    MemLocObjectPtr copyML() const;
+    MemLocObjectPtr copyMR() const;
     
-    SgType* getType() const {return type;}
-    /*std::set<SgType*> getType() const
-    {
-      std::set<SgType*> rt;
-      rt.insert(type);
-      return rt;
-    }*/
-    //PartPtr getPart()    const {return part;}
+    SgType* getType() const {assert(type == kind->getType(); return kind->getType();}
     
     std::string str(std::string indent); // pretty print for the object
     std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
-  };
+  }; // class StxMemRegionObject
+  typedef boost::shared_ptr<StxMemRegionObject> StxMemRegionObjectPtr;
 
-  // A simple implementation of the abstract memory object interface
-  // Four categories: scalar, labeled aggregate, array, and pointer
-  class Scalar_Impl : public Scalar/*, public StxMemLocObject*/
-  {
-    public:
-      Scalar_Impl(SgNode* n) : MemLocObject(n), Scalar(n) {}
-      Scalar_Impl(const Scalar_Impl& that) : MemLocObject((const MemLocObject&)that), Scalar(that) {}
-      // We implement operator < () at this level
-      bool operator < (const MemLocObject& other) const ;
-  };
-
-  class Function_Impl : public FunctionMemLoc/*, public StxMemLocObject*/
-  {
-    public:
-      Function_Impl(SgNode* n) : MemLocObject(n), FunctionMemLoc(n) {}
-      Function_Impl(const Scalar_Impl& that) : MemLocObject((const MemLocObject&)that), FunctionMemLoc((const FunctionMemLoc&)that) {}
-      // We implement operator < () at this level
-      bool operator < (const MemLocObject& other) const ;
-  };
-
-
-  // #SA 10/15/12
-  // Deriving from enable_shared_from_this provides shared_from_this() to create a shared_ptr using 'this'
-  //  
-  class LabeledAggregate_Impl : public LabeledAggregate
-  {
-    public:
-      LabeledAggregate_Impl(SgNode* n) : MemLocObject(n), LabeledAggregate(n) {}
-      LabeledAggregate_Impl(const Scalar_Impl& that) : MemLocObject((const MemLocObject&)that), LabeledAggregate((const LabeledAggregate&)that) {}
-      bool operator < (const MemLocObject& other) const ;
-
-      size_t fieldCount(PartEdgePtr pedge) const {return elements.size(); };
-      // Returns a list of fields
-      std::list<LabeledAggregateFieldPtr >  getElements(PartEdgePtr pedge) const {return elements;};
-      std::list<LabeledAggregateFieldPtr >& getElements(PartEdgePtr pedge) {return elements;};
-    protected:
-      std::list<LabeledAggregateFieldPtr > elements; 
-  };
-
-  class Array_Impl : public Array/*, public StxMemLocObject*/
-  {
-    public:   
-      Array_Impl(SgNode* n) : MemLocObject(n), Array(n) {}
-      Array_Impl(const Scalar_Impl& that) : MemLocObject((const MemLocObject &)that), Array((const Array&)that) {}
-      bool operator < (const MemLocObject& other) const ;
-  };
-
-  class Pointer_Impl: public Pointer/*, public StxMemLocObject*/
-  {
-    public: 
-      Pointer_Impl(SgNode* n) : MemLocObject(n), Pointer(n) {}
-      Pointer_Impl(const Scalar_Impl& that) : MemLocObject((const MemLocObject&)that), Pointer((const Pointer&)that) {}
-      bool operator < (const MemLocObject& other) const ;
-  };
-  
   // The most intuitive implementation of array index vector
   class IndexVector_Impl : public IndexVector
   {
@@ -521,26 +459,6 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
   };
   typedef boost::shared_ptr<IndexVector_Impl> IndexVector_ImplPtr;
 
-  class NamedObj; 
-  class LabeledAggregateField_Impl : public LabeledAggregateField
-  {
-    public:
-      LabeledAggregateField_Impl(MemLocObjectPtr f, LabeledAggregatePtr p): field (f), parent(p) {}
-      std::string getName(PartEdgePtr pedge); // field name
-      size_t getIndex(PartEdgePtr pedge); // The field's index within its parent object. The first field has index 0.
-
-      MemLocObjectPtr getField(PartEdgePtr pedge) { return field;}; // Pointer to an abstract description of the field
-      void setField(MemLocObjectPtr f) {field = f;}; // Pointer to an abstract description of the field
-
-      LabeledAggregatePtr getParent(PartEdgePtr pedge) {return parent;};
-      void setParent(LabeledAggregatePtr p) {parent = p; };
-
-      std::string str(std::string indent); // pretty print for the object
-    private:
-      MemLocObjectPtr field; // this should be a named obj 
-      LabeledAggregatePtr parent; 
-  };
-
   // The connection to the ROSE AST, all concrete type, size , etc. information come from this side
   // -----------------------------------------------------------------------------------------------
   //
@@ -554,25 +472,28 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
 
   class ExprObj;
   typedef boost::shared_ptr<ExprObj> ExprObjPtr;
-  class ExprObj: public StxMemLocObjectKind // one object for each SgExpression which does not have a corresponding symbol
+  class ExprObj: public StxMemRegionObjectKind // one object for each SgExpression which does not have a corresponding symbol
     // They are similar to compiler-generated temporaries for three operand AST format
   { 
     public:
       SgExpression* anchor_exp; 
       
-      ExprObj(SgExpression* a): MemLocObject(a), StxMemLocObjectKind(a), anchor_exp(a) {}
-      ExprObj(const ExprObj& that) : MemLocObject((const MemLocObject &)that), StxMemLocObjectKind((const StxMemLocObjectKind&)that), anchor_exp(that.anchor_exp) {}
+      ExprObj(SgExpression* a):      StxMemRegionObjectKind(a), anchor_exp(a) {}
+      ExprObj(const ExprObj& that) : StxMemRegionObjectKind((const StxMemRegionObjectKind&)that), anchor_exp(that.anchor_exp) {}
       
-      bool mayEqualML (MemLocObjectPtr o2, PartEdgePtr pedge); 
-      bool mustEqualML(MemLocObjectPtr o2, PartEdgePtr pedge); 
+      // Allocates a copy of this object and returns a pointer to it
+      StxMemLocObjectKindPtr copyMLK() const;
+      
+      bool mayEqualMR (StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
+      bool mustEqualMR(StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
       bool isConstant() {return isSgValueExp(anchor_exp); } ; // if the expression object represent a constant value (SgValueExp)
       
       // Returns whether the two abstract objects denote the same set of concrete objects
-      bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool equalSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
       // by the given abstract object.
-      bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool subSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns true if this MemLocObject is in-scope at the given part and false otherwise
       bool isLiveML(PartEdgePtr pedge);
@@ -594,9 +515,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
   //
   // However, for a symbol representing a field of a structure, it can be shared by many instances
   // of the structure. In this case, a parent MemLocObject is needed to distinguish between them 
-  class NamedObj;
-  typedef boost::shared_ptr<NamedObj> NamedObjPtr;
-  class NamedObj: public StxMemLocObjectKind  // one object for each named variable with a symbol
+  class NamedObj: public StxMemRegionObjectKind  // one object for each named variable with a symbol
   { 
     public:
       SgSymbol* anchor_symbol; // could be a symbol for variable, function, class/structure, etc.
@@ -607,8 +526,8 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
 
       //Is this always true that the parent of a named object must be an expr object?
       NamedObj (SgNode* n, SgSymbol* a, SgType* type, MemLocObjectPtr p, IndexVectorPtr iv): 
-          MemLocObject(n), StxMemLocObjectKind(n), anchor_symbol(a), type(type), parent(p), array_index_vector (iv){}
-      NamedObj (const NamedObj& that) : MemLocObject((const MemLocObject &)that), StxMemLocObjectKind((const StxMemLocObjectKind&)that),
+          StxMemRegionObjectKind(n), anchor_symbol(a), type(type), parent(p), array_index_vector (iv){}
+      NamedObj (const NamedObj& that) : StxMemRegionObjectKind((const StxMemRegionObjectKind&)that),
                                         anchor_symbol(that.anchor_symbol), type(that.type), 
                                         parent(that.parent), array_index_vector(that.array_index_vector) {}
       //SgType* getType() const {return type;}
@@ -616,25 +535,25 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       SgSymbol* getSymbol() {return anchor_symbol;}
 
       std::string getName() {return anchor_symbol->get_name().getString(); }
+      
+      // Allocates a copy of this object and returns a pointer to it
+      StxMemRegionObjectKindPtr copyMLK() const;
 
-      virtual std::string str(std::string indent=""); // pretty print for the object
-      virtual std::string strp(PartEdgePtr pedge, std::string indent=""); // pretty print for the object
+      bool mayEqualMR (NamedObjPtr that, PartEdgePtr pedge); 
+      bool mustEqualMR(NamedObjPtr that, PartEdgePtr pedge); 
 
-      bool mayEqualML (NamedObjPtr o2, PartEdgePtr pedge); 
-      bool mustEqualML(NamedObjPtr o2, PartEdgePtr pedge); 
-
-      bool mayEqualML (MemLocObjectPtr o2, PartEdgePtr pedge); 
-      bool mustEqualML(MemLocObjectPtr o2, PartEdgePtr pedge); 
+      bool mayEqualMR (StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
+      bool mustEqualMR(StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
       
       // Returns whether the two abstract objects denote the same set of concrete objects
-      bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool equalSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
       // by the given abstract object.
-      bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool subSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
-      // Returns true if this MemLocObject is in-scope at the given part and false otherwise
-      bool isLiveML(PartEdgePtr pedge);
+      // Returns true if this MemRegionObject is in-scope at the given part and false otherwise
+      bool isLiveMR(PartEdgePtr pedge);
       
       bool isFull(PartEdgePtr pedge);
       bool isEmpty(PartEdgePtr pedge);
@@ -642,47 +561,52 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       // Returns the type of the MemLoc this object denotes
       SgType* getType() const;
       
-      // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
-  };
+      std::string str(std::string indent=""); // pretty print for the object
+      std::string strp(PartEdgePtr pedge, std::string indent=""); // pretty print for the object
+  }; // class NamedObj
+  typedef boost::shared_ptr<NamedObj> NamedObjPtr;
 
   //  Memory regions that may be accessible via a pointer, such as heap memory
   //  This implementation does not track accurate aliases, an aliased memory object and 
   //  an aliased or named object may be equal if they have the same typ
   class AliasedObj;
   typedef boost::shared_ptr<AliasedObj> AliasedObjPtr;
-  class AliasedObj: public StxMemLocObjectKind
+  class AliasedObj: public StxMemRegionObjectKind
   {  // One object for each type
     public: 
       //#SA
-      // StxMemLocObject 'type' is sufficient
+      // StxMemRegionObject 'type' is sufficient
       SgType* type; 
-      AliasedObj(SgNode* n, SgType* type): MemLocObject(n), StxMemLocObjectKind(n), type(type) {}
-      AliasedObj(const AliasedObj& that): MemLocObject((const MemLocObject &)that), StxMemLocObjectKind((const StxMemLocObjectKind&)that), type(that.type) {}
+      AliasedObj(SgNode* n, SgType* type): StxMemRegionObjectKind(n), type(type) {}
+      AliasedObj(const AliasedObj& that): StxMemRegionObjectKind((const StxMemRegionObjectKind&)that), type(that.type) {}
       
-      virtual std::string str(std::string indent); // pretty print for the object
+      // Allocates a copy of this object and returns a pointer to it
+      StxMemRegionObjectKindPtr copyMLK() const;
+      
+      bool mayEqualMR (AliasedObjPtr that, PartEdgePtr pedge);
+      bool mustEqualMR(AliasedObjPtr that, PartEdgePtr pedge);
 
-      bool mayEqualML (AliasedObjPtr o2, PartEdgePtr pedge);
-      bool mustEqualML(AliasedObjPtr o2, PartEdgePtr pedge);
-
-      bool mayEqualML (MemLocObjectPtr o2, PartEdgePtr pedge); 
-      bool mustEqualML(MemLocObjectPtr o2, PartEdgePtr pedge);
+      bool mayEqualMR (StxMemRegionObjectKindPtr that, PartEdgePtr pedge); 
+      bool mustEqualMR(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns whether the two abstract objects denote the same set of concrete objects
-      bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool equalSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
       // by the given abstract object.
-      bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+      bool subSet(StxMemRegionObjectKindPtr that, PartEdgePtr pedge);
       
       // Returns true if this MemLocObject is in-scope at the given part and false otherwise
-      bool isLiveML(PartEdgePtr pedge);
+      bool isLiveMR(PartEdgePtr pedge);
       
       bool isFull(PartEdgePtr pedge);
       bool isEmpty(PartEdgePtr pedge);
       
       // Returns the type of the MemLoc this object denotes
       SgType* getType() const;
+      
+      std::string str(std::string indent=""); // pretty print for the object
+      std::string strp(PartEdgePtr pedge, std::string indent=""); // pretty print for the object
   };
 
   // -----------------------------
@@ -702,7 +626,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   // Does it make sense to have expressions which are of a function type?
@@ -720,7 +644,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class LabeledAggregateExprObj: public LabeledAggregate_Impl, public ExprObj
@@ -738,7 +662,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class ArrayExprObj: public Array_Impl, public ExprObj
@@ -761,7 +685,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class PointerExprObj: public Pointer_Impl, public ExprObj
@@ -782,7 +706,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   // ------------------------
@@ -803,7 +727,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
 
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class FunctionNamedObj: public Function_Impl, public NamedObj 
@@ -828,7 +752,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class LabeledAggregateNamedObj: public LabeledAggregate_Impl, public NamedObj
@@ -847,7 +771,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class ArrayNamedObj;
@@ -880,7 +804,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class PointerNamedObj: public Pointer_Impl, public NamedObj
@@ -903,7 +827,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string strp(PartEdgePtr pedge, std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   // --------------------------
@@ -921,7 +845,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string str(std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class FunctionAliasedObj: public Function_Impl, public AliasedObj
@@ -936,7 +860,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string str(std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
   
   class LabeledAggregateAliasedObj : public  LabeledAggregate_Impl, public AliasedObj
@@ -955,7 +879,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string str(std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class ArrayAliasedObj: public Array_Impl, public AliasedObj
@@ -983,7 +907,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string str(std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   class PointerAliasedObj: public Pointer_Impl, public AliasedObj
@@ -1000,19 +924,19 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;
       std::string str(std::string indent); // pretty print for the object
       
       // Allocates a copy of this object and returns a pointer to it
-      StxMemLocObjectKindPtr copyMLK() const;
+      StxMemRegionObjectKindPtr copyMLK() const;
   };
 
   // lower level, internal  builder for different objects -----------------------
   // Users should use MemLocObject* ObjSetFactory::createObjSet (SgNode* n) instead
   
-  // Creates an AliasedMemLocObject and an StxMemLocObject that contains it. It can return NULL since not all types are supported.
+  // Creates an AliasedMemLocObject and an StxMemRegionObject that contains it. It can return NULL since not all types are supported.
   // One object per type, Type based alias analysis. A type of the object pointed to by a pointer.
   MemLocObjectPtr createAliasedMemLocObject(SgNode* n, SgType* t, PartEdgePtr pedge);
   
   // Creates an AliasedMemLocObject, which is a MemLocObjectKind. It can return NULL since not all types are supported.
   // One object per type, Type based alias analysis. A type of the object pointed to by a pointer.
-  StxMemLocObjectKindPtr createAliasedMemLocObjectKind(SgNode* n, SgType* t, PartEdgePtr pedge);
+  StxMemRegionObjectKindPtr createAliasedMemLocObjectKind(SgNode* n, SgType* t, PartEdgePtr pedge);
   
   MemLocObjectPtr createNamedMemLocObject(SgNode* n, SgSymbol* anchor_symbol, SgType* t, PartEdgePtr pedge, MemLocObjectPtr parent, IndexVectorPtr iv); // any 
   
