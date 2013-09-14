@@ -71,8 +71,20 @@ Function::Function(SgFunctionCallExp* funcCall)
 {
   //assert(isSgFunctionRefExp(funcCall->get_function()));
   // If the call's referent is known, initialize based on its declaration
-  if(isSgFunctionRefExp(funcCall->get_function()))
+  if(isSgFunctionRefExp(funcCall->get_function())) {
+    assert(isSgFunctionRefExp(funcCall->get_function())->get_symbol());
+    assert(isSgFunctionRefExp(funcCall->get_function())->get_symbol()->get_declaration());
     init(isSgFunctionRefExp(funcCall->get_function())->get_symbol()->get_declaration());
+  } else if(isSgDotExp(funcCall->get_function())) {
+    SgExpression *rhs = isSgDotExp(funcCall->get_function())->get_rhs_operand();
+    while(isSgDotExp(rhs)) rhs = isSgDotExp(rhs)->get_rhs_operand();
+    if(isSgMemberFunctionRefExp(rhs)) {
+      assert(isSgMemberFunctionRefExp(rhs)->get_symbol());
+      assert(isSgMemberFunctionRefExp(rhs)->get_symbol()->get_declaration());
+      init(isSgMemberFunctionRefExp(rhs)->get_symbol()->get_declaration());
+    } else
+      init(NULL);
+  }
   // Otherwise, set the function to NULL
   else
     init(NULL);
@@ -163,8 +175,8 @@ Function::Function(const Function *that)
   decl = that->decl;
 }
 
-// Returns whether this Function object has been initialized
-bool Function::isInitialized() const {
+// Returns whether the Function that this object refers to is statically known 
+bool Function::isKnown() const {
   return decl!=NULL;
 }
 
@@ -315,6 +327,15 @@ SgFunctionParameterList* Function::get_params() const
 {
   if(decl)
     return get_declaration()->get_parameterList();
+  else
+    return NULL;
+}
+
+// Returns the function's type if it is known and NULL if it is not
+SgFunctionType* Function::get_type() const
+{
+  if(decl)
+    return get_declaration()->get_type();
   else
     return NULL;
 }

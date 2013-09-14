@@ -6,7 +6,7 @@ using namespace dbglog;
 namespace fuse
 {
 
-int callContextSensitivityDebugLevel=0;
+int callContextSensitivityDebugLevel=2;
 
 /* ###########################
    ##### CallPartContext #####
@@ -288,8 +288,9 @@ std::list<PartEdgePtr> CallCtxSensPart::inEdges() {
   list<PartEdgePtr> baseEdges = getParent()->inEdges();
   list<PartEdgePtr> ccsEdges;
   
-  // Consider all the CallCtxSensPartEdges along all of this part's outgoing edges. Since this is a forward
-  // analysis, they are maintained separately
+  // Since this is a forward analysis, only outgoing edges below a node are maintained separately.
+  // Thus, consider all of this part's predecessors and add the CallCtxSensPartEdges along the 
+  // outgoing edges that lead to this part.
   for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++) {
     // The NodeState at the current predecessor
     NodeState* inState = NodeState::getNodeState(analysis, (*be)->source());
@@ -738,13 +739,13 @@ bool CallCtxSensLattice::updateMapKey(
 {
   // Incorporate information in this->outgoing key PartPtrs about any recursion that may have been discovered
   if((!iThis->first->recursive && iThat->first->recursive) ||
-     (!iThis->first->lastCtxtFunc.isInitialized() && iThat->first->lastCtxtFunc.isInitialized())) {
+     (!iThis->first->lastCtxtFunc.isKnown() && iThat->first->lastCtxtFunc.isKnown())) {
     CallCtxSensPartPtr thisPart = iThis->first;
     set<CallCtxSensPartPtr> thisPartSet = iThis->second;
     thisMap.erase(thisPart);
 
     thisPart->recursive |= iThat->first->recursive;
-    if(!thisPart->lastCtxtFunc.isInitialized()) 
+    if(!thisPart->lastCtxtFunc.isKnown()) 
       thisPart->lastCtxtFunc = thisPart->lastCtxtFunc;
 
     thisMap[thisPart] = thisPartSet;
@@ -767,12 +768,12 @@ bool CallCtxSensLattice::updateSetElement(
 {
   // Incorporate information about any recursion that may have been discovered
   if((!(*jThis)->recursive && (*jThat)->recursive) ||
-     (!(*jThis)->lastCtxtFunc.isInitialized() && (*jThat)->lastCtxtFunc.isInitialized())) {
+     (!(*jThis)->lastCtxtFunc.isKnown() && (*jThat)->lastCtxtFunc.isKnown())) {
     CallCtxSensPartPtr thisPart = *jThis;
     thisSet.erase(thisPart);
 
     thisPart->recursive |= (*jThat)->recursive;
-    if(thisPart->lastCtxtFunc.isInitialized())
+    if(thisPart->lastCtxtFunc.isKnown())
       thisPart->lastCtxtFunc = thisPart->lastCtxtFunc;
 
     thisSet.insert(thisPart);
@@ -1232,7 +1233,7 @@ bool CallContextSensitivityAnalysis::isFuncExitAmbiguous(PartEdgePtr edge, set<C
         return true;
       }
       
-      /*assert((*e)->source()->outEdges().size()>=1);
+      assert((*e)->source()->outEdges().size()>=1);
       
       // Multiple functions call this one
       list<PartEdgePtr> srcOut=(*e)->source()->outEdges();

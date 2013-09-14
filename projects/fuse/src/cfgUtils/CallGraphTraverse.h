@@ -36,8 +36,8 @@ class Function
 
   Function(const Function *that);
 
-  // Returns whether this Function object has been initialized
-  bool isInitialized() const;
+  // Returns whether the Function that this object refers to is statically known 
+  bool isKnown() const;
   
   // returns a unique SgFunctionDeclaration* that is the canonical AST node that represents the given function
   static SgFunctionDeclaration* getCanonicalDecl(SgFunctionDeclaration* decl);
@@ -72,6 +72,9 @@ class Function
   
   // Returns the parameters of this function if it is known and NULL if it is not
   SgFunctionParameterList* get_params() const;
+  
+  // Returns the function's type if it is known and NULL if it is not
+  SgFunctionType* get_type() const;
   
   // Returns the Function object that refers to the function that contains the given SgNode
   static Function getEnclosingFunction(SgNode* n, bool includingSelf=true);

@@ -9,7 +9,7 @@ using namespace std;
 using namespace dbglog;
 
 namespace fuse {
-int constantPropagationAnalysisDebugLevel = 0;
+int constantPropagationAnalysisDebugLevel = 1;
 
 // **********************************************************************
 //              ConstantPropagationLattice

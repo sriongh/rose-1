@@ -269,11 +269,11 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
     // If the current caller object is concerned with PartEdges and the current analysis implements partition graphs, 
     // convert the current PartEdge that it implemented to the corresponding PartEdge of its precessor on which the 
     // current PartEdge is based.
-    if(composerDebugLevel>=1 && verbose) dbg << "pedge="<<pedge->str()<<" curAnalysis->implementsPartGraph()="<<curAnalysis->implementsPartGraph()<<endl;
+    if(composerDebugLevel>=1 && verbose) dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<" curAnalysis->implementsPartGraph()="<<curAnalysis->implementsPartGraph()<<endl;
     if(pedge && curAnalysis->implementsPartGraph())
     { pedge = curAnalysis->convertPEdge(pedge); 
       //pedge = pedge->getParent();
-      if(composerDebugLevel>=1 && verbose) dbg << "Updated: pedge="<<pedge->str()<<endl;
+      if(composerDebugLevel>=1 && verbose) dbg << "Updated: pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<endl;
     }
   }
   
@@ -1157,7 +1157,8 @@ class GetStartAStatesCaller : public FuncCaller<std::set<PartPtr>, dummyClass>
   public:
   // Calls the given analysis' implementation of GetStartAStates within the given node
   std::set<PartPtr> operator()(const dummyClass& dummy, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { return server->GetStartAStates(); }
+  { 
+    return server->GetStartAStates(); }
   // Returns a string representation of the returned object
   std::string retStr(std::set<PartPtr> parts) { 
     ostringstream oss;
@@ -1225,10 +1226,7 @@ void ChainComposer::runAnalysis()
       set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
       ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
       ats2dot(fName.str(), "ATS", startStates, endStates);
-      /*ostringstream dotStr;
-      ats2dot(dotStr, "ATS", startStates, endStates);
-      dbglog::graph::genGraph(dotStr.str());*/
-      //ats2dot_bw(fName.str()+".BW", "ATS", startState, endStates);
+      ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
     }
     
     cout << "ChainComposer Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("") << endl;
@@ -1265,13 +1263,11 @@ void ChainComposer::runAnalysis()
 
   if(lastAnalysis && composerDebugLevel>=1) {
     set<PartPtr> startStates = GetStartAStates(lastAnalysis);
+dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
     set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
     ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
     ats2dot(fName.str(), "ATS", startStates, endStates);
-    /*ostringstream dotStr;
-    ats2dot(dotStr, "ATS", startStates, endStates);
-    dbglog::graph::genGraph(dotStr.str());*/
-    //ats2dot_bw(fName.str()+".BW", "ATS", startState, endStates);
+    ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
   }
   
   if(testAnalysis) {

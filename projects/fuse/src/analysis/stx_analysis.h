@@ -31,7 +31,9 @@ class SyntacticAnalysis : virtual public UndirDataflow
   static boost::shared_ptr<SyntacticAnalysis> _instance;
 
   public:
-  SyntacticAnalysis() {}
+  SyntacticAnalysis() {
+    initGlobalDeclarations();
+  }
   static SyntacticAnalysis* instance();
   
   // Returns a shared pointer to a freshly-allocated copy of this ComposedAnalysis object
@@ -57,14 +59,27 @@ class SyntacticAnalysis : virtual public UndirDataflow
   static CodeLocObjectPtr Expr2CodeLocStatic(SgNode* e, PartEdgePtr pedge);
   bool implementsExpr2CodeLoc() { return true; }
   
-  // Return the anchor Parts of a given function
+  // Detects declarations of global variables, stores them in globalDeclarations
+  static std::set<SgVariableDeclaration*> globalDeclarations;
+  void initGlobalDeclarations();
+  
+  // Return the starting Parts of the application
   std::set<PartPtr> GetStartAStates_Spec();
+  
+  // Adds the entry points into all the non-static functions (can be called from the outside) to 
+  // the given set
+  template <class ArgPartPtr>
+  static void addFunctionEntries(std::set<ArgPartPtr>& states, SyntacticAnalysis* analysis);
+  
+  // Return the ending Parts of the application
   std::set<PartPtr> GetEndAStates_Spec();
+  
+  
   
   // pretty print for the object
   std::string str(std::string indent="")
   { return "SyntacticAnalysis"; }
-};
+}; // SyntacticAnalysis
 
 /**********************
  ***** PARTITIONS *****
@@ -120,6 +135,8 @@ class StxPart : public Part
   StxPart(const StxPartPtr& part, bool (*f) (CFGNode) = defaultFilter): Part((const Part&)part), n(part->n), filter (f) {}
   
   private:
+  // Returns a shared pointer to this of type StxPartPtr
+  StxPartPtr get_shared_this();
   
   std::map<StxPartEdgePtr, bool> getOutEdges();
   
