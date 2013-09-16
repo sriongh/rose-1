@@ -95,11 +95,8 @@ FUSE_TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
 
 # for .C files
 FUSE_C_TESTS = \
-	compositionalTestInput1.C \
 	compositionalTestInput1b.C \
-	compositionalTestInput2.C \
 	compositionalTestInput2b.C \
-	compositionalTestInput3.C \
 	compositionalTestInput4.C \
 	compositionalTestInput5.C \
 	compositionalTestInput5b.C \
@@ -108,20 +105,20 @@ FUSE_C_TESTS = \
 	compositionalTestInput.jisheng.C \
 	cp_test1.C 
 
+#SA (9/13/2013): moving these tests to expensive as they take long time
+# if these tests complete within 5 mins we can move them to regular checks
+FUSE_C_EXPENSIVE_TESTS = \
+	compositionalTestInput1.C \
+	compositionalTestInput2.C \
+	compositionalTestInput3.C
+
 # for .cpp files
 FUSE_CPP_TESTS = \
 	simplePtrTest.cpp \
 	sas13Fig1Example.cpp
 
-#FUSE_C_CHECKS = ${FUSE_C_TESTS:.C=.C-o}
-#FUSE_CPP_CHECKS = ${FUSE_CPP_TESTS:.cpp=.cpp-o}
-#$(FUSE_C_CHECKS): fuse $(FUSE_TESTS_DIR)/$(@:.C=.C-o)
-#	./fuse -c --edg:no_warnings $(@:.C-o=.C)
-
-#$(FUSE_CPP_CHECKS):fuse $(FUSE_TESTS_DIR)/$(@:.cpp=.cpp-o)
-#	./fuse -c --edg:no_warnings $(@:.cpp-o=.cpp)
-
 FUSE_C_CHECKS = $(addprefix fuse_C_, $(addsuffix .passed, $(FUSE_C_TESTS)))
+FUSE_C_EXPENSIVE_CHECKS = $(addprefix fuse_C_EXP_, $(addsuffix .passed, $(FUSE_C_EXPENSIVE_TESTS)))
 FUSE_CPP_CHECKS = $(addprefix fuse_cpp_, $(addsuffix .passed, $(FUSE_CPP_TESTS)))
 
 TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
@@ -132,12 +129,16 @@ FUSE = ./fuse
 $(FUSE_C_CHECKS): fuse_C_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
 
+$(FUSE_C_EXPENSIVE_CHECKS): fuse_C_EXP_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
 $(FUSE_CPP_CHECKS): fuse_cpp_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
 
 
-.PHONY: check-fuse
+.PHONY: check-fuse check-fuse-expensive
 check-fuse: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
+check-fuse-expensive: $(FUSE_C_EXPENSIVE_CHECKS)
 
 CXX_TESTDIR = $(top_srcdir)/tests/CompileTests/Cxx_tests
 
@@ -241,8 +242,11 @@ CXX_TESTS_REQUIRED_TO_PASS = \
         test2007_159.C test2007_164.C test2007_170.C test2007_171.C test2007_40.C               \
         test2007_44.C test2007_94.C test2008_16.C test2009_11.C test2009_31.C \
         test2009_42.C test2010_03.C test2010_04.C test2010_05.C test2010_06.C test2010_19.C  \
-        test2011_101.C test2011_110.C test2011_133.C test2011_39.C test2011_72.C                \
+        test2011_101.C test2011_110.C test2011_39.C test2011_72.C                \
         test2011_99.C test2005_114.C
+
+#SA: 9/15/13 currently takes > 5 mins to finish
+CXX_TESTS_EXPENSIVE = test2011_133.C
 
 # Currently do not support varargs (e.g. printf)
 CXX_TESTS_FAILING_VARARGS = test2001_29.C test2003_15.C test2004_11.C test2004_14.C test2004_19.C test2004_32.C test2005_02.C test2005_165.C test2005_50.C test2005_57.C test2006_111.C test2006_88.C test2006_91.C test2007_26.C test2007_28.C test2008_08.C test2009_37.C test_int_lexemes_donot_pass.C test_int_lexemes.C test2006_104.C  test2006_105.C test2006_107.C test2006_108.C test_simple_int.C  test_wchars.C test2008_05.C
@@ -301,10 +305,24 @@ CXX_FUSE_TESTS = $(addprefix cxx_, $(addsuffix .passed, $(CXX_TESTS_REQUIRED_TO_
 $(CXX_FUSE_TESTS): cxx_%.passed: $(CXX_TESTDIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 	@$(RTH_RUN) CMD="./fuse -fuse:\"lc(cp)\" -I$(CXX_TESTDIR) -c $<" $(TEST_EXIT_STATUS) $@
 
-.PHONY: check-cxx
-check-cxx: $(CXX_FUSE_TESTS)
+CXX_FUSE_EXPENSIVE_TESTS = $(addprefix cxx_exp_, $(addsuffix .passed, $(CXX_TESTS_EXPENSIVE)))
+$(CXX_FUSE_EXPENSIVE_TESTS): cxx_exp_%.passed: $(CXX_TESTDIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse -fuse:\"lc(cp)\" -I$(CXX_TESTDIR) -c $<" $(TEST_EXIT_STATUS) $@
 
+.PHONY: check-cxx check-cxx-expensive
+check-cxx: $(CXX_FUSE_TESTS)
+check-cxx-expensive: $(CXX_FUSE_EXPENSIVE_TESTS)
+
+check-expensive: check-fuse-expensive check-cxx-expensive
 check-local: check-fuse check-cxx
 
-clean-local:
-	rm -rf *.dot *.png dbg/ *.passed *.failed *.out *.err
+clean-check:
+	rm -f *.passed *.failed *.out *.err
+
+clean-debug:
+	rm -rf *.dot *.png dbg/
+
+clean-fuse:
+	rm -rf fuse fuse-*.o
+
+clean-local: clean-fuse clean-check clean-debug
