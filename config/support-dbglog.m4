@@ -32,5 +32,42 @@ AC_DEFUN([ROSE_SUPPORT_DBGLOG],
     DBGLOG_LIBRARY_PATH=
   fi
 
+  if test "x$DBGLOG_INSTALL_PATH" != "x"; then
+    dbglog_include_path=-I"$DBGLOG_INSTALL_PATH"
+    dbglog_libs_path=-L"$DBGLOG_INSTALL_PATH"
+    dbglog_libs=-ldbglog
+  else
+    dbglog_include_path=
+    dbglog_libs_path=
+    dbglog_libs=
+  fi
+  
+  ROSE_WITH_DBGLOG_CPPFLAGS="$dbglog_include_path $dbglog_libs_path"
+  ROSE_WITH_DBGLOG_LDFLAGS="$dbglog_libs"
+
+   AC_MSG_RESULT([$ROSE_WITH_DBGLOG_CPPFLAGS])
+
+  if test "x$ROSE_WITH_DBGLOG_CPPFLAGS" != "x"; then
+    OLD_CPPFLAGS=$CPPFLAGS
+    OLD_LIBS=$LIBS
+    CPPFLAGS="$OLD_CPPFLAGS $ROSE_WITH_DBGLOG_CPPFLAGS"
+    LIBS=$ROSE_WITH_DBGLOG_LDFLAGS
+    AC_TRY_LINK([#include <dbglog.h>],
+                          [dbg << "hello\n";],
+                          [ 
+                              have_dbglog=yes
+                              AC_MSG_NOTICE([dbglog library found])],
+                          [
+                              ROSE_MSG_ERROR([cannot detect dbglog library])
+                              ROSE_WITH_DBGLOG_CPPFLAGS=""
+                              ROSE_WITH_DBGLOG_LDFLAGS=""
+                              have_dbglog=])
+  fi
+
+  LIBS=$OLD_LIBS
+  CPPFLAGS=$OLD_CPPFLAGS
+
+  #AC_MSG_RESULT([$ROSE_WITH_DBGLOG_LDFLAGS])
+
   AM_CONDITIONAL(ROSE_WITH_DBGLOG, [test "x$DBGLOG_INSTALL_PATH" != "xno"])
 ])
