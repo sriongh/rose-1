@@ -42,18 +42,20 @@ AC_DEFUN([ROSE_SUPPORT_DBGLOG],
     dbglog_libs=
   fi
   
-  ROSE_WITH_DBGLOG_CPPFLAGS="$dbglog_include_path $dbglog_libs_path"
-  ROSE_WITH_DBGLOG_LDFLAGS="$dbglog_libs"
-
-   AC_MSG_RESULT([$ROSE_WITH_DBGLOG_CPPFLAGS])
-
-  if test "x$ROSE_WITH_DBGLOG_CPPFLAGS" != "x"; then
+  if test "x$DBGLOG_INSTALL_PATH" != "x"; then
+    ROSE_WITH_DBGLOG_CPPFLAGS="$dbglog_include_path $dbglog_libs_path"
+    ROSE_WITH_DBGLOG_LDFLAGS="$dbglog_libs"
+    #AC_MSG_RESULT([$ROSE_WITH_DBGLOG_CPPFLAGS])
     OLD_CPPFLAGS=$CPPFLAGS
     OLD_LIBS=$LIBS
     CPPFLAGS="$OLD_CPPFLAGS $ROSE_WITH_DBGLOG_CPPFLAGS"
     LIBS=$ROSE_WITH_DBGLOG_LDFLAGS
+    AC_LANG(C++)
+    dnl SA 10/6/2013
+    dnl AC_TRY_LINK is deprecated ??
+    dnl if so should consider using AC_LINK_IFELSE instead
     AC_TRY_LINK([#include <dbglog.h>],
-                          [dbg << "hello\n";],
+                          [dbglog::dbg << "hello\n";],
                           [ 
                               have_dbglog=yes
                               AC_MSG_NOTICE([dbglog library found])],
@@ -67,7 +69,7 @@ AC_DEFUN([ROSE_SUPPORT_DBGLOG],
   LIBS=$OLD_LIBS
   CPPFLAGS=$OLD_CPPFLAGS
 
-  #AC_MSG_RESULT([$ROSE_WITH_DBGLOG_LDFLAGS])
-
+  AC_SUBST(ROSE_WITH_DBGLOG_CPPFLAGS)
+  AC_SUBST(ROSE_WITH_DBGLOG_LDFLAGS)
   AM_CONDITIONAL(ROSE_WITH_DBGLOG, [test "x$DBGLOG_INSTALL_PATH" != "xno"])
 ])
