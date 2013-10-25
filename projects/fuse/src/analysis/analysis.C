@@ -32,7 +32,7 @@ using namespace dbglog;
 namespace fuse {
   
 //int analysisDebugLevel=1;
-DEBUG_LEVEL(analysisDebugLevel, 1);
+DEBUG_LEVEL(analysisDebugLevel, 0);
 
 /****************
  *** Analysis ***

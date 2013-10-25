@@ -90,6 +90,9 @@ class DFTransferVisitor : public ROSE_VisitorPatternDefaultBase
                          std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo)
     : part(p), cn(cn), nodeState(s), dfInfo(dfInfo)
   { }
+  
+  PartPtr getPart() const { return part; }
+  CFGNode getCFGNode() const { return cn; }
 
   virtual bool finish() = 0;
   virtual ~DFTransferVisitor() { }

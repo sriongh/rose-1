@@ -79,7 +79,8 @@ namespace fuse
     
     // functions called by composer
     MemLocObjectPtr Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge);
-
+    bool implementsExpr2MemLoc   () { return false; }
+    implTightness Expr2MemLocTightness()    { return loose; }
     std::string str(std::string indent); 
 
     friend class PointsToAnalysisTransfer;

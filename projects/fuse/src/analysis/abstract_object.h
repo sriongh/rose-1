@@ -53,15 +53,18 @@ class Composer;
 class AbstractObject;
 typedef boost::shared_ptr<AbstractObject> AbstractObjectPtr;
 
-class MemLocObject;
 class CodeLocObject;
 class ValueObject;
+class MemLocObject;
+class MemRegionObject;
 
 class AbstractObject : public dbglog::printable, public boost::enable_shared_from_this<AbstractObject>
 {
   SgNode* base;
   
   public:
+  typedef enum {Value, CodeLoc, MemRegion, MemLoc} AOType;
+  
   AbstractObject() {}
   AbstractObject(SgNode* base) : base(base) {}
   AbstractObject(const AbstractObject& that) : base(that.base) {}
@@ -74,34 +77,35 @@ class AbstractObject : public dbglog::printable, public boost::enable_shared_fro
   
   // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
   // classes to save the cost of a dynamic cast.
+  virtual bool isValueObject();
+  virtual bool isCodeLocObject();
   virtual bool isMemRegionObject();
   virtual bool isMemLocObject();
-  virtual bool isCodeLocObject();
-  virtual bool isValueObject();
+  virtual AOType getAOType()=0;
   
   // Returns whether this object may/must be equal to o within the given Part p
   virtual bool mayEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   virtual bool mustEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   
   // Simple equality test that just checks whether the two objects correspond to the same expression
-  bool mustEqualExpr(AbstractObjectPtr o, PartEdgePtr pedge);
+  //bool mustEqualExpr(AbstractObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  virtual bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge)=0;
+  //virtual bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge)=0;
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  virtual bool subSet(AbstractObjectPtr o, PartEdgePtr pedge)=0;
+  //virtual bool subSet(AbstractObjectPtr o, PartEdgePtr pedge)=0;
   
   // General versions of equalSet() that accounts for framework details before routing the call to the 
   // derived class' equalSet() check. Specifically, it routes the call through the composer to make 
   // sure the equalSet() call gets the right PartEdge.
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  virtual bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   
   // General versions of subSet() that accounts for framework details before routing the call to the 
   // derived class' subSet() check. Specifically, it routes the call through the composer to make 
   // sure the subSet() call gets the right PartEdge.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  virtual bool subSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   
   // Returns true if this object is live at the given part and false otherwise
   virtual bool isLive(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
@@ -110,16 +114,16 @@ class AbstractObject : public dbglog::printable, public boost::enable_shared_fro
   // returns true if this causes this to change and false otherwise
   virtual bool meetUpdate(AbstractObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   
-  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  virtual bool isFull(PartEdgePtr pedge)=0;
+  /*// Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  virtual bool isFullCL(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  virtual bool isEmpty(PartEdgePtr pedge)=0;
+  virtual bool isEmptyCL(PartEdgePtr pedge);*/
   
   // General versions of isFull() and isEmpty that account for framework details before routing the call to the 
   // derived class' isFull() and isEmpty()  check. Specifically, it routes the call through the composer to make 
   // sure the isFullML() and isEmptyML() call gets the right PartEdge.
-  bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
-  bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  virtual bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
+  virtual bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL)=0;
   
   // Allocates a copy of this object and returns a pointer to it
   virtual AbstractObjectPtr copyAO() const=0;
@@ -145,28 +149,50 @@ typedef boost::shared_ptr<CodeLocObject> CodeLocObjectPtr;
 //typedef boost::shared_ptr<const CodeLocObject> ConstCodeLocObjectPtr;
 extern CodeLocObjectPtr NULLCodeLocObject;
 
+// CodeLocs denote specific locations in the application code, as a part in the server-
+// provided ATS graph and a CFGNode within it
 class CodeLocObject : public AbstractObject
-{ 
+{
+  protected:
+  // Denote a specific CFGNode in a specific part. 
+  // If part==NULLPart, it denotes all Parts in the ATS graph.
+  // If cfgNode.getNode()==NULL it denotes all CFGNodes in a part; 
+  //         if part=NULLPart, it denotes all CFGNodes in the application.
+  // NOTE: Instead of using NULL to denote sets we can also explicitly enumerate set members
+  //       since there is a finite number of ATS graph nodes and CFGNodes. We'll need to 
+  //       evaluate whether this approach is cost-effective.
+  PartPtr part;
+  CFGNode cfgNode;
+  
   public:
-  CodeLocObject() {}
-  CodeLocObject(SgNode* base) : AbstractObject(base) {}
-  CodeLocObject(const CodeLocObject& that) : AbstractObject(that) {}
+  //CodeLocObject(SgNode* base) : AbstractObject(base) {}
+  CodeLocObject(SgNode* base) : AbstractObject(base) { assert(0); }
+  CodeLocObject(PartPtr part, CFGNode cfgNode) : AbstractObject(NULL), part(part), cfgNode(cfgNode) {
+    // If part denotes all parts in the ATS graph, set cfgNode to denote all CFGNodes
+    if(part==NULLPart) this->cfgNode = CFGNode();
+    // Otherwise, use the provided cfgNode
+    else               this->cfgNode = cfgNode;
+  }
+  CodeLocObject(const CodeLocObject& that) : AbstractObject(that), part(that.part), cfgNode(that.cfgNode) {}
   
   // Wrapper for shared_from_this that returns an instance of this class rather than its parent
   CodeLocObjectPtr shared_from_this() { return boost::static_pointer_cast<CodeLocObject>(AbstractObject::shared_from_this()); }
   
   // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
   // classes to save the cost of a dynamic cast.
+  bool isValueObject()      { return false; }
+  bool isCodeLocObject()    { return true; }
   bool isMemRegionObject()  { return false;  }
   bool isMemLocObject()     { return false; }
-  bool isCodeLocObject()    { return true; }
-  bool isValueObject()      { return false; }
+  AOType getAOType() { return AbstractObject::CodeLoc; }
   
-//private:
+  PartPtr getPart()    const { return part; }
+  CFGNode getCFGNode() const { return cfgNode; }
+  
   // Returns whether this object may/must be equal to o within the given Part p
   // These methods are called by composers and should not be called by analyses.
-  virtual bool mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge)=0;
-  virtual bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge)=0;
+  virtual bool mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  virtual bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
   
 public:
   // General version of mayEqual and mustEqual that implements may/must equality with respect to ExprObj
@@ -178,10 +204,28 @@ public:
   bool mayEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool mustEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+public:
+  // General version of equalSet and subSet that implements may/must equality with respect to ExprObj
+  // and uses the derived class' may/mustEqual check for all the other cases
+  // GREG: Currently nothing interesting here since we don't support ExprObjs for CodeLocObjects
+  bool equalSet(CodeLocObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet(CodeLocObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
 //private:
   // Returns true if this object is live at the given part and false otherwise.
   // This method is called by composers and should not be called by analyses.
-  virtual bool isLiveCL(PartEdgePtr pedge)=0;
+  virtual bool isLiveCL(PartEdgePtr pedge);
   
 public:
   // General version of isLive that accounts for framework details before routing the call to the derived class' 
@@ -191,7 +235,7 @@ public:
   
   // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
-  virtual bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge)=0;
+  virtual bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
   
   // General version of meetUpdate that accounts for framework details before routing the call to the derived class' 
   // meetUpdateCL check. Specifically, it routes the call through the composer to make sure the meetUpdateCL 
@@ -199,38 +243,28 @@ public:
   bool meetUpdate(CodeLocObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool meetUpdate(AbstractObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  virtual bool isFullCL(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  virtual bool isEmptyCL(PartEdgePtr pedge);
+    
+  // General versions of isFull() and isEmpty that account for framework details before routing the call to the 
+  // derived class' isFull() and isEmpty()  check. Specifically, it routes the call through the composer to make 
+  // sure the isFullML() and isEmptyML() call gets the right PartEdge.
+  // These functions are just aliases for the real implementations in AbstractObject
+  bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  
   // Allocates a copy of this object and returns a pointer to it
-  virtual CodeLocObjectPtr copyCL() const=0;
+  virtual CodeLocObjectPtr copyCL() const;
+  
+  // Allocates a copy of this object and returns a regular pointer to it
+  virtual CodeLocObject* copyCLPtr() const;
+  
   AbstractObjectPtr copyAO() const
   { return copyCL(); }
-};
-
-// Holds a pair of CodeLocObjectPtr (one for the expression object and another for the object in memory) and provides 
-// basic functionality to accessing them easily
-class CodeLocObjectPtrPair : public dbglog::printable
-{
-public:
-  CodeLocObjectPtr expr;
-  CodeLocObjectPtr mem;
-  CodeLocObjectPtrPair(CodeLocObjectPtr expr, CodeLocObjectPtr mem): expr(expr), mem(mem)
-  {}
   
-  CodeLocObjectPtrPair(const CodeLocObjectPtrPair& that): expr(that.expr), mem(that.mem)
-  {}
-  
-  // Returns whether this object may/must be equal to o within the given Part p
-  bool mayEqual(CodeLocObjectPtrPair that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
-  bool mustEqual(CodeLocObjectPtrPair that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
-  
-  // Returns a copy of this object
-  CodeLocObjectPtrPair copyCL() const;
-  
-  // pretty print for the object
-  std::string str(std::string indent="");
-  
-  // Variant of the str method that can produce information specific to the current Part.
-  // Useful since AbstractObjects can change from one Part to another.
-  std::string strp(PartEdgePtr pedge, std::string indent="");
+  virtual std::string str(std::string indent=""); // pretty print for the object
 };
 
 // The combination of multiple CodeLocObjects. Maintains multiple CodeLocObjects and responds to
@@ -246,8 +280,10 @@ class CombinedCodeLocObject: public CodeLocObject
   public:
   std::list<CodeLocObjectPtr> codeLocs;
   
-  CombinedCodeLocObject(CodeLocObjectPtr codeLoc);
-  CombinedCodeLocObject(const std::list<CodeLocObjectPtr>& codeLocs);
+  CombinedCodeLocObject(CodeLocObjectPtr codeLoc) : CodeLocObject(NULL) { codeLocs.push_back(codeLoc); }
+  CombinedCodeLocObject(const std::list<CodeLocObjectPtr>& codeLocs) : CodeLocObject(NULL), codeLocs(codeLocs) {}
+  
+  const std::list<CodeLocObjectPtr>& getCodeLocs() const { return codeLocs; }
   
   void add(CodeLocObjectPtr codeLoc);
   
@@ -257,11 +293,11 @@ class CombinedCodeLocObject: public CodeLocObject
   bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
   
   // Returns true if this object is live at the given part and false otherwise
   bool isLiveCL(PartEdgePtr pedge);
@@ -271,9 +307,9 @@ class CombinedCodeLocObject: public CodeLocObject
   bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullCL(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyCL(PartEdgePtr pedge);
   
   // Allocates a copy of this object and returns a pointer to it
   CodeLocObjectPtr copyCL() const;
@@ -301,6 +337,11 @@ extern ValueObjectPtr NULLValueObject;
 
 class ValueObject : public AbstractObject
 { 
+  std::map<ValueObjectPtr, bool> mayEqualCache;
+  std::map<ValueObjectPtr, bool> mustEqualCache;
+  std::map<ValueObjectPtr, bool> equalSetCache;
+  std::map<ValueObjectPtr, bool> subSetCache;
+  
   public:
   ValueObject() {}
   ValueObject(SgNode* base) : AbstractObject(base) {}
@@ -311,10 +352,11 @@ class ValueObject : public AbstractObject
   
   // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
   // classes to save the cost of a dynamic cast.
+  bool isValueObject()     { return true; }
+  bool isCodeLocObject()   { return false; }
   bool isMemRegionObject() { return false;  }
   bool isMemLocObject()    { return false; }
-  bool isCodeLocObject()   { return false; }
-  bool isValueObject()     { return true; }
+  AOType getAOType() { return AbstractObject::CodeLoc; }
   
 //private:
   // Returns whether this object may/must be equal to o within the given Part p
@@ -331,6 +373,24 @@ public:
   
   bool mayEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool mustEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool equalSetV(ValueObjectPtr o, PartEdgePtr pedge)=0;
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool subSetV(ValueObjectPtr o, PartEdgePtr pedge)=0;
+  
+public:
+  // General version of mayEqual and mustEqual that implements may/must equality with respect to ExprObj
+  // and uses the derived class' may/mustEqual check for all the other cases
+  // GREG: Currently nothing interesting here since we don't support ExprObjs for ValueObjects
+  bool equalSet(ValueObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet(ValueObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
 //private:
   // Returns true if this object is live at the given part and false otherwise.
@@ -352,6 +412,17 @@ public:
   // call gets the right PartEdge
   bool meetUpdate(ValueObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool meetUpdate(AbstractObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  virtual bool isEmptyV(PartEdgePtr pedge)=0;
+  // Returns whether this AbstractObject denotes the empty set.
+  virtual bool isFullV(PartEdgePtr pedge)=0;
+  
+  // General version of isFull/isEmpty that accounts for framework details before routing the call to the 
+  // derived class' isFullV/isEmptyV check. Specifically, it routes the call through the composer to make 
+  // sure the isFullV/isEmptyV call gets the right PartEdge
+  bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
   // Returns true if this ValueObject corresponds to a concrete value that is statically-known
   virtual bool isConcrete()=0;
@@ -378,6 +449,47 @@ public:
   AbstractObjectPtr copyAO() const;
 };
 
+// The default implementation of ValueObjects that denotes the set of all ValueObjects
+class UnknownValueObject : public ValueObject
+{
+  public:
+  UnknownValueObject() {}
+  
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullV(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyV(PartEdgePtr pedge);
+  
+  // Returns true if this ValueObject corresponds to a concrete value that is statically-known
+  bool isConcrete();
+  // Returns the type of the concrete value (if there is one)
+  SgType* getConcreteType();
+  // Returns the concrete value (if there is one) as an SgValueExp, which allows callers to use
+  // the normal ROSE mechanisms to decode it
+  std::set<boost::shared_ptr<SgValueExp> > getConcreteValue();
+  
+  // Allocates a copy of this object and returns a pointer to it
+  ValueObjectPtr copyV() const;
+  
+  std::string str(std::string indent="");
+};
+
 // The combination of multiple ValueObjects. Maintains multiple ValueObjects and responds to
 //   API calls with the most or least accurate response that its constituent objects return, depending
 //   on the value of the template parameter defaultMayEq (the default value that mayEqual would return
@@ -388,11 +500,17 @@ public:
 template <bool defaultMayEq>
 class CombinedValueObject : public ValueObject
 {
-  public:
   std::list<ValueObjectPtr> vals;
   
-  CombinedValueObject(ValueObjectPtr val);
-  CombinedValueObject(const std::list<ValueObjectPtr>& vals);
+  public:
+  CombinedValueObject(ValueObjectPtr val): ValueObject(NULL) { vals.push_back(val); }
+  CombinedValueObject(const std::list<ValueObjectPtr>& vals): ValueObject(NULL), vals(vals) {}
+  
+  const std::list<ValueObjectPtr>& getVals() const { return vals; }
+  
+  // Creates a new CombinedValueObject. Template instantiation is used to ensure that instances of
+  // CombinedalueObjectV<true> and CombinedValueObjeVctV<false> get instantiated
+  //static boost::shared_ptr<CombinedValueObject<defaultMayEq> > create(const std::list<ValueObjectPtr>& vals);
   
   void add(ValueObjectPtr val);
   
@@ -402,20 +520,20 @@ class CombinedValueObject : public ValueObject
   bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool equalSetV(ValueObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool subSetV(ValueObjectPtr o, PartEdgePtr pedge);
   
   // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullV(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyV(PartEdgePtr pedge);
   
   // Returns true if this ValueObject corresponds to a concrete value that is statically-known
   bool isConcrete();
@@ -461,6 +579,11 @@ extern MemRegionObjectPtr NULLMemRegionObject;
 
 class MemRegionObject : public AbstractObject
 { 
+  std::map<MemRegionObjectPtr, bool> mayEqualCache;
+  std::map<MemRegionObjectPtr, bool> mustEqualCache;
+  std::map<MemRegionObjectPtr, bool> equalSetCache;
+  std::map<MemRegionObjectPtr, bool> subSetCache;
+  
 public:
 //  MemRegionObject() {}
   //# SA
@@ -473,10 +596,11 @@ public:
   
   // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
   // classes to save the cost of a dynamic cast.
+  bool isValueObject()      { return false; }
+  bool isCodeLocObject()    { return false; }
   bool isMemRegionObject()  { return true;  }
   bool isMemLocObject()     { return false; }
-  bool isCodeLocObject()    { return false; }
-  bool isValueObject()      { return false; }
+  AOType getAOType() { return AbstractObject::MemRegion; }
   
 //private:
   // Returns whether this object may/must be equal to o within the given Part p
@@ -495,15 +619,35 @@ public:
   bool mayEqual (AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool mustEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+//private:
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge)=0;
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge)=0;
+  
+public:
+  // General version of equalSet and subSet that implements may/must equality with respect to ExprObj
+  // and uses the derived class' may/mustEqual check for all the other cases
+  // GREG: Currently nothing interesting here since we don't support ExprObjs for MemoryRegionObjects
+  bool equalSet(MemRegionObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet  (MemRegionObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool subSet  (AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
   // Returns true if this object is live at the given part and false otherwise
   virtual bool isLiveMR(PartEdgePtr pedge)=0;
 public:
-  MemRegionObjectPtr getThis();
+  //MemRegionObjectPtr getThis();
   // General version of isLive that accounts for framework details before routing the call to the derived class' 
   // isLiveMR check. Specifically, it routes the call through the composer to make sure the isLiveML call gets the 
   // right PartEdge
   bool isLive(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+// private:
   // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   virtual bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge)=0;
@@ -514,8 +658,19 @@ public:
   bool meetUpdate(MemRegionObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool meetUpdate(AbstractObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  virtual bool isEmptyMR(PartEdgePtr pedge)=0;
+  // Returns whether this AbstractObject denotes the empty set.
+  virtual bool isFullMR(PartEdgePtr pedge)=0;
+  
+  // General version of isFull/isEmpty that accounts for framework details before routing the call to the 
+  // derived class' isFullMR/isEmptyMR check. Specifically, it routes the call through the composer to make 
+  // sure the isFullMR/isEmptyMR call gets the right PartEdge
+  bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
   // Returns a ValueObject that denotes the size of this memory region
-  virtual ValueObjectPtr getRegionSize() const=0;
+  virtual ValueObjectPtr getRegionSize(PartEdgePtr pedge) const=0;
     
   // Allocates a copy of this object and returns a pointer to it
   virtual MemRegionObjectPtr copyMR() const=0;
@@ -528,18 +683,18 @@ class FuncResultMemRegionObject : public MemRegionObject
 {
   Function func;
   public:
-  FuncResultMemRegionObject(Function func) : MemRegionObject(NULL), func(func) {}
+  FuncResultMemRegionObject(Function func);
   
   // Returns whether this object may/must be equal to o within the given Part p
   bool mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Returns true if this object is live at the given part and false otherwise.
   // This method is called by composers and should not be called by analyses.
@@ -550,16 +705,19 @@ class FuncResultMemRegionObject : public MemRegionObject
   bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullMR(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyMR(PartEdgePtr pedge);
+  
+  // Returns a ValueObject that denotes the size of this memory region
+  ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
   
   std::string str(std::string indent="") const { return "FuncResultMemRegionObject"; }
   std::string str(std::string indent="")       { return "FuncResultMemRegionObject"; }
   std::string strp(PartEdgePtr pedge, std::string indent="") { return "FuncResultMemRegionObject"; }
   
   // Allocates a copy of this object and returns a pointer to it
-  MemRegionObjectPtr copyML() const;
+  MemRegionObjectPtr copyMR() const;
 };
 typedef boost::shared_ptr<FuncResultMemRegionObject> FuncResultMemRegionObjectPtr;
 
@@ -573,19 +731,22 @@ typedef boost::shared_ptr<FuncResultMemRegionObject> FuncResultMemRegionObjectPt
 template <bool defaultMayEq>
 class CombinedMemRegionObject : public virtual MemRegionObject
 {
-  public:
   std::list<MemRegionObjectPtr> memRegions;
   
   public:
   CombinedMemRegionObject(MemRegionObjectPtr memReg) : MemRegionObject(NULL) {   memRegions.push_back(memReg); }
-  CombinedMemRegionObject(const std::list<MemRegionObjectPtr>& memRegions) : MemRegionObject(NULL), memLocs(memRegions) {}
+  CombinedMemRegionObject(const std::list<MemRegionObjectPtr>& memRegions) : MemRegionObject(NULL), memRegions(memRegions) {}
   
+  virtual ~CombinedMemRegionObject() {}
+  
+  const std::list<MemRegionObjectPtr>& getMemRegions() const { return memRegions; }
+
   public:
   // Creates a new CombinedMemRegionObject. If all the sub-objects have a given type (Scalar, FunctionMemLoc, 
   // LabeledAggregate, Array or Pointer), the created CombinedMemRegionObject has the same type. Otherwise, the
   // created CombinedMemRegionObject is an instance of the generic CombinedMemRegionObject class.
-  static boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > create(MemRegionObjectPtr memReg);
-  static boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > create(const std::list<MemRegionObjectPtr>& memRegions);
+  /*static boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > create(MemRegionObjectPtr memReg);
+  static boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > create(const std::list<MemRegionObjectPtr>& memRegions);*/
   
   void add(MemRegionObjectPtr memLoc);
   
@@ -594,11 +755,11 @@ class CombinedMemRegionObject : public virtual MemRegionObject
   bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
   
   // Allocates a copy of this object and returns a pointer to it
   MemRegionObjectPtr copyMR() const;
@@ -611,9 +772,12 @@ class CombinedMemRegionObject : public virtual MemRegionObject
   bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullMR(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyMR(PartEdgePtr pedge);
+  
+  // Returns a ValueObject that denotes the size of this memory region
+  ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
   
   std::string str(std::string indent="");
 };
@@ -648,30 +812,40 @@ extern MemLocObjectPtr NULLMemLocObject;
 
 class MemLocObject : public AbstractObject
 { 
+  protected:
   MemRegionObjectPtr region;
   ValueObjectPtr     index;
-public:
+  public:
 //  MemLocObject() {}
   //# SA
   // should the default mutable value be conservatively true ?
   MemLocObject(SgNode* base) : AbstractObject(base) {}
   MemLocObject(MemRegionObjectPtr region, ValueObjectPtr index, SgNode* base) : AbstractObject(base), region(region), index(index) {}
-  MemLocObject(const MemLocObject& that) : AbstractObject(that), region(that.region), index(that.index) {}
+  MemLocObject(const MemLocObject& that) : 
+    AbstractObject(that), 
+    region(that.region? that.region->copyMR(): that.region), 
+    index (that.index ? that.index->copyV()  : that.index) {}
 
   // Wrapper for shared_from_this that returns an instance of this class rather than its parent
   MemLocObjectPtr shared_from_this() { return boost::static_pointer_cast<MemLocObject>(AbstractObject::shared_from_this()); }
   
   // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
   // classes to save the cost of a dynamic cast.
+  bool isValueObject()      { return false; }
+  bool isCodeLocObject()    { return false; }
   bool isMemRegionObject()  { return false;  }
   bool isMemLocObject()     { return true;  }
-  bool isCodeLocObject()    { return false; }
-  bool isValueObject()      { return false; }
+  AOType getAOType() { return AbstractObject::MemLoc; }
   
   MemRegionObjectPtr getRegion() const { return region; }
   ValueObjectPtr     getIndex() const  { return index; }
   
-public:
+//private:
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  virtual bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
   // General version of mayEqual and mustEqual that accounts for framework details before routing the call to the 
   // derived class' may/mustEqual check. Specifically, it checks may/must equality with respect to ExprObj and routes
   // the call through the composer to make sure the may/mustEqual call gets the right PartEdge
@@ -682,62 +856,92 @@ public:
   bool mayEqual (AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool mustEqual(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   
+//private:
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  // These methods are called by composers and should not be called by analyses.
+  virtual bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSet(MemLocObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSet(MemLocObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+
+//private:
   // Returns true if this object is live at the given part and false otherwise
-  virtual bool isLiveML(PartEdgePtr pedge)=0;
+  virtual bool isLiveML(PartEdgePtr pedge);
 public:
-  MemLocObjectPtr getThis();
+  
   // General version of isLive that accounts for framework details before routing the call to the derived class' 
   // isLiveML check. Specifically, it routes the call through the composer to make sure the isLiveML call gets the 
   // right PartEdge
   bool isLive(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
- 
-   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
-  
-  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
-  // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+
+// private:
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  virtual bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
   
   // General version of meetUpdate that accounts for framework details before routing the call to the derived class' 
   // meetUpdateML check. Specifically, it routes the call through the composer to make sure the meetUpdateML 
   // call gets the right PartEdge
   bool meetUpdate(MemLocObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
   bool meetUpdate(AbstractObjectPtr that, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  virtual bool isFullML(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  virtual bool isEmptyML(PartEdgePtr pedge);
     
+  // General versions of isFull() and isEmpty that account for framework details before routing the call to the 
+  // derived class' isFull() and isEmpty()  check. Specifically, it routes the call through the composer to make 
+  // sure the isFullML() and isEmptyML() call gets the right PartEdge.
+  // These functions are just aliases for the real implementations in AbstractObject
+  bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+  bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis=NULL);
+
   // Allocates a copy of this object and returns a pointer to it
-  virtual MemLocObjectPtr copyML() const=0;
+  virtual MemLocObjectPtr copyML() const;
+  
+  // Allocates a copy of this object and returns a regular pointer to it
+  virtual MemLocObject* copyMLPtr() const;
+  
   AbstractObjectPtr copyAO() const
   { return copyML(); }
   
   // Returns true if the given expression denotes a memory location and false otherwise
   static bool isMemExpr(SgExpression* expr)
   { return isSgVarRefExp(expr) || isSgPntrArrRefExp(expr) || isSgPointerDerefExp(expr); }
-};
+  
+  virtual std::string str(std::string indent=""); // pretty print for the object
+}; // MemLocObject
 
-// Special MemLocObject used internally by the framework to associate with the return value of a function
+// Special MemLocObject used internally by the framework to associate with the return value of a function.
+// This is just a MemLoc dedicated to wrapping FuncResultMemLocRegion
 class FuncResultMemLocObject : public MemLocObject
 {
   public:
   FuncResultMemLocObject(Function func);
-  
-  // Returns true if this object is live at the given part and false otherwise.
-  // This method is called by composers and should not be called by analyses.
-  bool isLiveML(PartEdgePtr pedge) { return true; }
-  
-  // Computes the meet of this and that and saves the result in this
-  // returns true if this causes this to change and false otherwise
-  bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
-  
-  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
-  // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  FuncResultMemLocObject(const FuncResultMemLocObject& that);
   
   std::string str(std::string indent="") const { return "FuncResultMemLocObject"; }
   std::string str(std::string indent="")       { return "FuncResultMemLocObject"; }
   std::string strp(PartEdgePtr pedge, std::string indent="") { return "FuncResultMemLocObject"; }
   
-  // Allocates a copy of this object and returns a pointer to it
+  // Allocates a copy of this object and returns a shared pointer to it
   MemLocObjectPtr copyML() const;
 };
 typedef boost::shared_ptr<FuncResultMemLocObject> FuncResultMemLocObjectPtr;
@@ -759,12 +963,12 @@ class CombinedMemLocObject : public virtual MemLocObject
   CombinedMemLocObject(MemLocObjectPtr memLoc) : MemLocObject(NULL) {   memLocs.push_back(memLoc); }
   CombinedMemLocObject(const std::list<MemLocObjectPtr>& memLocs) : MemLocObject(NULL), memLocs(memLocs) {}
   
-  public:
-  // Creates a new CombinedMemLocObject. If all the sub-objects have a given type (Scalar, FunctionMemLoc, 
-  // LabeledAggregate, Array or Pointer), the created CombinedMemLocObject has the same type. Otherwise, the
-  // created CombinedMemLocObject is an instance of the generic CombinedMemLocObject class.
-  static boost::shared_ptr<CombinedMemLocObject<defaultMayEq> > create(MemLocObjectPtr memLoc);
-  static boost::shared_ptr<CombinedMemLocObject<defaultMayEq> > create(const std::list<MemLocObjectPtr>& memLocs);
+  const std::list<MemLocObjectPtr>& getMemLocs() const { return memLocs; }
+    
+  // Creates a new CombinedMemLocObject. Template instantiation is used to ensure that instances of
+  // CombinedMemLocObject<true> and CombinedMemLocObject<false> get instantiated
+  /*static boost::shared_ptr<CombinedMemLocObject<defaultMayEq> > create(MemLocObjectPtr memLoc);
+  static boost::shared_ptr<CombinedMemLocObject<defaultMayEq> > create(const std::list<MemLocObjectPtr>& memLocs);*/
   
   void add(MemLocObjectPtr memLoc);
   
@@ -773,11 +977,11 @@ class CombinedMemLocObject : public virtual MemLocObject
   bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
   
   // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
   // by the given abstract object.
-  bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+  bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
   
   // Allocates a copy of this object and returns a pointer to it
   MemLocObjectPtr copyML() const;
@@ -790,9 +994,9 @@ class CombinedMemLocObject : public virtual MemLocObject
   bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullML(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyML(PartEdgePtr pedge);
   
   std::string str(std::string indent="");
 };

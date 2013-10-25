@@ -7,7 +7,7 @@ using namespace std;
 using namespace dbglog;
 namespace fuse {
 //int liveDeadAnalysisDebugLevel=0;
-DEBUG_LEVEL(liveDeadAnalysisDebugLevel, 0);
+DEBUG_LEVEL(liveDeadAnalysisDebugLevel, 2);
 
 // ###############################
 // ##### LiveDeadMemAnalysis #####
@@ -795,13 +795,13 @@ bool LDMemLocObject::meetUpdateML(MemLocObjectPtr o, PartEdgePtr pedge)
 }
 
 // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-bool LDMemLocObject::isFull(PartEdgePtr pedge)
+bool LDMemLocObject::isFullML(PartEdgePtr pedge)
 {
   return parent->isFull(pedge, ldma->getComposer(), ldma);
 }
 
 // Returns whether this AbstractObject denotes the empty set.
-bool LDMemLocObject::isEmpty(PartEdgePtr pedge)
+bool LDMemLocObject::isEmptyML(PartEdgePtr pedge)
 {
   return parent->isEmpty(pedge, ldma->getComposer(), ldma);
 }

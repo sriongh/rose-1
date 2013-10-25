@@ -65,7 +65,7 @@ namespace fuse
   {
     AbstractObjectSetPtr _aos = boost::dynamic_pointer_cast<AbstractObjectSet> (productLattice->get(o));
     assert(_aos);
-    dbg << "getLattice(o): o=" << o->strp(part->inEdgeFromAny()) << ", lattice=" << _aos->strp(part->inEdgeFromAny()) << "\n";
+    if(ptaDebugLevel()>=1) dbg << "getLattice(o): o=" << o->strp(part->inEdgeFromAny()) << ", lattice=" << _aos->strp(part->inEdgeFromAny()) << "\n";
     return _aos;
   }
 

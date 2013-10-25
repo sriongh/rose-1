@@ -582,10 +582,11 @@ ComposedAnalysisSelfTester::ComposedAnalysisSelfTester(
    analysisToTestLP(analysisToTest), analysisToTestHP(analysisToTest->copy()), 
    precisionAnalyses(precisionAnalyses), stxAnalysis(stxAnalysis)
 {
-  assert(analysisToTestLP->implementsExpr2Val()     == analysisToTestHP->implementsExpr2Val());
-  assert(analysisToTestLP->implementsExpr2MemLoc()  == analysisToTestHP->implementsExpr2MemLoc());
-  assert(analysisToTestLP->implementsExpr2CodeLoc() == analysisToTestHP->implementsExpr2CodeLoc());
-  assert(analysisToTestLP->implementsPartGraph()    == analysisToTestHP->implementsPartGraph());
+  assert(analysisToTestLP->implementsExpr2Val()       == analysisToTestHP->implementsExpr2Val());
+  assert(analysisToTestLP->implementsExpr2CodeLoc()   == analysisToTestHP->implementsExpr2CodeLoc());
+  assert(analysisToTestLP->implementsExpr2MemLoc()    == analysisToTestHP->implementsExpr2MemLoc());
+  assert(analysisToTestLP->implementsExpr2MemRegion() == analysisToTestHP->implementsExpr2MemRegion());
+  assert(analysisToTestLP->implementsATSGraph()       == analysisToTestHP->implementsATSGraph());
 }
  
 // Creates a Composer that creates an Abstract Transition System using the analyses in precisionAnalyses
@@ -705,7 +706,7 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
       if(analysisToTestLP->implementsExpr2MemLoc()) {
         MemLocObjectPtr lpML = lowPrecision->Expr2MemLoc(expr, lpPEdge);
         MemLocObjectPtr hpML = highPrecision->Expr2MemLoc(expr, hpPEdge);
-        if(hpML->subSet(lpML, hpPEdge, highPrecision)) {
+        if(hpML->subSet(lpML, hpPEdge, highPrecision, NULL)) {
           scope reg("ERROR!", scope::medium);
           dbg << "lpPEdge="<<lpPEdge->str()<<endl;
           dbg << "hpPEdge="<<hpPEdge->str()<<endl;
@@ -740,10 +741,11 @@ bool ComposedAnalysisSelfTester::testAnalysis()
   lowPrecision->runAnalysis();
   }
   
-  assert(analysisToTestLP->implementsExpr2Val()     == analysisToTestHP->implementsExpr2Val());
-  assert(analysisToTestLP->implementsExpr2MemLoc()  == analysisToTestHP->implementsExpr2MemLoc());
-  assert(analysisToTestLP->implementsExpr2CodeLoc() == analysisToTestHP->implementsExpr2CodeLoc());
-  assert(analysisToTestLP->implementsPartGraph()    == analysisToTestHP->implementsPartGraph());
+  assert(analysisToTestLP->implementsExpr2Val()       == analysisToTestHP->implementsExpr2Val());
+  assert(analysisToTestLP->implementsExpr2CodeLoc()   == analysisToTestHP->implementsExpr2CodeLoc());
+  assert(analysisToTestLP->implementsExpr2MemRegion() == analysisToTestHP->implementsExpr2MemLoc());
+  assert(analysisToTestLP->implementsExpr2MemLoc()    == analysisToTestHP->implementsExpr2MemRegion());
+  assert(analysisToTestLP->implementsATSGraph()       == analysisToTestHP->implementsATSGraph());
   
   scope reg("testAnalysis", scope::medium);
   set<PartPtr> hpEntry = highPrecision->GetStartAStates_Spec();

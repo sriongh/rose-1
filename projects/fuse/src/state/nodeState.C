@@ -8,7 +8,7 @@ using namespace std;
 using namespace dbglog;
 namespace fuse {
 //int nodeStateDebugLevel=2;
-DEBUG_LEVEL(nodeStateDebugLevel, 1);
+DEBUG_LEVEL(nodeStateDebugLevel, 0);
 
 // Records that this analysis has initialized its state at this node
 void NodeState::initialized(Analysis* init)
@@ -386,10 +386,13 @@ bool NodeState::unionLatticeMaps(map<PartEdgePtr, vector<Lattice*> >& to,
     vector<Lattice*>::iterator       lTo;
     vector<Lattice*>::const_iterator lFrom;
     for(lTo=eTo->second.begin(), lFrom=eFrom->second.begin(); lTo!=eTo->second.end(); lTo++, lFrom++) {
-      if(nodeStateDebugLevel()>=2) dbg << "(*lTo)->finiteLattice()="<<(*lTo)->finiteLattice()<<endl;
-      if((*lTo)->finiteLattice())
+      if(nodeStateDebugLevel()>=1) {
+        dbg << "lTo="<<(*lTo? (*lTo)->str() : "NULL")<<endl;
+        dbg << "lFrom="<<(*lFrom? (*lFrom)->str() : "NULL")<<endl;
+      }
+      if((*lTo)->finiteLattice()) {
         modified = (*lTo)->meetUpdate(*lFrom) || modified;
-      else {
+      } else {
         InfiniteLattice* meetResult = dynamic_cast<InfiniteLattice*>((*lTo)->copy());
         meetResult->meetUpdate(*lFrom); 
         // Widen the resulting meet
@@ -768,7 +771,7 @@ string NodeState::str(Analysis* analysis, string indent)
     i=0;
     const vector<NodeFact*>& aFacts = facts.find(analysis)->second;
     for(vector<NodeFact*>::const_iterator fact=aFacts.begin(); fact!=aFacts.end(); fact++, i++)
-      oss << indent << "    Fact "<<i<<": "<<(*fact)->str(indent+"  ")<<"\n";
+      oss << indent << "    Fact "<<i<<": "<<(*fact? (*fact)->str(indent+"  ") : "NULL")<<"\n";
     oss << indent << "]";
   }
   
@@ -786,7 +789,8 @@ string NodeState::str(const map<PartEdgePtr, vector<Lattice*> >& dfInfo, string 
 
     int i=0;
     for(vector<Lattice*>::const_iterator l=e->second.begin(); l!=e->second.end(); l++, i++) {
-      oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;Lattice "<<i<<" = "<<(*l)<<"="<<(*l)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<"\n";
+      oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;Lattice "<<i<<" = "<<
+                      (*l? (*l)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") : "NULL")<<"\n";
     }
   }
   

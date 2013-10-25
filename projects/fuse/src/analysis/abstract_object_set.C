@@ -43,7 +43,7 @@ bool AbstractObjectSet::insert(AbstractObjectPtr that)
   
   // Having inserted the new item we need to clean up the map to ensure that it stays bounded in size
   // Step 1: call isEmpty to check for any keys mapped to empty sets
-  isEmpty();
+  isEmptyLat();
   // Step 2: if the map is larger than some fixed bound, merge some key->value mappings together
   // !!! TODO !!!
   
@@ -165,14 +165,15 @@ bool AbstractObjectSet::containsMay(const AbstractObjectPtr that)
 // Returns true if this set contains an AbstractObject that denotes the same set as that; false otherwise
 bool AbstractObjectSet::containsEqualSet(const AbstractObjectPtr that) 
 {
-  /*dbg << "AbstractObjectSet::containsEqualSet("<<that->str("")<<")"<<endl;
-  indent(1, 1);*/
+  if(AbstractObjectSetDebugLevel()>=1) dbg << "AbstractObjectSet::containsEqualSet("<<that->str("")<<")"<<endl;
   assert(that);
   bool retval = false;
   std::list<AbstractObjectPtr>::iterator it = items.begin();
   for( ; it != items.end(); it++) {
-    /*dbg << "it="<<(*it)->str()<<endl;
-    dbg << "equalSet="<<(*it)->equalSet(that, latPEdge, comp, analysis)<<endl;*/
+    if(AbstractObjectSetDebugLevel()>=1) {
+      dbg << "it="<<(*it)->str()<<endl;
+      dbg << "equalSet="<<(*it)->equalSet(that, latPEdge, comp, analysis)<<endl;
+    }
     if((*it)->equalSet(that, latPEdge, comp, analysis)) {
       retval = true;
       break;
@@ -211,13 +212,13 @@ bool AbstractObjectSet::setMLValueToFull(MemLocObjectPtr ml)
 }
 
 // Returns whether this lattice denotes the set of all possible execution prefixes.
-bool AbstractObjectSet::isFull()
+bool AbstractObjectSet::isFullLat()
 {
   return setIsFull;
 }
 
 // Returns whether this lattice denotes the empty set.
-bool AbstractObjectSet::isEmpty()
+bool AbstractObjectSet::isEmptyLat()
 {
   // Check if all items are empty
   for(std::list<AbstractObjectPtr>::iterator i=items.begin(); i!=items.end();) {
@@ -225,7 +226,7 @@ bool AbstractObjectSet::isEmpty()
     if(!(*i)->isEmpty(getPartEdge(), comp, analysis)) return false;
     
     // If this item is empty, remove it from the items list
-    dbg << "AbstractObjectSet::isEmpty() removing "<<(*i)->str()<<endl;
+    if(AbstractObjectSetDebugLevel()>=1) dbg << "AbstractObjectSet::isEmpty() removing "<<(*i)->str()<<endl;
     items.erase(i++);
   }
   // If all are empty, return true
@@ -348,8 +349,10 @@ Lattice* AbstractObjectSet::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
     for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++) {
       if(!m->from) continue;
       scope regM(txt() << "m="<<m->str(), scope::low, attrGE("AbstractObjectSetDebugLevel", 2));
-      dbg << "m->from->isLive = "<<m->from->isLive(fromPEdge, comp, analysis)<<endl;
-      dbg << "m->to->isLive = "<<(m->to? m->to->isLive(latPEdge, comp, analysis): -1)<<endl;
+      if(AbstractObjectSetDebugLevel()>=2) {
+        dbg << "m->from->isLive = "<<m->from->isLive(fromPEdge, comp, analysis)<<endl;
+        dbg << "m->to->isLive = "<<(m->to? m->to->isLive(latPEdge, comp, analysis): -1)<<endl;
+      }
       // If either the key or the value of this mapping is dead within its respective part, skip it
       if(!m->from->isLive(fromPEdge, comp, analysis) || (m->to && !m->to->isLive(latPEdge, comp, analysis))) continue;
       
