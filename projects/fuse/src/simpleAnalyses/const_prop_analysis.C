@@ -6,8 +6,10 @@
 #include <boost/make_shared.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/casts.hpp>
+
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 #include <cwchar>
 

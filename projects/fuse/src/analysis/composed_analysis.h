@@ -19,7 +19,7 @@ class NotImplementedException
 class ComposedAnalysis;
 typedef boost::shared_ptr<ComposedAnalysis> ComposedAnalysisPtr;
 
-class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
+class ComposedAnalysis : public virtual Dataflow, public sight::printable
 {
   public:
   Composer* composer;

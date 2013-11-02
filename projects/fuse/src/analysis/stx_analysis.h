@@ -332,7 +332,7 @@ typedef boost::shared_ptr<StxCodeLocObject> StxCodeLocObjectPtr;*/
 //
 
 // Root class for the three variants of StxMemRegionObjects
-class StxMemRegionType: public printable
+class StxMemRegionType: public sight::printable
 {
   public:
   

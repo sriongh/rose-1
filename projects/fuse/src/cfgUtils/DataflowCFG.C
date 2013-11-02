@@ -3,7 +3,7 @@
 #include "cfgUtils.h"
 #include <cassert>
 using namespace std;
-using namespace dbglog;
+
 
 #define SgNULL_FILE Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 

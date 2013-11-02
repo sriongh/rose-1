@@ -3,7 +3,8 @@
 #include "factor_trans_system.h"
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 namespace fuse {
 

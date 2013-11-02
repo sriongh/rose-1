@@ -13,12 +13,12 @@
 
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 //namespace bll = boost::lambda;
 
 namespace fuse {
 
-//int stxAnalysisDebugLevel=3;
 DEBUG_LEVEL(stxAnalysisDebugLevel, 0);
 
 /****************************************
@@ -722,7 +722,6 @@ list<PartEdgePtr> StxPart::outEdges() {
   ostringstream oss; 
   //dbg << "n=>"<<CFGNode2Str(n)<<endl;
   //scope reg(txt()<<"StxPart::outEdges() part="<<str(), scope::medium, attrGE("stxAnalysisDebugLevel", 2));
-  
   map<StxPartEdgePtr, bool> vStx = getOutEdges();
 
   list<PartEdgePtr> v;
@@ -730,7 +729,6 @@ list<PartEdgePtr> StxPart::outEdges() {
     v.push_back(dynamicPtrCast<PartEdge>(i->first));
   
 //  dbg << "#v="<<v.size()<<endl;
-  
   return v;
 }
 
@@ -1033,7 +1031,7 @@ std::string StxPartEdge::str(std::string indent)
 {
   ostringstream oss;
   oss << (isNULLCFGNode(p.source().getNode())? "*" : source()->str()) << 
-         escape(" ==&gt; ") << 
+         " ==&gt; " << 
          (isNULLCFGNode(p.target().getNode())? "*" : target()->str());// << ", analysis="<<analysis
   return oss.str();
 }

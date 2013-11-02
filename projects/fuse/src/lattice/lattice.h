@@ -9,7 +9,7 @@
 #include <map>
 
 namespace fuse {
-class Lattice : public dbglog::printable
+class Lattice : public sight::printable
 {
   public:
   PartEdgePtr latPEdge;

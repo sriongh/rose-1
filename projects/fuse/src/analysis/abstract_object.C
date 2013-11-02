@@ -4,7 +4,7 @@
 #include <iostream>
 
 using namespace std;
-using namespace dbglog;
+
 
 namespace fuse
 {
@@ -526,7 +526,7 @@ bool ValueObject::mustEqual(ValueObjectPtr o, PartEdgePtr pedge, Composer* comp,
   /*if(mustEqualCache.find(o) == mustEqualCache.end())
     mustEqualCache[o] = comp->mustEqualV(shared_from_this(), o, pedge, analysis);
   return mustEqualCache[o];*/
-  comp->mustEqualV(shared_from_this(), o, pedge, analysis);
+  return comp->mustEqualV(shared_from_this(), o, pedge, analysis);
 }
 
 // Returns whether this object may/must be equal to o within the given Part p
@@ -562,7 +562,7 @@ bool ValueObject::subSet(ValueObjectPtr that, PartEdgePtr pedge, Composer* comp,
   /*if(subSetCache.find(that) == subSetCache.end())
     subSetCache[that] = comp->equalSetV(shared_from_this(), that, pedge, analysis);
   return subSetCache[that];*/
-  comp->equalSetV(shared_from_this(), that, pedge, analysis);
+  return comp->equalSetV(shared_from_this(), that, pedge, analysis);
 }
 
 

@@ -3,7 +3,7 @@
 #include "composed_analysis.h"
 #include "compose.h"
 #include "printAnalysisStates.h"
-#include "ats_graph.h"
+#include "ats_graph_structure.h"
 
 #include <memory>
 using std::auto_ptr;
@@ -17,11 +17,11 @@ using boost::mem_fn;
 #include <boost/make_shared.hpp>
 
 using namespace std;
-using namespace dbglog;
+
 
 namespace fuse
 {
-DEBUG_LEVEL(composedAnalysisDebugLevel, 0);
+DEBUG_LEVEL(composedAnalysisDebugLevel, 1);
   
 /****************************
  ***** ComposedAnalysis *****
@@ -252,29 +252,30 @@ void ComposedAnalysis::runAnalysis(/*NodeState* appState*/)
     
     //set<anchor> toAnchorsSet; for(set<pair<anchor, PartPtr> >::iterator a=toAnchors[part].begin(); a!=toAnchors[part].end(); a++) toAnchorsSet.insert(a->first);
     ostringstream label; if(composedAnalysisDebugLevel()>=1) label << "Cur AState "<<part->str();
+    // If we have previously invoked this transfer function on this Abstract State, attach the link from it to this scope
+    if(nextTransferAnchors.find(part) != nextTransferAnchors.end())
+      toAnchors[part].insert(nextTransferAnchors[part]);
+//         reg.attachAnchor(nextTransferAnchors[part]);
     scope reg(label.str(), toAnchors[part], scope::medium, attrGE("composedAnalysisDebugLevel", 1));
     if(composedAnalysisDebugLevel()>=1) {
-      // If we have previously invoked this transfer function on this Abstract State, attach the link from it to this scope
-      if(nextTransferAnchors.find(part) != nextTransferAnchors.end())
-         reg.attachAnchor(nextTransferAnchors[part]);
       if(composedAnalysisDebugLevel()>=1 && fromAnchors.size()>0) { 
         scope backedges("Incoming Edges", scope::low, attrGE("composedAnalysisDebugLevel", 1)); 
         if(composedAnalysisDebugLevel()>=1)
           for(set<pair<anchor, PartPtr> >::iterator a=fromAnchors[part].begin(); a!=fromAnchors[part].end(); a++) 
-            dbg << a->first.linkImg(a->second.get()->str())<<endl;
+          { a->first.linkImg(a->second.get()->str()); dbg<<endl; }
       }
       
       if(composedAnalysisDebugLevel()>=1) { 
-        scope nextprev("", scope::min, attrGE("composedAnalysisDebugLevel", 1)); 
+        scope nextprev("", scope::minimum, attrGE("composedAnalysisDebugLevel", 1)); 
         // If we've previously visited this Abstract State, set up a link to it
         if(lastTransferAnchors.find(part) != lastTransferAnchors.end())
-          dbg << lastTransferAnchors[part].linkImg("Last visit");
+          lastTransferAnchors[part].linkImg("Last visit");
         lastTransferAnchors[part] = reg.getAnchor();
       
         // Set up a link to the next visit, if any
         anchor nextVisitA;
         nextTransferAnchors[part] = nextVisitA;
-        dbg << nextVisitA.linkImg("Next visit");
+        nextVisitA.linkImg("Next visit");
       }
       
       // We've found the destination of all the links that were pointing at this scope, so we now erase them
@@ -584,7 +585,7 @@ void ComposedAnalysis::propagateDF2Desc(PartPtr part,
     
     // Add an anchor to toAnchors from the current Abstract State to its current descendant
     anchor toAnchor;
-    if(composedAnalysisDebugLevel()>=1) dbg << toAnchor.linkImg()<<endl;
+    if(composedAnalysisDebugLevel()>=1) { toAnchor.linkImg(); dbg <<endl; }
     worklistGraph.addDirEdge(curPartAnchor, toAnchor);
     toAnchors[nextPart].insert(toAnchor);
     fromAnchors[nextPart].insert(make_pair(curPartAnchor, part));

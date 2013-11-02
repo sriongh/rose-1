@@ -5,7 +5,7 @@
 #include <boost/make_shared.hpp>
 
 using namespace std;
-using namespace dbglog;
+
 namespace fuse {
 //int nodeStateDebugLevel=2;
 DEBUG_LEVEL(nodeStateDebugLevel, 0);

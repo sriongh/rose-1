@@ -1,7 +1,7 @@
 #ifndef ABSTRACT_OBJECT_H
 #define ABSTRACT_OBJECT_H
 
-#include "dbglog.h"
+#include "sight.h"
 #include "partitions.h"
 #include "CallGraphTraverse.h"
 #include <string>
@@ -58,7 +58,7 @@ class ValueObject;
 class MemLocObject;
 class MemRegionObject;
 
-class AbstractObject : public dbglog::printable, public boost::enable_shared_from_this<AbstractObject>
+class AbstractObject : public sight::printable, public boost::enable_shared_from_this<AbstractObject>
 {
   SgNode* base;
   

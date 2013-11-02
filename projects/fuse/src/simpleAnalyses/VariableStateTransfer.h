@@ -6,7 +6,7 @@
 #include "compose.h"
 #include <vector>
 
-using namespace dbglog;
+
 namespace fuse {
 template <class LatticeType, class AnalysisType>
 class VariableStateTransfer : public DFTransferVisitor

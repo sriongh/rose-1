@@ -14,7 +14,7 @@
 using namespace std;
 using namespace boost;
 using namespace ssa_private;
-using namespace dbglog;
+using namespace sight;
 
 namespace fuse {
 DEBUG_LEVEL(AbstractObjectMapDebugLevel, 0);

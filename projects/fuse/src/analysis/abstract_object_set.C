@@ -4,7 +4,7 @@
 #include <typeinfo>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
 
 namespace fuse
 {  

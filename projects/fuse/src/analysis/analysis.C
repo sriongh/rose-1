@@ -12,6 +12,10 @@
 #include <set>
 #include <map>
 #include <boost/make_shared.hpp>
+#include "sight.h"
+
+using namespace std;
+using namespace sight;
 
 /* GB 2012-10-23: DESIGN NOTE
  * At the start of an intra-procedural analysis of a given function the function's initial dataflow state is copied 
@@ -28,11 +32,16 @@
  */
 
 using namespace std;
-using namespace dbglog;
+
 namespace fuse {
-  
-//int analysisDebugLevel=1;
-DEBUG_LEVEL(analysisDebugLevel, 0);
+
+DEBUG_LEVEL(analysisDebugLevel, 1);
+
+// Initializes Fuse
+void FuseInit(int argc, char **argv) {
+  setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/projects/fuse/src/fuseLayout").c_str(), 1);
+  SightInit(argc, argv);
+}
 
 /****************
  *** Analysis ***

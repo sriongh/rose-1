@@ -2,7 +2,7 @@
 #include "dead_path_elim_analysis.h"
 
 using namespace std;
-using namespace dbglog;
+
 
 namespace fuse {
 

@@ -6,19 +6,20 @@
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
-#include "dbglog.h"
+#include "sight.h"
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 namespace fuse {
 
 //int ats2DotDebugLevel=0;
 DEBUG_LEVEL(ats2DotDebugLevel, 0);
 
-/***************************************
- *** ATS Graph Visualizer for dbglog ***
- ***************************************/
+/**************************************
+ *** ATS Graph Visualizer for Sight ***
+ **************************************/
 
 void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent);
 // Helper function to print Part information

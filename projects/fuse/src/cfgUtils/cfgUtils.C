@@ -12,6 +12,7 @@
 #include <boost/make_shared.hpp>
 
 using namespace std;
+using namespace sight;
 
 namespace fuse
 {
@@ -191,15 +192,15 @@ std::string SgNode2Str(SgNode* sgn)
     SgInitializedNamePtrList args = isSgFunctionParameterList(sgn)->get_args();
     for(SgInitializedNamePtrList::iterator a=args.begin(); a!=args.end(); a++) {
       if(a!=args.begin()) oss << ", ";
-      oss << dbglog::escape((*a)->unparseToString());
+      oss << common::escape((*a)->unparseToString());
     }       
     oss << ") | " << sgn->class_name() << "]";
   } else if(isSgVariableSymbol(sgn)) {
-    oss << "[" << dbglog::escape(isSgVariableSymbol(sgn)->get_name().getString()) << " | " << sgn->class_name() << "]";
+    oss << "[" << common::escape(isSgVariableSymbol(sgn)->get_name().getString()) << " | " << sgn->class_name() << "]";
   } else if(isSgInitializedName(sgn)) {
-    oss << "[" << dbglog::escape(isSgInitializedName(sgn)->get_qualified_name().getString()) << " | " << sgn->class_name() << "]";
+    oss << "[" << common::escape(isSgInitializedName(sgn)->get_qualified_name().getString()) << " | " << sgn->class_name() << "]";
   } else
-    oss << "[" << dbglog::escape(sgn->unparseToString()) << " | " << sgn->class_name() << "]";
+    oss << "[" << common::escape(sgn->unparseToString()) << " | " << sgn->class_name() << "]";
   return oss.str();
 }
 
@@ -219,15 +220,15 @@ std::string CFGNode2Str(CFGNode n)
     SgInitializedNamePtrList args = isSgFunctionParameterList(n.getNode())->get_args();
     for(SgInitializedNamePtrList::iterator a=args.begin(); a!=args.end(); a++) {
       if(a!=args.begin()) oss << ", ";
-      oss << dbglog::escape((*a)->unparseToString());
+      oss << common::escape((*a)->unparseToString());
     }       
     oss << ") | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else if(isSgVariableSymbol(n.getNode())) {
-    oss << "[" << dbglog::escape(isSgVariableSymbol(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << common::escape(isSgVariableSymbol(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else if(isSgInitializedName(n.getNode())) {
-    oss << "[" << dbglog::escape(isSgInitializedName(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << common::escape(isSgInitializedName(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else
-    oss << "[" << dbglog::escape(n.getNode()->unparseToString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << common::escape(n.getNode()->unparseToString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   return oss.str();
 }
 

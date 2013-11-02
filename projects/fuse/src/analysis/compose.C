@@ -5,15 +5,16 @@
 //#include "printAnalysisStates.h"
 #include "saveDotAnalysis.h"
 #include "stx_analysis.h"
-#include "dbglog.h"
+#include "sight.h"
 #include <set>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 using namespace boost;
 namespace fuse
 {
-DEBUG_LEVEL(composerDebugLevel, 0);
+DEBUG_LEVEL(composerDebugLevel, 1);
 
 //--------------------
 //----- Composer -----
@@ -1271,7 +1272,7 @@ bool ChainComposer::implementsExpr2MemLoc()
 // --------------------------
 
 ComposedAnalysis::implTightness ChainComposer::Expr2ValTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2ValTightness();
@@ -1283,7 +1284,7 @@ ComposedAnalysis::implTightness ChainComposer::Expr2ValTightness() {
 }
 
 ComposedAnalysis::implTightness ChainComposer::Expr2CodeLocTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2CodeLocTightness();
@@ -1295,7 +1296,7 @@ ComposedAnalysis::implTightness ChainComposer::Expr2CodeLocTightness() {
 }
 
 ComposedAnalysis::implTightness ChainComposer::Expr2MemRegionTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2MemRegionTightness();
@@ -1307,7 +1308,7 @@ ComposedAnalysis::implTightness ChainComposer::Expr2MemRegionTightness() {
 }
 
 ComposedAnalysis::implTightness ChainComposer::Expr2MemLocTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2MemLocTightness();
@@ -1723,7 +1724,7 @@ bool LooseParallelComposer::implementsExpr2MemLoc()
 // --------------------------
 
 ComposedAnalysis::implTightness LooseParallelComposer::Expr2ValTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2ValTightness();
@@ -1735,7 +1736,7 @@ ComposedAnalysis::implTightness LooseParallelComposer::Expr2ValTightness() {
 }
 
 ComposedAnalysis::implTightness LooseParallelComposer::Expr2CodeLocTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2CodeLocTightness();
@@ -1747,7 +1748,7 @@ ComposedAnalysis::implTightness LooseParallelComposer::Expr2CodeLocTightness() {
 }
 
 ComposedAnalysis::implTightness LooseParallelComposer::Expr2MemRegionTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2MemRegionTightness();
@@ -1759,7 +1760,7 @@ ComposedAnalysis::implTightness LooseParallelComposer::Expr2MemRegionTightness()
 }
 
 ComposedAnalysis::implTightness LooseParallelComposer::Expr2MemLocTightness() {
-  ComposedAnalysis::implTightness t;
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
     // If this is the first analysis, just assign its tightness to t
     if(a==allAnalyses.begin()) t = (*a)->Expr2MemLocTightness();

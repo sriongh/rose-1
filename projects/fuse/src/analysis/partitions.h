@@ -4,7 +4,7 @@
 //#include <boost/lambda/lambda.hpp>
 //#include <boost/lambda/bind.hpp>
 #include "cfgUtils.h"
-#include "dbglog.h"
+#include "sight.h"
 #include "comp_shared_ptr.h"
 
 namespace fuse {
@@ -93,7 +93,7 @@ class MLMapping
 // from MemLocObjects that are the keys of ml2ml to their corresponding values in ml2ml. The value MemLocObjects in 
 // ml2ml should be interpreted with respect to PartEdge newPEdge. It corresponds to the code region(s) to which we 
 // are remapping.
-class MLRemapper: public dbglog::printable
+class MLRemapper: public sight::printable
 {
   // The edge for which the remapping is being performed
   PartEdgePtr pedge;
@@ -201,7 +201,7 @@ class PartContext;
 typedef CompSharedPtr<PartContext> PartContextPtr;
 extern PartContextPtr NULLPartContextPtr;
 
-class PartContext: public dbglog::printable//, public boost::enable_shared_from_this<PartContext>
+class PartContext: public sight::printable//, public boost::enable_shared_from_this<PartContext>
 {
   // Comparison operations must be derived on contexts to make it possible to differentiate
   // them and create data structures from them. Note that we will only need to compare 
@@ -248,7 +248,7 @@ typedef CompSharedPtr<Context> ContextPtr;
 typedef CompSharedPtr<const Context> ConstContextPtr;
 extern ContextPtr NULLContextPtr;
 
-class Context//: public dbglog::printable
+class Context//: public sight::printable
 {
   public:
   /*ConstPartPtr part;
@@ -288,7 +288,7 @@ class Context//: public dbglog::printable
   //std::string str_rec(PartPtr part, std::string indent="");
 };
 
-class Part : public dbglog::printable, public boost::enable_shared_from_this<Part>
+class Part : public sight::printable, public boost::enable_shared_from_this<Part>
 {
   protected:
   ComposedAnalysis* analysis;
@@ -460,7 +460,7 @@ class Part : public dbglog::printable, public boost::enable_shared_from_this<Par
 };
 extern PartPtr NULLPart;
 
-class PartEdge : public dbglog::printable, public boost::enable_shared_from_this<PartEdge> {
+class PartEdge : public sight::printable, public boost::enable_shared_from_this<PartEdge> {
   protected:
   ComposedAnalysis* analysis;
   PartEdgePtr parent;

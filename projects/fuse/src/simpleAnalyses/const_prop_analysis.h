@@ -42,7 +42,7 @@ typedef boost::shared_ptr<CPOffsetListKind> CPOffsetListKindPtr;
 class CPUnknownKind;
 typedef boost::shared_ptr<CPUnknownKind> CPUnknownKindPtr;
 
-class CPValueKind: public printable, public boost::enable_shared_from_this<CPValueKind> {
+class CPValueKind: public sight::printable, public boost::enable_shared_from_this<CPValueKind> {
   public:
   
   // The different kinds of CPValueObjects

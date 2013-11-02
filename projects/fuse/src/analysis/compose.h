@@ -32,6 +32,8 @@ class debugLevel {
   int level;
   public:
   debugLevel(const char* name, int level) : level(level) {
+/*    static bool sightInitialized=false;
+    if(!sightInitialized) { */
     debugAttribute = attr_enter(name, (long)level);
   }
   ~debugLevel() { attr_exit(debugAttribute); }
@@ -221,7 +223,7 @@ typedef boost::shared_ptr<Composer> ComposerPtr;
 // decide what function the () operator actually calls and what the arguments actually are
 // but by abstracting these details away we can get a general algorithm for the ChainComposer to 
 // choose the analysis that implements a given function.
-/*class FuncCallerArgs : public dbglog::printable
+/*class FuncCallerArgs : public sight::printable
 { 
   // Dummy virtual methods to allow dynamic casting on classes derived from FuncCallerArgs
   virtual void dummy() {}
@@ -241,7 +243,7 @@ class FuncCaller
 
 // Records the info required to forward queries of each type. We maintain one instance of this class
 // for each analysis
-class CCQueryServers : public printable
+class CCQueryServers : public sight::printable
 {
   public:
   // Records the last analysis in the composition chain that can answer queries of a given type
@@ -330,11 +332,11 @@ class CCQueryServers : public printable
   std::string str(std::string indent="") {
     std::ostringstream oss;
     oss << "[CCQueryServers:"<<std::endl;
-    oss << indent << "    lastCodeLocAnalysis="  <<lastCodeLocAnalysis->str()  <<": ATSGraphsSinceLastCodeLocAnalysis="  <<ATSGraphsSinceLastCodeLocAnalysis  <<std::endl;
-    oss << indent << "    lastValAnalysis="      <<lastValAnalysis->str()      <<": ATSGraphsSinceLastValAnalysis="      <<ATSGraphsSinceLastValAnalysis      <<std::endl;
-    oss << indent << "    lastMemLocAnalysis="   <<lastMemLocAnalysis->str()   <<": ATSGraphsSinceLastMemLocAnalysis="   <<ATSGraphsSinceLastMemLocAnalysis   <<std::endl;
-    oss << indent << "    lastMemRegionAnalysis="<<lastMemRegionAnalysis->str()<<": ATSGraphsSinceLastMemRegionAnalysis="<<ATSGraphsSinceLastMemRegionAnalysis<<std::endl;
-    oss << indent << "    lastATSGraphAnalysis=" <<lastATSGraphAnalysis->str() <<"]";
+    oss << indent << "    lastCodeLocAnalysis="  <<lastCodeLocAnalysis->str(indent)  <<": ATSGraphsSinceLastCodeLocAnalysis="  <<ATSGraphsSinceLastCodeLocAnalysis  <<std::endl;
+    oss << indent << "    lastValAnalysis="      <<lastValAnalysis->str(indent)      <<": ATSGraphsSinceLastValAnalysis="      <<ATSGraphsSinceLastValAnalysis      <<std::endl;
+    oss << indent << "    lastMemLocAnalysis="   <<lastMemLocAnalysis->str(indent)   <<": ATSGraphsSinceLastMemLocAnalysis="   <<ATSGraphsSinceLastMemLocAnalysis   <<std::endl;
+    oss << indent << "    lastMemRegionAnalysis="<<lastMemRegionAnalysis->str(indent)<<": ATSGraphsSinceLastMemRegionAnalysis="<<ATSGraphsSinceLastMemRegionAnalysis<<std::endl;
+    oss << indent << "    lastATSGraphAnalysis=" <<lastATSGraphAnalysis->str(indent) <<"]";
     return oss.str();
   }
 };

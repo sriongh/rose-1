@@ -1,7 +1,9 @@
 #include "sage3basic.h"
 #include "pointsToAnalysis.h"
 
-using namespace dbglog;
+using namespace std;
+using namespace sight;
+
 namespace fuse
 {
   //int ptaDebugLevel = 2;

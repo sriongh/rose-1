@@ -3,7 +3,7 @@
 
 #include <set>
 #include <string>
-#include "dbglog.h"
+#include "sight.h"
 
 namespace fuse
 {

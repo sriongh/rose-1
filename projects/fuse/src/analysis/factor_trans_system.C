@@ -3,7 +3,7 @@
 #include <algorithm>
 
 using namespace std;
-using namespace dbglog;
+
 namespace fuse {
 
 //int factorTransSystemDebugLevel=0;

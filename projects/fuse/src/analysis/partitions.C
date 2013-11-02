@@ -3,7 +3,8 @@
 #include "abstract_object.h"
 #include "compose.h"
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse {
 
 DEBUG_LEVEL(partitionsDebugLevel, 0);

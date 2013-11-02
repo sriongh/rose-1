@@ -2,12 +2,13 @@
 #include "call_context_sensitivity_analysis.h"
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse
 {
 
-//int callContextSensitivityDebugLevel=2;
 DEBUG_LEVEL(callContextSensitivityDebugLevel, 0);
+
 /* ###########################
    ##### CallPartContext #####
    ########################### */

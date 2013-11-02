@@ -6,13 +6,13 @@
 #include "analysis.h"
 #include "latticeFull.h"
 #include "saveDotAnalysis.h"
-
+#include "widgets/graph_structure.h"
 extern int divAnalysisDebugLevel;
 
 namespace fuse {
-/***************************************
- *** ATS Graph Visualizer for dbglog ***
- ***************************************/
+/**************************************
+ *** ATS Graph Visualizer for Sight ***
+ **************************************/
   
 // Contains information required to visualize an individual Part
 class partDotInfo_atsGraph : public partDotInfo {
@@ -40,7 +40,7 @@ class Ctxt2PartsMap_Leaf_atsGraph : public Ctxt2PartsMap_Leaf {
   void map2dot(std::ostream& o, std::map<PartPtr, partDotInfoPtr>& partInfo, std::string subgraphName="cluster", std::string indent="") const;
 };
 
-class atsGraph : public dbglog::graph {
+class atsGraph : public sight::structure::graph {
   std::map<PartPtr, partDotInfoPtr> partInfo;
   // Maps each anchor to the Part it is associated with
   std::map<anchor, PartPtr> anchor2Parts;

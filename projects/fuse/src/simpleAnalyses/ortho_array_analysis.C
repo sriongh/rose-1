@@ -4,7 +4,8 @@
 #include <boost/make_shared.hpp>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 namespace fuse {
 //int orthoArrayAnalysisDebugLevel=0;
