@@ -6,8 +6,7 @@ using namespace sight;
 
 namespace fuse
 {
-  //int ptaDebugLevel = 2;
-  DEBUG_LEVEL(ptaDebugLevel, 2);
+  DEBUG_LEVEL(ptaDebugLevel, 0);
   
   PointsToAnalysisTransfer::PointsToAnalysisTransfer(PartPtr part,
                                                      CFGNode cn, NodeState& state,

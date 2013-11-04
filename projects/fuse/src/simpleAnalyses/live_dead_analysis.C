@@ -8,7 +8,7 @@ using namespace sight;
 
 namespace fuse {
 //int liveDeadAnalysisDebugLevel=0;
-DEBUG_LEVEL(liveDeadAnalysisDebugLevel, 2);
+DEBUG_LEVEL(liveDeadAnalysisDebugLevel, 0);
 
 // ###############################
 // ##### LiveDeadMemAnalysis #####

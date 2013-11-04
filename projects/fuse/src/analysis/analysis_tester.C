@@ -9,7 +9,7 @@ using namespace sight;
 namespace fuse {
 
 //int analysisTesterDebugLevel=1;
-DEBUG_LEVEL(analysisTesterDebugLevel, 1);
+DEBUG_LEVEL(analysisTesterDebugLevel, 0);
   
 /********************
  ***** HierEdge *****

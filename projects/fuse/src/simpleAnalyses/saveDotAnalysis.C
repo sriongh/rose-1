@@ -14,8 +14,7 @@ namespace fuse {
  *** SaveDotAnalysis ***
  ***********************/
 
-//int saveDotAnalysisDebugLevel=1;
-DEBUG_LEVEL(saveDotAnalysisDebugLevel, 1);
+DEBUG_LEVEL(saveDotAnalysisDebugLevel, 0);
 
 // Helper function to print Part information
 void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr part, string indent);
