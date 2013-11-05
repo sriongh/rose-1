@@ -1,17 +1,20 @@
 #include "sage3basic.h"
 #include "saveDotAnalysis.h"
 #include "partitions.h"
+#include "compose.h"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
+
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse {
 /***********************
  *** SaveDotAnalysis ***
  ***********************/
 
-int saveDotAnalysisDebugLevel=1;
+DEBUG_LEVEL(saveDotAnalysisDebugLevel, 0);
 
 // Helper function to print Part information
 void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr part, string indent);
@@ -93,15 +96,16 @@ std::string DummyContext::str(std::string indent) { return ""; }
  ***** Ctxt2PartsMap *****
  *************************/
 
-Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
-      lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
+Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, 
+                             Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
+  mgen(mgen), lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
 {
   l = lgen->newLeaf();
 }
 
-Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, const list<list<PartContextPtr> >& key, 
-        PartPtr part, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
-  lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
+Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, const list<list<PartContextPtr> >& key, PartPtr part, 
+                             Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
+  mgen(mgen), lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
 {
   l = lgen->newLeaf();
   crossAnalysisBoundary = false;
@@ -161,7 +165,8 @@ void Ctxt2PartsMap::insert(const list<list<PartContextPtr> >& key, PartPtr part)
   else {
     SubKey sk = getNextSubKey(key);
     crossAnalysisBoundary = sk.crossAnalysisBoundary;
-    if(m.find(sk.front) == m.end()) m[sk.front] = new Ctxt2PartsMap(false, lgen);
+    if(m.find(sk.front) == m.end()) m[sk.front] = mgen->newMap(false, mgen, lgen);
+            //new Ctxt2PartsMap(false, lgen);
     m[sk.front]->insert(sk.back, part);
   }
 }
@@ -367,6 +372,12 @@ std::string Ctxt2PartsMap_Leaf::str(std::string indent) {
   return c2pMap;
 }*/
 
+class Ctxt2PartsMap_Generator_Base : public Ctxt2PartsMap_Generator {
+  public:
+  Ctxt2PartsMap* newMap(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) const
+  { return new Ctxt2PartsMap(crossAnalysisBoundary, mgen, lgen); }
+};
+
 class Ctxt2PartsMap_Leaf_Generator_Base : public Ctxt2PartsMap_Leaf_Generator {
   public:
   Ctxt2PartsMap_Leaf* newLeaf() const { return new Ctxt2PartsMap_Leaf(); }
@@ -374,7 +385,7 @@ class Ctxt2PartsMap_Leaf_Generator_Base : public Ctxt2PartsMap_Leaf_Generator {
 
 std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   // Maps parts to their unique IDs
@@ -386,17 +397,18 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
   //cout << "------------------------------------------------"<<endl;
   
   // Maps contexts to the set of parts in each context
-  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
+  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Generator_Base>(),
+                                  boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
   for(fw_partEdgeIterator state(startParts); state!=fw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
     }
     
     list<list<PartContextPtr> > key = part->getContext()->getDetailedPartContexts();
-    if(saveDotAnalysisDebugLevel>=1) dbg << "#key="<<key.size()<<endl;
+    if(saveDotAnalysisDebugLevel()>=1) dbg << "#key="<<key.size()<<endl;
     if(key.size()==0) {
       DummyContext d;
       key.push_back(d.getSubPartContexts());
@@ -470,7 +482,7 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
 
 std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot_bw", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot_bw", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   //dbg << "#endParts="<<endParts.size()<<endl;
@@ -483,12 +495,13 @@ std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& 
   //cout << "------------------------------------------------"<<endl;
   
   // Maps contexts to the set of parts in each context
-  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
+  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Generator_Base>(),
+                                  boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
   
   for(bw_partEdgeIterator state(endParts); state!=bw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "state="<<state.str()<<endl;
       dbg << "*state="<<part->str()<<" context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;

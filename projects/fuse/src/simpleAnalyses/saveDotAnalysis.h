@@ -7,8 +7,6 @@
 #include "latticeFull.h"
 
 
-extern int divAnalysisDebugLevel;
-
 namespace fuse {
 /***********************
  *** SaveDotAnalysis ***
@@ -32,14 +30,24 @@ class DummyContext: public PartContext
 };
 typedef CompSharedPtr<DummyContext> DummyContextPtr;
 
+class Ctxt2PartsMap_Generator;
+typedef boost::shared_ptr<Ctxt2PartsMap_Generator> Ctxt2PartsMap_GeneratorPtr;
+class Ctxt2PartsMap_Leaf_Generator;
+typedef boost::shared_ptr<Ctxt2PartsMap_Leaf_Generator> Ctxt2PartsMap_Leaf_GeneratorPtr;
 
-class Ctxt2PartsMap_Leaf;
+// Class that generates instances of the appropriate sub-type of Ctxt2PartsMap
+class Ctxt2PartsMap;
+class Ctxt2PartsMap_Generator {
+  public:
+  virtual Ctxt2PartsMap* newMap(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) const=0;
+};
+
 // Class that generates instances of the appropriate sub-type of Ctxt2PartsMap_Leaf
+class Ctxt2PartsMap_Leaf;
 class Ctxt2PartsMap_Leaf_Generator {
   public:
   virtual Ctxt2PartsMap_Leaf* newLeaf() const=0;
 };
-typedef boost::shared_ptr<Ctxt2PartsMap_Leaf_Generator> Ctxt2PartsMap_Leaf_GeneratorPtr;
 
 
 // Contains information required to visualize an individual Part
@@ -51,18 +59,20 @@ class partDotInfo {
 };
 typedef boost::shared_ptr<partDotInfo> partDotInfoPtr;
 
-class Ctxt2PartsMap : public dbglog::printable {
+class Ctxt2PartsMap : public sight::printable {
   protected:
   std::map<PartContextPtr, Ctxt2PartsMap* > m;
   Ctxt2PartsMap_Leaf* l;
+  Ctxt2PartsMap_GeneratorPtr mgen;
   Ctxt2PartsMap_Leaf_GeneratorPtr lgen;
   
   // True if this map crosses the boundary from the context of one analysis to the context of another,
   // which is indicated by moving onto the next element in the top-level list in the insertion key.
   bool crossAnalysisBoundary;
   public:
-  Ctxt2PartsMap(bool crossAnalysisBoundary, Ctxt2PartsMap_Leaf_GeneratorPtr lgen);
-  Ctxt2PartsMap(bool crossAnalysisBoundary, const std::list<std::list<PartContextPtr> >& key, PartPtr part, Ctxt2PartsMap_Leaf_GeneratorPtr lgen);
+  Ctxt2PartsMap(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen);
+  Ctxt2PartsMap(bool crossAnalysisBoundary, const std::list<std::list<PartContextPtr> >& key, PartPtr part, 
+                Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen);
   
   // Given a key, pulls off the PartContextPtr at its very front and returns the resulting key along
   // with a flag that indicates whether the front element of the top-level list was removed in the process
@@ -90,7 +100,7 @@ class Ctxt2PartsMap : public dbglog::printable {
   virtual std::string str(std::string indent="");
 };
 
-class Ctxt2PartsMap_Leaf : public dbglog::printable {
+class Ctxt2PartsMap_Leaf : public sight::printable {
   protected:
   std::map<PartContextPtr, std::set<PartPtr> > m;
   public:

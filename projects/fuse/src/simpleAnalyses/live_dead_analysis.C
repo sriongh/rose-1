@@ -4,9 +4,11 @@
 #include <boost/make_shared.hpp>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse {
-int liveDeadAnalysisDebugLevel=0;
+//int liveDeadAnalysisDebugLevel=0;
+DEBUG_LEVEL(liveDeadAnalysisDebugLevel, 0);
 
 // ###############################
 // ##### LiveDeadMemAnalysis #####
@@ -107,7 +109,7 @@ public:
       // Only make the operand(s) live if the expression is live
       if(!ldmt.isMemLocLive(sgn)) return;
       
-      if(liveDeadAnalysisDebugLevel>=1) {
+      if(liveDeadAnalysisDebugLevel()>=1) {
         dbg << "LDMAExpressionTransfer::visit(SgAssignInitializer *sgn)"<<endl;
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;sgn="<<SgNode2Str(sgn)<<endl;
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;sgn->get_operand()="<<SgNode2Str(sgn->get_operand())<<endl;
@@ -162,13 +164,13 @@ public:
     // Array access
     void visit(SgPntrArrRefExp *sgn) {
       //if(ldmt.isMemLocLive(sgn)) {
-        if(liveDeadAnalysisDebugLevel>=1) dbg << "visit(SgPntrArrRefExp *sgn)"<<endl;
+        if(liveDeadAnalysisDebugLevel()>=1) dbg << "visit(SgPntrArrRefExp *sgn)"<<endl;
         // The only way for this SgPntrArrRefExp to appear s if it is used by its parent expression
         ldmt.useMem(sgn);
         // Both the lhs and rhs are used to identify the memory location being accessed
-        if(liveDeadAnalysisDebugLevel>=1) dbg << "LHS"<<endl;
+        if(liveDeadAnalysisDebugLevel()>=1) dbg << "LHS"<<endl;
         ldmt.use(sgn, sgn->get_lhs_operand());
-        if(liveDeadAnalysisDebugLevel>=1) dbg << "RHS"<<endl;
+        if(liveDeadAnalysisDebugLevel()>=1) dbg << "RHS"<<endl;
         ldmt.use(sgn, sgn->get_rhs_operand());
       //}
     }
@@ -179,7 +181,7 @@ public:
       if(isSgCompoundAssignOp(sgn))
         ldmt.assign(sgn, sgn->get_lhs_operand());*/
       
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDead: visit("<<SgNode2Str(sgn)<<") ldmt.isMemLocLive(sgn)="<<ldmt.isMemLocLive(sgn)<<endl;
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDead: visit("<<SgNode2Str(sgn)<<") ldmt.isMemLocLive(sgn)="<<ldmt.isMemLocLive(sgn)<<endl;
       
       // If this expression is live or writes writes to a live memory location, make the operands live
       if(ldmt.isMemLocLive(sgn) || (isSgCompoundAssignOp(sgn) && ldmt.isMemLocLive(sgn, sgn->get_lhs_operand()))) {
@@ -269,9 +271,9 @@ public:
       /*
       // If the function's source code is not available
       Function func(sgn);
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDeadAnalysis::visit(SgFunctionCallExp *sgn) call to function "<<func.get_name().getString()<<"()"<<endl;
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDeadAnalysis::visit(SgFunctionCallExp *sgn) call to function "<<func.get_name().getString()<<"()"<<endl;
       if(!func.get_definition()) {
-        if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDeadAnalysis::visit(SgFunctionCallExp *sgn) Function "<<func.get_name().getString()<<"() with no definition."<<endl;
+        if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDeadAnalysis::visit(SgFunctionCallExp *sgn) Function "<<func.get_name().getString()<<"() with no definition."<<endl;
       
         // The function call's arguments are used
         SgExprListExp* exprList = sgn->get_args();
@@ -331,9 +333,9 @@ LiveDeadMemTransfer::LiveDeadMemTransfer(PartPtr part, CFGNode cn, NodeState &s,
   assert(dfInfo.find(PartEdgePtr()) != dfInfo.end());
   liveLat = dynamic_cast<AbstractObjectSet*>(*(dfInfo[PartEdgePtr()].begin()));
 
-  if(liveDeadAnalysisDebugLevel>=1) {
+  if(liveDeadAnalysisDebugLevel()>=1) {
     dbg << "LiveDeadMemTransfer: liveLat=";
-    indent ind(liveDeadAnalysisDebugLevel, 1);
+    indent ind(attrGE("liveDeadAnalysisDebugLevel", 1));
     dbg << liveLat->str("")<<endl;
   }
   // Make sure that all the lattice is initialized
@@ -362,7 +364,7 @@ void LiveDeadMemTransfer::use(SgNode *sgn, SgExpression* operand)
 {
   //dbg << "part->outEdgeToAny()="<<part->outEdgeToAny()->str()<<endl;
   // MemLocObjectPtrPair p = composer->OperandExpr2MemLoc(sgn, operand, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
-  scope reg(txt()<<"LiveDeadMemTransfer::use(sgn="<<SgNode2Str(sgn)<<", operand="<<SgNode2Str(operand)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::use(sgn="<<SgNode2Str(sgn)<<", operand="<<SgNode2Str(operand)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   MemLocObjectPtr p = composer->OperandExpr2MemLoc(sgn, operand, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
   //dbg << "LiveDeadMemTransfer::use(sgn=["<<escape(sgn->unparseToString())<<" | "<<sgn->class_name()<<"]"<<endl;
   //dbg << "p="<<p->str()<<endl;
@@ -380,27 +382,27 @@ void LiveDeadMemTransfer::use(SgNode *sgn, SgExpression* operand)
 // Note that the memory location denoted by the corresponding SgInitializedName is used
 void LiveDeadMemTransfer::useMem(SgInitializedName* name)
 {
-  scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(name)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(name)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   dbg << "name="<<SgNode2Str(name)<<endl;
   MemLocObjectPtr p = composer->Expr2MemLoc(name, part->outEdgeToAny(), ldma);
-  if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDeadMemTransfer::useMem(SgInitializedName)("<<SgNode2Str(name)<<")"<<endl;
+  if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDeadMemTransfer::useMem(SgInitializedName)("<<SgNode2Str(name)<<")"<<endl;
   // used.insert(p.mem);
   used.insert(p);
 }
 // Note that the memory location denoted by the corresponding SgVarRefExp is used
 void LiveDeadMemTransfer::useMem(SgVarRefExp* sgn)
 {
-  scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   // MemLocObjectPtrPair p = composer->Expr2MemLoc(sgn, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
   MemLocObjectPtr p = composer->Expr2MemLoc(sgn, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
-  if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDeadMemTransfer::useMem(SgVarRefExp)("<<SgNode2Str(sgn)<<")"<<endl;
+  if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDeadMemTransfer::useMem(SgVarRefExp)("<<SgNode2Str(sgn)<<")"<<endl;
   // used.insert(p.mem);
   used.insert(p);
 }
 // Note that the memory location denoted by the corresponding SgPntrArrRefExp is used
 void LiveDeadMemTransfer::useMem(SgPntrArrRefExp* sgn)
 {
-  scope reg(txt()<<"LiveDeadMemTransfer::useMem(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::useMem(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   // We use the SgPntrArrRefExp itself as well as all of its parent SgPntrArrRefExp because to reach
   // this index we need to access all the indexes that precede it in the expression, as well as the root 
   // (array in array[1][2][3]) that identifies the base pointer.
@@ -413,7 +415,7 @@ void LiveDeadMemTransfer::useMem(SgPntrArrRefExp* sgn)
   // !!!   multi-dimensional offset. This should be resolved when we move to an object-offset representation for 
   // !!!   MemLocs that makes it easy to not explicitly maintain array indexes.
 
-  if(liveDeadAnalysisDebugLevel>=1) {
+  if(liveDeadAnalysisDebugLevel()>=1) {
     dbg << "LiveDeadMemTransfer::useMem(SgPntrArrRefExp)("<<SgNode2Str(sgn)<<")"<<endl;
     dbg << "LHS="<<SgNode2Str(sgn->get_lhs_operand())<<endl;
     dbg << "RHS="<<SgNode2Str(sgn->get_rhs_operand())<<endl;
@@ -424,7 +426,7 @@ void LiveDeadMemTransfer::useMem(SgPntrArrRefExp* sgn)
   if(p) used.insert(p);
   
   /*do {
-    if(liveDeadAnalysisDebugLevel>=1) { dbg << "LHS="<<SgNode2Str(sgn->get_lhs_operand())<<endl; }
+    if(liveDeadAnalysisDebugLevel()>=1) { dbg << "LHS="<<SgNode2Str(sgn->get_lhs_operand())<<endl; }
     MemLocObjectPtr p = composer->Expr2MemLoc(sgn->get_lhs_operand(), part->outEdgeToAny(), ldma);
     // If a memory object is available, insert it. Not all SgPntrArrRefExps correspond to a real memory location.
     // e.g. in array2d[a][b] the expression array2D[a] doesn't denote a memory location if array2d is allocated statically.
@@ -459,7 +461,7 @@ bool LiveDeadMemTransfer::isMemLocLive(SgExpression* sgn) {
 
 void LiveDeadMemTransfer::visit(SgExpression *sgn)
 {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   
   //AbstractMemoryObject::ObjSet* objset = SgExpr2ObjSet(sgn);
   // MemLocObjectPtrPair p = composer->Expr2MemLoc(sgn, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
@@ -471,7 +473,7 @@ void LiveDeadMemTransfer::visit(SgExpression *sgn)
   // Do not remove the memory location object since it has just been used.
   /*if(!isSgVarRefExp(sgn) && !isSgPntrArrRefExp(sgn)) // Liao 4/5/2012, we should not remove SgVarRef or SgPntrArrRefExp since it may have uses above itself
   {
-    //if(liveDeadAnalysisDebugLevel>=1) dbg << "   Removing "<< mem.str("         ") <<endl;
+    //if(liveDeadAnalysisDebugLevel()>=1) dbg << "   Removing "<< mem.str("         ") <<endl;
     //modified = liveLat->remove(mem) || modified;
     if(assigned.insert(mem); /// ????
   }*/
@@ -484,7 +486,7 @@ void LiveDeadMemTransfer::visit(SgExpression *sgn)
 }
 
 void LiveDeadMemTransfer::visit(SgInitializedName *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   /*SgVarRefExp* exp = SageBuilder::buildVarRefExp(sgn);
   dbg << "LiveDeadMemTransfer::visit(SgInitializedName: sgn=["<<escape(sgn->unparseToString())<<" | "<<sgn->class_name()<<"]"<<endl;
   dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exp="<<exp<<endl;
@@ -494,7 +496,7 @@ void LiveDeadMemTransfer::visit(SgInitializedName *sgn) {
   assert(p);
   bool isLive = (p  ? liveLat->containsMay(p)  : false);
   /*dbg << "&nbsp;&nbsp;&nbsp;&nbsp;isLive="<<isLive<<endl;
-  if(liveDeadAnalysisDebugLevel>=1)
+  if(liveDeadAnalysisDebugLevel()>=1)
     dbg << indent << (isLive ? "Live Expression" : "Dead Expression") <<endl;*/
 
   // If this is a live variable and this is the instance of SgInitializedName that occurs immediately after 
@@ -508,7 +510,7 @@ void LiveDeadMemTransfer::visit(SgInitializedName *sgn) {
 }
 
 void LiveDeadMemTransfer::visit(SgReturnStmt *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
 /*  
   WE CURRENTLY ASSUME THAT THE EXPRESSION OF A RETURN STATEMENT IS ALWAYS USED
   SHOULD ONLY ASSUME THIS FOR RETURN STA```TEMENT OF main()*/
@@ -528,7 +530,7 @@ void LiveDeadMemTransfer::visit(SgSwitchStatement *sgn) {
   //use(sgn, sgn->get_item_selector());
 }
 void LiveDeadMemTransfer::visit(SgCaseOptionStmt *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   use(sgn, sgn->get_key());
   use(sgn, sgn->get_key_range_end());
 }
@@ -544,7 +546,7 @@ void LiveDeadMemTransfer::visit(SgIfStmt *sgn) {
 }
 
 void LiveDeadMemTransfer::visit(SgForStatement *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   //dbg << "test="<<escape(sgn->get_test()->unparseToString()) << " | " << sgn->get_test()->class_name()<<endl;
   //dbg << "increment="<<escape(sgn->get_increment()->unparseToString()) << " | " << sgn->get_increment()->class_name()<<endl;
   
@@ -555,7 +557,7 @@ void LiveDeadMemTransfer::visit(SgForStatement *sgn) {
   use(sgn, sgn->get_increment());
 }
 void LiveDeadMemTransfer::visit(SgWhileStmt *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   // The operands of a while statement are automatically live since loops have an unknown
   // number of iterations that is decided based on these operands
   assert(isSgExprStatement(sgn->get_condition()));
@@ -563,7 +565,7 @@ void LiveDeadMemTransfer::visit(SgWhileStmt *sgn) {
   use(sgn, isSgExprStatement(sgn->get_condition())->get_expression());
 }
 void LiveDeadMemTransfer::visit(SgDoWhileStmt *sgn) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   // The operands of a do-while statement are automatically live since loops have an unknown
   // number of iterations that is decided based on these operands
   assert(isSgExprStatement(sgn->get_condition()));
@@ -571,7 +573,7 @@ void LiveDeadMemTransfer::visit(SgDoWhileStmt *sgn) {
   use(sgn, isSgExprStatement(sgn->get_condition())->get_expression());
 }
 void LiveDeadMemTransfer::visit(SgFunctionDefinition* def) {
-  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(def)<<")", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(def)<<")", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   Function func(def);
   dbg << "Definition "<<SgNode2Str(def)<<" attributeExists="<<def->attributeExists("fuse:UnknownSideEffects")<<endl;
   
@@ -582,25 +584,25 @@ void LiveDeadMemTransfer::visit(SgFunctionDefinition* def) {
 }
 bool LiveDeadMemTransfer::finish()
 {
-  scope reg(txt()<<"LiveDeadMemTransfer::finish()", scope::medium, liveDeadAnalysisDebugLevel, 1);
+  scope reg(txt()<<"LiveDeadMemTransfer::finish()", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
   
   // First process assignments, then uses since we may assign and use the same variable
   // and in the end we want to first remove it and then re-insert it.   
-  if(liveDeadAnalysisDebugLevel>=1) {
+  if(liveDeadAnalysisDebugLevel()>=1) {
     dbg << "used="<<endl;
-    { indent ind(analysisDebugLevel, 1);
+    { indent ind(attrGE("liveDeadAnalysisDebugLevel", 1));
     for(AbstractObjectSet::const_iterator asgn=used.begin(); asgn!=used.end(); asgn++) {
       dbg << (*asgn)->str()<<endl;
     } }
     
     dbg << "assigned="<<endl;
-    { indent ind(analysisDebugLevel, 1);
+    { indent ind(attrGE("liveDeadAnalysisDebugLevel", 1));
     for(AbstractObjectSet::const_iterator asgn=assigned.begin(); asgn!=assigned.end(); asgn++) {
       dbg << (*asgn)->str() << endl;
     } }
     
     dbg << "liveLat="<<endl;
-    {indent ind(analysisDebugLevel, 1);
+    {indent ind(attrGE("liveDeadAnalysisDebugLevel", 1));
      dbg << liveLat->str("")<<endl;}
   }
 
@@ -614,7 +616,7 @@ bool LiveDeadMemTransfer::finish()
     // If the lhs is a variable reference, remove it from live variables unless we also use this variable
     if(!used.containsMay(*asgn)) // if not found in use, then remove it, Liao 4/5/2012
     {
-      // if(liveDeadAnalysisDebugLevel>=1) {
+      // if(liveDeadAnalysisDebugLevel()>=1) {
       //     dbg << indent << "    removing assigned expr <" << (*asgn)->class_name() <<":"<<(*asgn)->unparseToString();
       //     dbg << ">"<<endl;
       // }
@@ -623,7 +625,7 @@ bool LiveDeadMemTransfer::finish()
     else 
     {
       modified = liveLat->insert(*asgn) || modified;
-      // if(liveDeadAnalysisDebugLevel>=1) {
+      // if(liveDeadAnalysisDebugLevel()>=1) {
       //     dbg << indent << "    add assigned expr as live <" << (*asgn)->class_name() <<":"<<(*asgn)->unparseToString();
       // }
     }
@@ -648,7 +650,7 @@ MemLocObjectPtr LiveDeadMemAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr pedge)
   // if(p.mem) return createLDMemLocObjectCategory(n, p.mem, this);
   // else      return p.expr;
   MemLocObjectPtr p = composer->Expr2MemLoc(n, pedge, this);
-  if(liveDeadAnalysisDebugLevel>=1) dbg << "LiveDeadMemAnalysis::Expr2MemLoc() p="<<p->strp(pedge)<<endl;
+  if(liveDeadAnalysisDebugLevel()>=1) dbg << "LiveDeadMemAnalysis::Expr2MemLoc() p="<<p->strp(pedge)<<endl;
   // #SA
   // createLDMemLocObject for objects returned by composer for now
   return boost::make_shared<LDMemLocObject>(n, p, this);
@@ -794,13 +796,13 @@ bool LDMemLocObject::meetUpdateML(MemLocObjectPtr o, PartEdgePtr pedge)
 }
 
 // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-bool LDMemLocObject::isFull(PartEdgePtr pedge)
+bool LDMemLocObject::isFullML(PartEdgePtr pedge)
 {
   return parent->isFull(pedge, ldma->getComposer(), ldma);
 }
 
 // Returns whether this AbstractObject denotes the empty set.
-bool LDMemLocObject::isEmpty(PartEdgePtr pedge)
+bool LDMemLocObject::isEmptyML(PartEdgePtr pedge)
 {
   return parent->isEmpty(pedge, ldma->getComposer(), ldma);
 }
@@ -1003,8 +1005,8 @@ bool isLiveMust(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedg
 // Returns true if the given MemLocObject may be live at the given PartEdgePtr pedge
 bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge, string indent)
 {
-  scope reg("isLiveMay()", scope::medium, liveDeadAnalysisDebugLevel, 1);
-  if(liveDeadAnalysisDebugLevel>=1) {
+  scope reg("isLiveMay()", scope::medium, attrGE("liveDeadAnalysisDebugLevel", 1));
+  if(liveDeadAnalysisDebugLevel()>=1) {
     dbg << "mem="<<mem->str("")<<endl;
     dbg << "pedge="<<pedge->str()<<endl;
   }
@@ -1015,9 +1017,9 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
     //dbg << "state="<<state->str(ldma)<<endl;
     
     AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(state->getLatticeAbove(ldma, pedge, 0)); assert(liveL);
-    if(liveDeadAnalysisDebugLevel>=1) dbg << "isLiveMay: liveLAbove="<<liveL->str("")<<endl;
+    if(liveDeadAnalysisDebugLevel()>=1) dbg << "isLiveMay: liveLAbove="<<liveL->str("")<<endl;
     if(liveL->containsMay(mem)) {
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "<b>LIVE</b>"<<endl;
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "<b>LIVE</b>"<<endl;
       return true;
     }
   // If the source of this edge is a wildcard, mem is live if it is live along any incoming edge or 
@@ -1027,29 +1029,29 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
     NodeState* state = NodeState::getNodeState(ldma, pedge->target());
     //dbg << "state="<<state->str(ldma)<<endl;
     
-    {scope regAbv("Checking containment above", scope::low, liveDeadAnalysisDebugLevel, 1);
+    {scope regAbv("Checking containment above", scope::low, attrGE("liveDeadAnalysisDebugLevel", 1));
     map<PartEdgePtr, std::vector<Lattice*> >& e2lats = state->getLatticeAboveAllMod(ldma);
     assert(e2lats.size()>=1);
     for(map<PartEdgePtr, std::vector<Lattice*> >::iterator lats=e2lats.begin(); lats!=e2lats.end(); lats++) {
       PartEdge* p = lats->first.get();
       assert(p->target() == pedge.get()->target());
       AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats->second.begin())); assert(liveL);
-      scope regAbvEdge(txt()<<"edge="<<p->str(), scope::low, liveDeadAnalysisDebugLevel, 1);
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "liveLAbove="<<liveL->str("")<<endl;
+      scope regAbvEdge(txt()<<"edge="<<p->str(), scope::low, attrGE("liveDeadAnalysisDebugLevel", 1));
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "liveLAbove="<<liveL->str("")<<endl;
       
       if(liveL->containsMay(mem)) {
-        if(liveDeadAnalysisDebugLevel>=1) dbg << "<b>LIVE</b>"<<endl;
+        if(liveDeadAnalysisDebugLevel()>=1) dbg << "<b>LIVE</b>"<<endl;
         return true;
       }
     }}
 
-    { scope regAbv("Checking containment below", scope::low, liveDeadAnalysisDebugLevel, 1);
+    { scope regAbv("Checking containment below", scope::low, attrGE("liveDeadAnalysisDebugLevel", 1));
     std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma);
     AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats.begin())); assert(liveL);
-    if(liveDeadAnalysisDebugLevel>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
+    if(liveDeadAnalysisDebugLevel()>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
     //dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
     if(liveL->containsMay(mem)) {
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "<b>LIVE</b>"<<endl;
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "<b>LIVE</b>"<<endl;
       return true;
     }}
   // If the target of this edge is a wildcard, mem is live if it is live along any outgoing edge
@@ -1060,14 +1062,14 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
     std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma);
     AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats.begin()));
     assert(liveL);
-    if(liveDeadAnalysisDebugLevel>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
+    if(liveDeadAnalysisDebugLevel()>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
     if(liveL->containsMay(mem)) {
-      if(liveDeadAnalysisDebugLevel>=1) dbg << "<b>LIVE</b>"<<endl;
+      if(liveDeadAnalysisDebugLevel()>=1) dbg << "<b>LIVE</b>"<<endl;
       return true;
     }
   }
   
-  if(liveDeadAnalysisDebugLevel>=1) dbg << "<b>DEAD</b>"<<endl;
+  if(liveDeadAnalysisDebugLevel()>=1) dbg << "<b>DEAD</b>"<<endl;
   return false;
 }
 

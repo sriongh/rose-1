@@ -3,11 +3,12 @@
 #include "abstract_object.h"
 #include "compose.h"
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse {
 
-int partitionsDebugLevel=0;
-  
+DEBUG_LEVEL(partitionsDebugLevel, 0);
+
 /* #########################
    ##### Remap Functor #####
    ######################### */
@@ -29,20 +30,29 @@ string MLMapping::str(string indent) const {
   return oss.str();
 }
 
-MLRemapper::MLRemapper() : initialized(false) {}
+MLRemapper::MLRemapper() {}
 
 MLRemapper::MLRemapper(const MLRemapper& that) : 
       pedge(that.pedge), fwML2ML(that.fwML2ML), bwML2ML(that.bwML2ML), initialized(that.initialized)
 {}
 
-void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* analysis)
+// This initialization method must be called by the MLRemapper's host PartEdge before it calls 
+//    forwardRemapML() or backwardRemapML(). The MLRemapper's full initalization is delayed in this way
+//    because the pedge argument is a shared_ptr created from the host PartEdge's this. shared_ptrs
+//    cannot be created from this in the object's constructor, thus forcing us to delay initialization
+//    until the host PartEdge is fully initialized.
+// It is legal to call this function multiple times but in each call the field pedge.
+void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* client)
 {
   // Initialize pedge, fwML2ML and bwML2ML only once
-  if(initialized) return;
-  initialized = true;
+  if(initialized.find(client) != initialized.end()) return;
+  initialized.insert(client);
   
-  /*scope reg(txt()<<"MLRemapper::init() pedge=" << pedge.get()->str(), scope::medium, 1, 1);*/
-  this->pedge = pedge;
+  //scope reg(txt()<<"MLRemapper::init() pedge=" << pedge.get()->str()<<" client="<<client->str(), scope::medium);
+  // Record the given PartEdge and ensure that it is consistent
+  if(this->pedge) assert(this->pedge == pedge);
+  else            this->pedge = pedge;
+  
   if(pedge->source()) {
     set<CFGNode> srcNodes = pedge->source()->CFGNodes();
     for(set<CFGNode>::iterator n=srcNodes.begin(); n!=srcNodes.end(); n++) {
@@ -51,25 +61,25 @@ void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* analysis)
         set<MLMapping> ml2ml;
         // Map the return value to a FunctionResultML
         ml2ml.insert(
-            MLMapping(analysis->getComposer()->Expr2MemLoc(isSgReturnStmt(n->getNode())->get_expression(), pedge->source()->inEdgeFromAny(), analysis),
+            MLMapping(client->getComposer()->Expr2MemLoc(isSgReturnStmt(n->getNode())->get_expression(), pedge->source()->inEdgeFromAny(), client),
                       boost::make_shared<FuncResultMemLocObject>(Function(SageInterface::getEnclosingFunctionDeclaration(n->getNode()))),
                       false));
-        fwML2ML.insert(ml2ml);
+        fwML2ML[client].insert(ml2ml);
       // Else, if this is an edge out of a function's call (must be to a SgFunctionParameterList)
       } else if(isSgFunctionCallExp(n->getNode()) && n->getIndex()==2) {
         //dbg << "Function call out"<<endl;
         // Map the arguments of a function call <-> the function's parameters
         set<MLMapping> ml2ml_fw;
         setArgParamMap(pedge, isSgFunctionCallExp(n->getNode()), ml2ml_fw,
-                       analysis->getComposer(),
-                       analysis, true);
-        fwML2ML.insert(ml2ml_fw);
+                       client->getComposer(),
+                       client, true);
+        fwML2ML[client].insert(ml2ml_fw);
         
         set<MLMapping> ml2ml_bw;
         setArgParamMap(pedge, isSgFunctionCallExp(n->getNode()), ml2ml_bw,
-                       analysis->getComposer(),
-                       analysis, false);
-        bwML2ML.insert(invertArg2ParamMap(ml2ml_bw));
+                       client->getComposer(),
+                       client, false);
+        bwML2ML[client].insert(invertArg2ParamMap(ml2ml_bw));
       }
     }
   }
@@ -83,14 +93,14 @@ void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* analysis)
         //         the function's return MemLocObject <-> the call's return MemLocObject
         set<MLMapping> ml2ml;
         setArgByRef2ParamMap(pedge, isSgFunctionCallExp(n->getNode()), ml2ml,
-                             analysis->getComposer(),
-                             analysis);
-        bwML2ML.insert(ml2ml);
-        fwML2ML.insert(invertArg2ParamMap(ml2ml));
+                             client->getComposer(),
+                             client);
+        bwML2ML[client].insert(ml2ml);
+        fwML2ML[client].insert(invertArg2ParamMap(ml2ml));
       }
     }
   }
-  dbg << "MLRemapper::init"<<endl<<str() <<endl;
+  if(partitionsDebugLevel()>=2) dbg << "MLRemapper::init"<<endl<<str() <<endl;
 }
 
 // Given a lattice returns a freshly-allocated Lattice object that points to Lattice remapped in the forward direction
@@ -98,16 +108,20 @@ void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* analysis)
 //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
 //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
 //    the Lattice) is the one to which control is passing.
-Lattice* MLRemapper::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) const {
-  assert(initialized);
+Lattice* MLRemapper::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) const {
+  assert(initialized.find(client) != initialized.end());
   assert(pedge == lat->getPartEdge());
   
-  /*scope reg("MLRemapper::forwardRemapML()", scope::medium, 1, 1);
-  dbg << "#fwML2ML="<<fwML2ML.size()<<" pedge="<<pedge.get()->str()<<endl;*/
+  /*scope reg("MLRemapper::forwardRemapML()", scope::medium);
+  dbg << "client="<<client->str()<<endl;
+  dbg << "#fwML2ML="<<fwML2ML.size()<<" #initialized="<<initialized.size()<<" pedge="<<pedge.get()->str()<<endl;*/
   
+  map<ComposedAnalysis*, set<set<MLMapping> > >::const_iterator clientML2ML = fwML2ML.find(client);
+  if(clientML2ML == fwML2ML.end()) return NULL;
+
   // Iterate through all the possible remappings, computing the Lattices that they produce
   Lattice* ret=NULL;
-  for(set<set<MLMapping> >::iterator i=fwML2ML.begin(); i!=fwML2ML.end(); i++) {
+  for(set<set<MLMapping> >::const_iterator i=clientML2ML->second.begin(); i!=clientML2ML->second.end(); i++) {
     //dbg << "#i="<<i->size()<<endl;
     if(ret==NULL) ret = lat->remapML(*i, fromPEdge);
     else {
@@ -125,15 +139,18 @@ Lattice* MLRemapper::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) const {
 //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
 //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
 //    the Lattice) is the one to which control is passing.
-Lattice* MLRemapper::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) const {
-  assert(initialized);
+Lattice* MLRemapper::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) const {
+  assert(initialized.find(client) != initialized.end());
   assert(pedge == lat->getPartEdge());
   
-  dbg << "MLRemapper::backwardRemapML() #bwML2ML="<<bwML2ML.size()<<" pedge="<<pedge.get()->str()<<endl;
+ // if(partitionsDebugLevel()>=1) dbg << "MLRemapper::backwardRemapML() #bwML2ML="<<bwML2ML[client].size()<<" pedge="<<pedge.get()->str()<<endl;
+  
+  map<ComposedAnalysis*, set<set<MLMapping> > >::const_iterator clientML2ML = bwML2ML.find(client);
+  if(clientML2ML == bwML2ML.end()) return NULL;
   
   // Iterate through all the possible remappings, computing the Lattices that they produce
   Lattice* ret=NULL;
-  for(set<set<MLMapping> >::iterator i=bwML2ML.begin(); i!=bwML2ML.end(); i++) {
+  for(set<set<MLMapping> >::const_iterator i=clientML2ML->second.begin(); i!=clientML2ML->second.end(); i++) {
     if(ret==NULL) ret = lat->remapML(*i, fromPEdge);
     else {
       // Merge the lattice that results from the current remapping into ret, deleting the intermediate Lattice object
@@ -170,23 +187,35 @@ bool MLRemapper::equalMaps(const set<set<MLMapping> >& ml2mlA,
 
 bool MLRemapper::operator==(const MLRemapper& that) const
 {
-  return equalMaps(fwML2ML, that.fwML2ML) && 
-         equalMaps(bwML2ML, that.bwML2ML);
+  if(fwML2ML.size() != that.fwML2ML.size()) return false;
+  std::map<ComposedAnalysis*, std::set<std::set<MLMapping > > >::const_iterator 
+    fwThisIt = fwML2ML.begin(),
+    bwThisIt = bwML2ML.begin(),
+    fwThatIt = that.fwML2ML.begin(),
+    bwThatIt = that.bwML2ML.begin();
+
+  for(; fwThisIt != fwML2ML.end(); fwThisIt++, bwThisIt++, fwThatIt++, bwThatIt++) {
+    if(!equalMaps(fwThisIt->second, fwThatIt->second) ||
+        equalMaps(bwThisIt->second, bwThatIt->second))
+      return false;
+  }
+  return true;
 }
 
 // String representation of object
-std::string MLRemapper::map2Str(set<set<MLMapping> >& ml2ml, std::string indent) {
+std::string MLRemapper::map2Str(map<ComposedAnalysis*, set<set<MLMapping> > >& ml2ml, std::string indent) {
   ostringstream oss;
 
-  bool first=true;
-  for(set<set<MLMapping> >::iterator i=ml2ml.begin(); i!=ml2ml.end(); i++) {
+  for(map<ComposedAnalysis*, set<set<MLMapping> > >::iterator client=ml2ml.begin(); client!=ml2ml.end(); client++) {
+    if(client!=ml2ml.begin()) oss << indent;
+    oss << client->first->str() << ": "<<endl;
+    
+    for(set<set<MLMapping> >::iterator i=client->second.begin(); i!=client->second.end(); i++) {
     for(set<MLMapping>::iterator j=i->begin(); j!=i->end(); j++){
-      if(first) first=false;
-      else      oss << indent;
-      oss << indent << (j->from? j->from->str(indent+"        "): "NULL") << " -&gt; " << endl;
-      oss << indent << "    " << (j->to? j->to->str(indent+"        "): "NULL") << endl;
-      oss << indent << "    replaceMapping=" <<j->replaceMapping<<endl;
-    }
+      oss << indent << "    " << (j->from? j->from->str(indent+"        "): "NULL") << " -&gt; " << endl;
+      oss << indent << "        " << (j->to? j->to->str(indent+"        "): "NULL") << endl;
+      oss << indent << "        replaceMapping=" <<j->replaceMapping<<endl;
+    } }
   }
 
   return oss.str();
@@ -209,19 +238,21 @@ std::string MLRemapper::str(std::string indent)
 // (direction specified by the fw flag).
 void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call, 
                     std::set<MLMapping>& argParamMap,
-                    Composer* composer, ComposedAnalysis* analysis,
+                    Composer* composer, ComposedAnalysis* client,
                     bool fw)
 {
-  scope reg("setArgParamMap", scope::medium, analysisDebugLevel, 1);
+  scope reg("setArgParamMap", scope::medium, attrGE("partitionsDebugLevel", 1));
   Function func(call);
-  dbg << "call="<<SgNode2Str(call)<<endl;
-  dbg << "callEdge="<<callEdge->str()<<endl;
+  if(partitionsDebugLevel()>=1) {
+    dbg << "call="<<SgNode2Str(call)<<endl;
+    dbg << "callEdge="<<callEdge->str()<<endl;
+  }
   
   PartPtr callPart = callEdge->source();
   PartPtr funcStartPart = callEdge->target();
   
   // Part that corresponds to the function, which for now is set to be the start of its definition
-  //PartPtr funcStartPart = analysis->getComposer()->GetFunctionStartPart(func, analysis);
+  //PartPtr funcStartPart = client->getComposer()->GetFunctionStartPart(func, client);
   /*
   dbg << "call args="<<call->get_args()<<endl;
   dbg << "func params="<<(func.get_params()? SgNode2Str(func.get_params()): "NULL")<<endl;
@@ -273,9 +304,11 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
       itA!=args.end() && itP!=params.end(); 
       itA++, itP++)
   {
-    scope iter("iter", scope::low, analysisDebugLevel, 1);
-    dbg << "itA="<<SgNode2Str(*itA)<<endl;
-    dbg << "itP="<<SgNode2Str(*itP)<<endl;
+    scope iter("iter", scope::low, attrGE("partitionsDebugLevel", 1));
+    if(partitionsDebugLevel()>=1) {
+      dbg << "itA="<<SgNode2Str(*itA)<<endl;
+      dbg << "itP="<<SgNode2Str(*itP)<<endl;
+    }
     SgType* typeParam = (*itP)->get_type();
     
     // Skip "..." types, which are used to specify VarArgs.
@@ -286,16 +319,16 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
     //if((*itP)->get_name().getString() == "") continue;
     
     //cout << "itA="<<cfgUtils::SgNode2Str(*itA)<<", itP="<<cfgUtils::SgNode2Str(*itP)<<endl;
-    // MemLocObjectPtrPair argP = composer->Expr2MemLoc(*itA, funcStartPart->inEdgeFromAny(), analysis);
+    // MemLocObjectPtrPair argP = composer->Expr2MemLoc(*itA, funcStartPart->inEdgeFromAny(), client);
     // The argument MemLoc is preferrably the argument expression but may be a memory location if the expression is not available
-    MemLocObjectPtr arg = composer->Expr2MemLoc(*itA, callEdge->source()->outEdgeToAny(), analysis);
+    MemLocObjectPtr arg = composer->OperandExpr2MemLoc(call, *itA, callEdge->source()->outEdgeToAny(), client);
     // if(argP.expr) arg = argP.expr;
     // else    arg = argP.mem;
-    //if(analysisDebugLevel>=1) dbg << "argParamMap["<<arg->str()<<"]="<< composer->Expr2MemLoc(*itP, funcStartPart->inEdgeFromAny(), analysis)->str()<<endl;
+    //if(analysisDebugLevel>=1) dbg << "argParamMap["<<arg->str()<<"]="<< composer->Expr2MemLoc(*itP, funcStartPart->inEdgeFromAny(), client)->str()<<endl;
     /*dbg << "funcStartPart="<<funcStartPart->str()<<endl;
     dbg << "itP="<<SgNode2Str(*itP)<<endl;*/
     argParamMap.insert(MLMapping(arg,
-                                 composer->Expr2MemLoc(*itP, funcStartPart->outEdgeToAny(), analysis),
+                                 composer->Expr2MemLoc(*itP, funcStartPart->outEdgeToAny(), client),
                                  // In the forward direction only replace parameters passed by reference
                                  // In the backward direction replace everything
                                  !fw || (fw && isSgReferenceType(typeParam))));
@@ -308,9 +341,9 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
 // Supports callee->caller transfers for forwards analyses and caller->callee transfers for backwards analyses.
 void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call, 
                           std::set<MLMapping>& paramArgByRef2ParamMap,
-                          Composer* composer, ComposedAnalysis* analysis)
+                          Composer* composer, ComposedAnalysis* client)
 {
-  scope reg("setArgByRef2ParamMap", scope::medium, analysisDebugLevel, 1);
+  scope reg("setArgByRef2ParamMap", scope::medium, attrGE("partitionsDebugLevel", 1));
   std::set<CFGNode> exitNodes;
   assert(callEdge->source()->mustFuncExit(exitNodes));
   // For now we can only handle 1 CFGNode per Part
@@ -320,10 +353,10 @@ void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
   
   PartPtr callPart = callEdge->source();
   PartPtr funcStartPart = callEdge->target();
-  dbg << "callEdge="<<callEdge->str()<<endl;
+  if(partitionsDebugLevel()>=1) dbg << "callEdge="<<callEdge->str()<<endl;
   
   // Part that corresponds to the function, which for now is set to be the start of its definition
-  //PartPtr funcStartPart = analysis->getComposer()->GetFunctionStartPart(func, analysis);
+  //PartPtr funcStartPart = client->getComposer()->GetFunctionStartPart(func, client);
 
   SgExpressionPtrList args = call->get_args()->get_expressions(); 
   SgInitializedNamePtrList* params = func.get_args();
@@ -340,9 +373,11 @@ void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
       itParams!=params->end() && itArgs!=args.end(); 
       itParams++, itArgs++)
   {
-    scope iter("iter", scope::low, analysisDebugLevel, 1);
-    dbg << "itArgs="<<SgNode2Str(*itArgs)<<endl;
-    dbg << "itParams="<<SgNode2Str(*itParams)<<endl;
+    scope iter("iter", scope::low, attrGE("partitionsDebugLevel", 1));
+    if(partitionsDebugLevel()>=1) {
+      dbg << "itArgs="<<SgNode2Str(*itArgs)<<endl;
+      dbg << "itParams="<<SgNode2Str(*itParams)<<endl;
+    }
     SgType* typeParam = (*itParams)->get_type();
     
     // Skip "..." types, which are used to specify VarArgs.
@@ -355,35 +390,35 @@ void setArgByRef2ParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
     if(isSgReferenceType(typeParam)) {
   // If the current argument expression corresponds to a real memory location, make its key the MemLocObject 
   // that corresponds to its memory location
-  /*scope reg("setArgByRef2ParamMap", scope::medium, 1, 1);
+  /*scope reg("setArgByRef2ParamMap", scope::medium);
   dbg << "itParams=["<<(*itParams)->unparseToString()<<" | "<<(*itParams)->class_name()<<"]"<<endl;
-  dbg << "itParams MemLoc = "<<composer->Expr2MemLoc(*itParams, funcStartPart, analysis).strp(funcStartPart)<<endl;*/
+  dbg << "itParams MemLoc = "<<composer->Expr2MemLoc(*itParams, funcStartPart, client).strp(funcStartPart)<<endl;*/
   // if(isSgVarRefExp(*itArgs) || isSgPntrArrRefExp(*itArgs))
-  //   paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(*itArgs, callPart->inEdgeFromAny(), analysis).mem,
-  //             composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), analysis).mem));
+  //   paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(*itArgs, callPart->inEdgeFromAny(), client).mem,
+  //             composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), client).mem));
   // // Otherwise, use the expression MemLocObject
   // else
-  //   paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(*itArgs, callPart->inEdgeFromAny(), analysis).expr,
-  //             composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), analysis).mem));
+  //   paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(*itArgs, callPart->inEdgeFromAny(), client).expr,
+  //             composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), client).mem));
   //   }
-      paramArgByRef2ParamMap.insert(MLMapping(composer->Expr2MemLoc(*itArgs,   callEdge->target()->inEdgeFromAny(), analysis),
-                                              composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(),       analysis), true));
+      paramArgByRef2ParamMap.insert(MLMapping(composer->OperandExpr2MemLoc(call, *itArgs,   callEdge->target()->inEdgeFromAny(), client),
+                                              composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(),       client), true));
     // Parameters that are not passed in by reference are mapped to the NULL MemLoc to indicate that their scope is 
     // purely inside the function and they should not be propagated across function boundaries
     } else
       paramArgByRef2ParamMap.insert(MLMapping(NULLMemLocObject,
-                                              composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), analysis), true));
+                                              composer->Expr2MemLoc(*itParams, funcStartPart->outEdgeToAny(), client), true));
   }
   // Add the mapping from the FuncResultMemLocObject that denotes the return value to the function's call expression
   /*dbg << "declSymbol=["<<func.get_declaration()->search_for_symbol_from_symbol_table()->unparseToString()<<" | "<<func.get_declaration()->search_for_symbol_from_symbol_table()->class_name()<<"]"<<endl;
-  dbg << "declSymbol MemLoc = "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, analysis).str()<<endl;
-  dbg << "declSymbol MemLoc (funcStartPart)= "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, analysis).strp(funcStartPart)<<endl;
-  dbg << "declSymbol MemLoc (callPart)= "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, analysis).strp(callPart)<<endl;*/
+  dbg << "declSymbol MemLoc = "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, client).str()<<endl;
+  dbg << "declSymbol MemLoc (funcStartPart)= "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, client).strp(funcStartPart)<<endl;
+  dbg << "declSymbol MemLoc (callPart)= "<<composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart, client).strp(callPart)<<endl;*/
 
-  // paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(call, callPart->inEdgeFromAny(), analysis).expr,
-  //           composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart->outEdgeToAny(), analysis).mem));
-  paramArgByRef2ParamMap.insert(MLMapping(composer->Expr2MemLoc(call, callEdge, analysis),
-                                          //composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart->outEdgeToAny(), analysis)
+  // paramArgByRef2ParamMap.insert(make_pair(composer->Expr2MemLoc(call, callPart->inEdgeFromAny(), client).expr,
+  //           composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart->outEdgeToAny(), client).mem));
+  paramArgByRef2ParamMap.insert(MLMapping(composer->Expr2MemLoc(call, callEdge, client),
+                                          //composer->Expr2MemLoc(func.get_declaration()->search_for_symbol_from_symbol_table(), funcStartPart->outEdgeToAny(), client)
                                           boost::make_shared<FuncResultMemLocObject>(func), true));
 }
 
@@ -490,7 +525,7 @@ bool Context::lessContext(PartPtr a, PartPtr b) {
 }*/
 bool Context::operator<(const ContextPtr& that) const { 
   //return lessContext(part, that->part);
-  dbg << "Context::operator<  #partContexts="<<partContexts.size()<<" #that->partContexts="<<that->partContexts.size()<<endl;
+  //dbg << "Context::operator<  #partContexts="<<partContexts.size()<<" #that->partContexts="<<that->partContexts.size()<<endl;
   if(partContexts.size() < that->partContexts.size()) return true;
   if(partContexts.size() > that->partContexts.size()) return false;
   
@@ -557,7 +592,7 @@ PartEdgePtr NULLPartEdge;
 
 Part::~Part()
 {
-  /*scope reg(txt()<<"Deleting Part "<<this, scope::medium, 1, 1);*/
+  /*scope reg(txt()<<"Deleting Part "<<this, scope::medium);*/
 }
 
 // Returns the context that includes this Part and its ancestors.
@@ -655,7 +690,7 @@ bool Part::mayIncomingFuncCall(set<CFGNode>& ret) {
 // exclusively of matching pairs of outgoing and incoming function calls (for each outgoing call in one
 // list there's an incoming call in the other and vice versa).
 bool Part::mustMatchFuncCall(PartPtr that) {
-  //scope reg("Part::mustMatchFuncCall()", scope::medium, 1, 1);
+  //scope reg("Part::mustMatchFuncCall()", scope::medium);
   //dbg << "this = "<<str()<<endl;
   //dbg << "that = "<<that->str()<<endl;
   
@@ -829,8 +864,8 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
   // The target of this edge identifies the termination point of all the execution prefixes
   // denoted by this edge. We thus use it to query for the parts of the operands and only both
   // if this part is itself live.
-  scope reg("PartEdge::getOperandPartEdge()", scope::medium, partitionsDebugLevel, 2);
-  if(partitionsDebugLevel>=2) {
+  scope reg("PartEdge::getOperandPartEdge()", scope::medium, attrGE("partitionsDebugLevel", 2));
+  if(partitionsDebugLevel()>=2) {
     dbg << "anchor="<<SgNode2Str(anchor)<<" operand="<<SgNode2Str(operand)<<endl;
     dbg << "this PartEdge="<<str()<<endl;
   }
@@ -841,8 +876,8 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
   for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++)
     baseEdgesSet.insert(*be);
   
-  if(partitionsDebugLevel>=2) {
-    scope regBE("baseOperandEdges", scope::medium, partitionsDebugLevel, 2);
+  if(partitionsDebugLevel()>=2) {
+    scope regBE("baseOperandEdges", scope::medium, attrGE("partitionsDebugLevel", 2));
     for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++)
       dbg << be->get()->str();
   }
@@ -861,13 +896,13 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
   for(std::list<PartEdgePtr>::iterator o=out.begin(); o!=out.end(); o++)
     it.add(*o);*/
   
-  if(partitionsDebugLevel>=2) dbg << "it="<<it.str()<<endl;
-  scope regBE("Backward search", scope::medium, partitionsDebugLevel, 2);
+  if(partitionsDebugLevel()>=2) dbg << "it="<<it.str()<<endl;
+  scope regBE("Backward search", scope::medium, attrGE("partitionsDebugLevel", 2));
   
   // Walk backwards through the CCS edges, looking for the most recent CCS edge the parent of which is in list baseEdges
   while(it!=bw_dataflowPartEdgeIterator::end()) {
-    scope reg("Predecessor", scope::low, partitionsDebugLevel, 2);
-    if(partitionsDebugLevel>=2) {
+    scope reg("Predecessor", scope::low, attrGE("partitionsDebugLevel", 2));
+    if(partitionsDebugLevel()>=2) {
         dbg << it.getPartEdge().get()->str()<<endl;
         dbg << "pred-parent "<<it.getPartEdge()->getParent()->str()<<", "<<
                "source is "<<(it.getPartEdge()->getParent()->source()==NULLPart? "wildcard": "concrete")<<", "<<
@@ -883,8 +918,8 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
       // Look it up in baseEdges using a linear lookup that is sensitive to wildcards (this case should be 
       // rare enough that we don't optimize for it).
       for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++) {
-        if(partitionsDebugLevel>=3) {
-          scope sbe(txt()<<"baseEdge="<<be->get()->str(), scope::low, partitionsDebugLevel, 2);
+        if(partitionsDebugLevel()>=3) {
+          scope sbe(txt()<<"baseEdge="<<be->get()->str(), scope::low, attrGE("partitionsDebugLevel", 3));
           dbg << "it.getPartEdge()->getParent()->source()==NULLPart="<<(it.getPartEdge()->getParent()->source()==NULLPart)<<", "<<
                  "it.getPartEdge()->getParent()->target()==(*be)->target()="<<(it.getPartEdge()->getParent()->target()==(*be)->target())<<", "<<
                  "it.getPartEdge()->getParent()->target()==NULLPart="<<(it.getPartEdge()->getParent()->target()==NULLPart)<<", "<<
@@ -906,12 +941,12 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
       isOperandEdge = (baseEdgesSet.find(it.getPartEdge()->getParent()) != baseEdgesSet.end());
     
     if(isOperandEdge) {
-      if(partitionsDebugLevel>=2) dbg << "    Predecessor is an Operand edge."<<endl;
+      if(partitionsDebugLevel()>=2) dbg << "    Predecessor is an Operand edge."<<endl;
       // Add it to the operand edges
       ccsOperandEdges.push_back(it.getPartEdge());
     // Otherwise, keep searching backward
     } else {
-      if(partitionsDebugLevel>=2) dbg << "    Not an Operand edge. Moving on..."<<endl;
+      if(partitionsDebugLevel()>=2) dbg << "    Not an Operand edge. Moving on..."<<endl;
       it.pushAllDescendants();
     }
     it++;
@@ -941,22 +976,24 @@ bool PartEdge::operator>=(const PartEdgePtr& that) const { return !(*this<that);
 bool PartEdge::operator<=(const PartEdgePtr& that) const { return (*this<that) || (*this == that); }
 bool PartEdge::operator> (const PartEdgePtr& that) const { return !(*this<=that); }
 
-// Remaps the given Lattice as needed to take into account any function call boundaries.
+// Remaps the given Lattice as needed to take into account any function call boundaries on behalf of the given 
+//    client analysis (Expr2* is called with this analysis as the client rather than the analysis that created
+//    the ATS graph). 
 // Remapping is performed both in the forwards and backwards directions. 
 // Returns the resulting Lattice object, which is freshly allocated.
 // Since the function is called for the scope change across some Part, it needs to account for the fact that
 //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
 //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
 //    the Lattice) is the one to which control is passing.
-Lattice* PartEdge::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) { 
-  remap.init(makePtrFromThis(shared_from_this()), analysis);
+Lattice* PartEdge::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) { 
+  remap.init(makePtrFromThis(shared_from_this()), client);
   assert(makePtrFromThis(shared_from_this()) == lat->getPartEdge());
-  return remap.forwardRemapML(lat, fromPEdge);
+  return remap.forwardRemapML(lat, fromPEdge, client);
 }
-Lattice* PartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) {
-  remap.init(makePtrFromThis(shared_from_this()), analysis);
+Lattice* PartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) {
+  remap.init(makePtrFromThis(shared_from_this()), client);
   assert(makePtrFromThis(shared_from_this()) == lat->getPartEdge());
-  return remap.backwardRemapML(lat, fromPEdge);
+  return remap.backwardRemapML(lat, fromPEdge, client);
 }
 
 /* ################################
@@ -1068,7 +1105,7 @@ IntersectionPart::IntersectionPart(const std::map<ComposedAnalysis*, PartPtr>& p
 // of its sub-parts.
 std::list<PartEdgePtr> IntersectionPart::outEdges()
 {
-  /*scope reg("IntersectionPart::outEdges", scope::high, 1, 1);*/
+  /*scope reg("IntersectionPart::outEdges", scope::high);*/
   // For each part in parts, maps the parent part of each outgoing part to the set of parts that share this parent
   map<PartEdgePtr, map<ComposedAnalysis*, set<PartEdgePtr> > > parent2Out;
   for(map<ComposedAnalysis*, PartPtr>::iterator part=parts.begin(); part!=parts.end(); part++) {
@@ -1694,7 +1731,7 @@ bool IntersectionPartEdge::isEqualRemap
 //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
 //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
 //    the Lattice) is the one to which control is passing.
-Lattice* IntersectionPartEdge::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) 
+Lattice* IntersectionPartEdge::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) 
 {
   assert(edges.size()>0);
   // Confirm that all the sub-edges use the same remapping functors
@@ -1702,10 +1739,10 @@ Lattice* IntersectionPartEdge::forwardRemapML(Lattice* lat, PartEdgePtr fromPEdg
   assert(makePtrFromThis(shared_from_this()) == lat->getPartEdge());
 
   // Since all the edges have the same remapper, call the remapper of the first one
-  return edges.begin()->second->forwardRemapML(lat, fromPEdge);
+  return edges.begin()->second->forwardRemapML(lat, fromPEdge, client);
 }
 
-Lattice* IntersectionPartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) 
+Lattice* IntersectionPartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) 
 { 
   assert(edges.size()>0);
   // Confirm that all the sub-edges use the same remapping functors
@@ -1713,7 +1750,7 @@ Lattice* IntersectionPartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEd
   assert(makePtrFromThis(shared_from_this()) == lat->getPartEdge());
   
   // Since all the edges have the same remapper, call the remapper of the first one
-  return edges.begin()->second->backwardRemapML(lat, fromPEdge);
+  return edges.begin()->second->backwardRemapML(lat, fromPEdge, client);
 }
 
 std::string IntersectionPartEdge::str(std::string indent)

@@ -6,7 +6,7 @@
 #include <fstream>
 #include <map>
 using namespace std;
-using namespace dbglog;
+
 
 namespace fuse {
   
@@ -23,7 +23,7 @@ bool Lattice::setPartEdge(PartEdgePtr latPEdge) {
 }
 
 // Returns the PartEdge that this Lattice's information corresponds to
-PartEdgePtr Lattice::getPartEdge()
+PartEdgePtr Lattice::getPartEdge() const
 { 
 //  Dbg:: << "Lattice::getPartEdge() this->latPEdge="<<this->latPEdge<<endl;
 //  Dbg:: << "Lattice::getPartEdge() this->latPEdge="<<this->latPEdge->str()<<endl;
@@ -139,11 +139,11 @@ bool BoolAndLattice::setMLValueToFull(MemLocObjectPtr ml)
 }
 
 // Returns whether this lattice denotes the set of all possible execution prefixes.
-bool BoolAndLattice::isFull()
+bool BoolAndLattice::isFullLat()
 { return state==1; }
 
 // Returns whether this lattice denotes the empty set.
-bool BoolAndLattice::isEmpty()
+bool BoolAndLattice::isEmptyLat()
 { return state==-1; }
 
 string BoolAndLattice::str(string indent)
@@ -307,11 +307,11 @@ bool IntMaxLattice::setMLValueToFull(MemLocObjectPtr ml)
 }
 
 // Returns whether this lattice denotes the set of all possible execution prefixes.
-bool IntMaxLattice::isFull()
+bool IntMaxLattice::isFullLat()
 { return state==infinity; }
 
 // Returns whether this lattice denotes the empty set.
-bool IntMaxLattice::isEmpty()
+bool IntMaxLattice::isEmptyLat()
 { return state==-1; }
 
 string IntMaxLattice::str(string indent)
@@ -514,19 +514,19 @@ bool ProductLattice::setMLValueToFull(MemLocObjectPtr ml)
 
 
 // Returns whether this lattice denotes the set of all possible execution prefixes.
-bool ProductLattice::isFull()
+bool ProductLattice::isFullLat()
 {
   // Since we're not sure whether the contents of the product lattice are exhaustive, 
   // we don't bother checking if they are individually full and instead conservatively return false.
   return false;
 }
 // Returns whether this lattice denotes the empty set.
-bool ProductLattice::isEmpty()
+bool ProductLattice::isEmptyLat()
 {
   // Check if all items are empty
   for(std::vector<Lattice*>::iterator it=lattices.begin(); it!=lattices.end();) {
     // If at least one is not empty, return false
-    if(!(*it)->isEmpty()) return false;
+    if(!(*it)->isEmptyLat()) return false;
     
     // If this item is empty, remove it from the items list
     lattices.erase(it++);

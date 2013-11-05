@@ -1,17 +1,16 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
 
-bin_PROGRAMS = fuse
+bin_PROGRAMS = fuse fuseLayout
 
-fuse_CXXFLAGS =
+fuse_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS) -DROSE_PREFIX="\"${prefix}\""
 fuse_LDADD = -lrose
-fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH)
+fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LDFLAGS)
 
 INCLUDES = \
 	$(ROSE_INCLUDES) \
 	-I$(srcdir)/analysis \
 	-I$(srcdir)/cfgUtils \
-	-I$(srcdir)/dbglog \
-	-I$(srcdir)/dbglog/widgets \
+	-I$(srcdir)/sight/widgets \
 	-I$(srcdir)/lattice \
 	-I$(srcdir)/simpleAnalyses \
 	-I$(srcdir)/state
@@ -32,21 +31,23 @@ fuse_SOURCES = \
 	cfgUtils/cfgUtils.C \
 	cfgUtils/DataflowCFG.C \
 	cfgUtils/VirtualCFGIterator.C \
-	dbglog/dbglog.C \
-	dbglog/widgets.C \
-	dbglog/widgets/ats_graph.C \
+	sight/widgets/ats_graph_structure.C \
 	lattice/lattice.C \
 	simpleAnalyses/call_context_sensitivity_analysis.C \
 	simpleAnalyses/const_prop_analysis.C \
 	simpleAnalyses/dead_path_elim_analysis.C \
 	simpleAnalyses/live_dead_analysis.C \
-	simpleAnalyses/ortho_array_analysis.C \
 	simpleAnalyses/pointsToAnalysis.C \
 	simpleAnalyses/printAnalysisStates.C \
 	simpleAnalyses/saveDotAnalysis.C \
 	simpleAnalyses/taintAnalysis.C \
 	state/nodeState.C \
 	compositionalTestAnalysis.C
+
+fuseLayout_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS)
+fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LAYOUT_LDFLAGS)
+fuseLayout_SOURCES = \
+	sight/widgets/ats_graph_layout.C
 
 include_HEADERS =\
 	analysis/abstract_object.h \
@@ -66,16 +67,13 @@ include_HEADERS =\
 	cfgUtils/cfgUtils.h \
 	cfgUtils/DataflowCFG.h \
 	cfgUtils/VirtualCFGIterator.h \
-	dbglog/dbglog.h \
-	dbglog/widgets.h \
-	dbglog/widgets/ats_graph.h \
+	sight/widgets/ats_graph_structure.h \
 	lattice/lattice.h \
 	lattice/latticeFull.h \
 	simpleAnalyses/call_context_sensitivity_analysis.h \
 	simpleAnalyses/const_prop_analysis.h \
 	simpleAnalyses/dead_path_elim_analysis.h \
 	simpleAnalyses/live_dead_analysis.h \
-	simpleAnalyses/ortho_array_analysis.h \
 	simpleAnalyses/pointsToAnalysis.h \
 	simpleAnalyses/printAnalysisStates.h \
 	simpleAnalyses/saveDotAnalysis.h \
@@ -84,24 +82,21 @@ include_HEADERS =\
 	state/nodeState.h
 
 EXTRA_DIST = \
-	dbglog/dbgLogGraphTester.C \
-	dbglog/dbgLogTester.C \
-	dbglog/index.html \ # used by the dbglog system
-	src/factor_trans_systemTest.C \
-	img/divDL.gif \
-	img/divGO.gif
+	src/factor_trans_systemTest.C 
 
 FUSE_TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
 
 # for .C files
 FUSE_C_TESTS = \
-	compositionalTestInput1b.C \
-	compositionalTestInput2b.C \
+	compositionalTestInput1.C \
+	compositionalTestInput2.C \
+	compositionalTestInput3.C \
 	compositionalTestInput4.C \
 	compositionalTestInput5.C \
-	compositionalTestInput5b.C \
 	compositionalTestInput6.C \
 	compositionalTestInput7.C \
+	compositionalTestInput8.C \
+	compositionalTestInput9.C \
 	compositionalTestInput.jisheng.C \
 	cp_test1.C 
 
@@ -242,7 +237,7 @@ CXX_TESTS_REQUIRED_TO_PASS = \
         test2007_159.C test2007_164.C test2007_170.C test2007_171.C test2007_40.C               \
         test2007_44.C test2007_94.C test2008_16.C test2009_11.C test2009_31.C \
         test2009_42.C test2010_03.C test2010_04.C test2010_05.C test2010_06.C test2010_19.C  \
-        test2011_101.C test2011_110.C test2011_39.C test2011_72.C                \
+        test2011_101.C test2011_110.C test2011_133.C test2011_39.C test2011_72.C                \
         test2011_99.C test2005_114.C
 
 #SA: 9/15/13 currently takes > 5 mins to finish
@@ -316,8 +311,8 @@ check-cxx-expensive: $(CXX_FUSE_EXPENSIVE_TESTS)
 check-expensive: check-fuse-expensive check-cxx-expensive
 check-local: check-fuse check-cxx
 
-clean-check:
-	rm -f *.passed *.failed *.out *.err
+clean-local:
+	rm -rf *.dot *.png dbg/ *.passed *.failed *.out *.err
 
 clean-debug:
 	rm -rf *.dot *.png dbg/

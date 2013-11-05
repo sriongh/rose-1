@@ -16,7 +16,7 @@ class NodeState;
 
 namespace fuse {
 class ComposedAnalysis;
-extern int nodeStateDebugLevel;
+//extern int nodeStateDebugLevel;
 
 /************************************************
  ***         NodeFact       ***
@@ -27,7 +27,7 @@ extern int nodeStateDebugLevel;
  ************************************************/
 // A fact associated with a CFG node that is not part of a dataflow analysis. In other words, 
 // it is not a lattice and is not meant to evolve during the course of a dataflow analysis.
-class NodeFact: public dbglog::printable
+class NodeFact: public sight::printable
 {
   public:
   

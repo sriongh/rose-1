@@ -1,20 +1,23 @@
 #include "sage3basic.h"
 #include "pointsToAnalysis.h"
 
-using namespace dbglog;
+using namespace std;
+using namespace sight;
+
 namespace fuse
 {
-  int ptaDebugLevel = 2;
-
+  DEBUG_LEVEL(ptaDebugLevel, 0);
+  
   PointsToAnalysisTransfer::PointsToAnalysisTransfer(PartPtr part,
                                                      CFGNode cn, NodeState& state,
                                                      std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
-                                                     Composer* _composer, PointsToAnalysis* _analysis, const int& _debugLevel)
+                                                     Composer* _composer, PointsToAnalysis* _analysis, 
+                                                     const debugLevel& dLevel, std::string dLevelStr)
     :DFTransferVisitor(part, cn, state, dfInfo),
      composer(_composer),
      analysis(_analysis),
      modified(false),
-     debugLevel(_debugLevel)
+     dLevel(dLevel), dLevelStr(dLevelStr)
   {
     // set the pointer of the map for this PartEdge
     setProductLattice();
@@ -63,7 +66,7 @@ namespace fuse
   {
     AbstractObjectSetPtr _aos = boost::dynamic_pointer_cast<AbstractObjectSet> (productLattice->get(o));
     assert(_aos);
-    dbg << "getLattice(o): o=" << o->strp(part->inEdgeFromAny()) << ", lattice=" << _aos->strp(part->inEdgeFromAny()) << "\n";
+    if(ptaDebugLevel()>=1) dbg << "getLattice(o): o=" << o->strp(part->inEdgeFromAny()) << ", lattice=" << _aos->strp(part->inEdgeFromAny()) << "\n";
     return _aos;
   }
 
@@ -91,7 +94,7 @@ namespace fuse
                                             PointsToAnalysisTransfer::AbstractObjectSetPtr aos)
   {
     modified = modified || productLattice->insert(o, aos);
-    if(debugLevel >= 2) {
+    if(dLevel() >= 2) {
       dbg << productLattice->strp(part->inEdgeFromAny());
     }
   }
@@ -156,7 +159,7 @@ namespace fuse
   PointsToAnalysis::getTransferVisitor(PartPtr _part, CFGNode cn, NodeState& state, 
                                        std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo)                                     
   {
-    PointsToAnalysisTransfer* idftv = new PointsToAnalysisTransfer(_part, cn, state, dfInfo, getComposer(), this, ptaDebugLevel);
+    PointsToAnalysisTransfer* idftv = new PointsToAnalysisTransfer(_part, cn, state, dfInfo, getComposer(), this, ptaDebugLevel, "ptaDebugLevel");
     return boost::shared_ptr<DFTransferVisitor>(idftv);
   }
 
@@ -207,14 +210,14 @@ namespace fuse
 
   MemLocObjectPtr PointsToAnalysis::Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge)
   {
-    scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, ptaDebugLevel, 1);
-    if(ptaDebugLevel>=1) dbg << "pedge=" << pedge->str() << endl;
+    scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("ptaDebugLevel", 1));
+    if(ptaDebugLevel()>=1) dbg << "pedge=" << pedge->str() << endl;
 
     // NOTE: source and target of edge are not wildcard
     if(pedge->source() && pedge->target())
     {
       NodeState* state = NodeState::getNodeState(this, pedge->source());
-      if(ptaDebugLevel>=1) dbg << "state="<<state->str(this)<<endl;
+      if(ptaDebugLevel()>=1) dbg << "state="<<state->str(this)<<endl;
       AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeBelow(this, pedge, 0));
       assert(aom);
       boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
@@ -238,7 +241,7 @@ namespace fuse
       
         AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeBelow(this, lats->first, 0));
         assert(aom);
-        if(ptaDebugLevel>=1) dbg << "aom="<<aom->str()<<endl;
+        if(ptaDebugLevel()>=1) dbg << "aom="<<aom->str()<<endl;
         boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
         // NOTE: It can be empty if no entry was found in AbstractObjectMap
         // Safe approximation : merge only if it contains pointsTo information along this particular edge
@@ -252,7 +255,7 @@ namespace fuse
     else if(pedge->target()) 
     {
       NodeState* state = NodeState::getNodeState(this, pedge->target());
-      if(ptaDebugLevel>=1) dbg << "state="<<state->str()<<endl;
+      if(ptaDebugLevel()>=1) dbg << "state="<<state->str()<<endl;
       AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, NULLPartEdge, 0));
       assert(aom);
       boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
@@ -263,7 +266,7 @@ namespace fuse
 
   void Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)
   {
-    scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, ptaDebugLevel, 1);
+    scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, attrGE("ptaDebugLevel", 1));
     SgExpression* operand = sgn->get_operand();
     operand->accept(*this);
     boost::shared_ptr<AbstractObjectSet> new_p_aos = 
@@ -278,7 +281,7 @@ namespace fuse
 
   void Expr2MemLocTraversal::visit(SgVarRefExp* sgn)
   {
-    scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, ptaDebugLevel, 1);
+    scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, attrGE("ptaDebugLevel", 1));
     dbg << "isSgPointerType(sgn->get_type())="<<isSgPointerType(sgn->get_type())<<endl;
     // return points to set only for pointer types
     /*if(isSgPointerType(sgn->get_type()))
@@ -288,7 +291,7 @@ namespace fuse
     }*/
     p_aos = boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
     p_aos->insert(composer->Expr2MemLoc(sgn, pedge, analysis));
-    if(ptaDebugLevel>=1) dbg << "p_aos="<<p_aos->str()<<endl;
+    if(ptaDebugLevel()>=1) dbg << "p_aos="<<p_aos->str()<<endl;
   }
 
   void Expr2MemLocTraversal::visit(SgAssignOp* sgn)

@@ -3,7 +3,7 @@
 #include "cfgUtils.h"
 #include <cassert>
 using namespace std;
-using namespace dbglog;
+
 
 #define SgNULL_FILE Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 
@@ -57,10 +57,10 @@ namespace fuse
           return cfgn.getIndex()==1;
           
       // Filter out intermediate dot expressions. We only care about the complete ones.
-      case V_SgDotExp:
+/*      case V_SgDotExp:
         //dbg << "isSgDotExp(node->get_parent())="<<isSgDotExp(node->get_parent())<<endl;
         //cout << "defaultFilter() node="<<cfgUtils::SgNode2Str(node)<<" node->get_parent()="<<cfgUtils::SgNode2Str(node->get_parent())<<" interesting="<<(!isSgDotExp(node->get_parent()))<<endl;
-        return !isSgDotExp(node->get_parent());
+        return !isSgDotExp(node->get_parent());*/
       /*case V_SgCastExp:
           return false;*/
       

@@ -20,7 +20,7 @@
  */
 
 namespace fuse {
-extern int liveDeadAnalysisDebugLevel;
+//extern int liveDeadAnalysisDebugLevel;
 
 // Virtual class that allows users of the LiveDeadVarsAnalysis to mark certain variables as 
 // being used inside a function call if the function's body is not available.
@@ -174,9 +174,9 @@ class LDMemLocObject : public virtual MemLocObject
   bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullML(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyML(PartEdgePtr pedge);
   
   // pretty print for the object
   std::string str(std::string indent="") const;

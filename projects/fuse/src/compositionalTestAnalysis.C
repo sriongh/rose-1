@@ -12,10 +12,13 @@
 #include <ctype.h>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/xpressive/regex_actions.hpp>
+#include "sight.h"
+#include <sys/time.h>
 
 using namespace std;
 using namespace fuse;
 using namespace boost::xpressive;
+
 
 // Regex expressions for the composition command, defined globally so that they can be used inside main 
 // (where they're initialized) as well as inside output_nested_results()
@@ -53,7 +56,7 @@ struct output_nested_results
       // Create the selected analysis and add it to the parent's sub-analysis list
            if(regex_match(match, subWhat, cpAnalysis))  { parentSubAnalyses.push_back(new ConstantPropagationAnalysis()); }
       else if(regex_match(match, subWhat, ldAnalysis))  { parentSubAnalyses.push_back(new LiveDeadMemAnalysis()); }
-      else if(regex_match(match, subWhat, oaAnalysis))  { parentSubAnalyses.push_back(new OrthogonalArrayAnalysis()); }//ComposedAnalysis* ca = new OrthogonalArrayAnalysis(); cout << "OrthogonalArrayAnalysis="<<ca->str()<<endl; parentSubAnalyses.push_back(ca); }
+//      else if(regex_match(match, subWhat, oaAnalysis))  { parentSubAnalyses.push_back(new OrthogonalArrayAnalysis()); }//ComposedAnalysis* ca = new OrthogonalArrayAnalysis(); cout << "OrthogonalArrayAnalysis="<<ca->str()<<endl; parentSubAnalyses.push_back(ca); }
       else if(regex_match(match, subWhat, dpAnalysis))  { parentSubAnalyses.push_back(new DeadPathElimAnalysis()); }
       else if(regex_match(match, subWhat, ccsAnalysis)) { 
         parentSubAnalyses.push_back(new CallContextSensitivityAnalysis(1, CallContextSensitivityAnalysis::callSite));
@@ -111,8 +114,10 @@ struct output_nested_results
 
 int main(int argc, char** argv)
 {
+  FuseInit(argc, argv);
+  
   printf("========== S T A R T ==========\n");
-    
+  
   Rose_STL_Container<string> args = CommandlineProcessing::generateArgListFromArgcArgv(argc, argv);
   // Strip the dataflow analysis options
   
@@ -191,7 +196,15 @@ int main(int argc, char** argv)
                     what.nested_results().end(),
                     ons);
       assert(rootComposer!=NULL);
+      
+      struct timeval start, end;
+      gettimeofday(&start, NULL);
+      
       ((ChainComposer*)rootComposer)->runAnalysis();
+      
+      gettimeofday(&end, NULL);
+      cout << "Elapsed="<<((end.tv_sec*1000000+end.tv_usec) - 
+                           (start.tv_sec*1000000+start.tv_usec))/1000000.0<<"s"<<endl;
       
       //cout << "rootComposer="<<rootComposer<<" cdip->getNumErrors()="<<cdip->getNumErrors()<<endl;
       if(cdip->getNumErrors() > 0) cout << cdip->getNumErrors() << " Errors Reported!"<<endl;

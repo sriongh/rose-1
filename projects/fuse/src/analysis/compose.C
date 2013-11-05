@@ -5,14 +5,16 @@
 //#include "printAnalysisStates.h"
 #include "saveDotAnalysis.h"
 #include "stx_analysis.h"
-#include "widgets.h"
+#include "sight.h"
 #include <set>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
+using namespace boost;
 namespace fuse
 {
-int composerDebugLevel=1;
+DEBUG_LEVEL(composerDebugLevel, 0);
 
 //--------------------
 //----- Composer -----
@@ -20,11 +22,11 @@ int composerDebugLevel=1;
 
 Composer::Composer()
 {
-  //domInit = false;
+  //domInit = false; 
 }
 
 // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
-// Wrapper for calling type-specific versions of isLive without forcing the caller to care about the type of objects.
+// Wrapper for calling type-specific versions of mayEqual without forcing the caller to care about the type of objects.
 bool Composer::mayEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
 {
   ValueObjectPtr val1 = boost::dynamic_pointer_cast<ValueObject>(ao1);
@@ -34,25 +36,32 @@ bool Composer::mayEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePt
     return mayEqualV(val1, val2, pedge, client);
   }
   
-  MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
-  if(ml1) { 
-    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
-    assert(ml2);
-    return mayEqualML(ml1, ml2, pedge, client);
-  }
-  
-  CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
+  /*CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
   if(cl1) { 
     CodeLocObjectPtr cl2 = boost::dynamic_pointer_cast<CodeLocObject>(ao2);
     assert(cl2);
     return mayEqualCL(cl1, cl2, pedge, client);
+  }*/
+
+  MemRegionObjectPtr mr1 = boost::dynamic_pointer_cast<MemRegionObject>(ao1);
+  if(mr1) { 
+    MemRegionObjectPtr mr2 = boost::dynamic_pointer_cast<MemRegionObject>(ao2);
+    assert(mr2);
+    return mayEqualMR(mr1, mr2, pedge, client);
   }
+
+  /*MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
+  if(ml1) { 
+    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
+    assert(ml2);
+    return mayEqualML(ml1, ml2, pedge, client);
+  }*/
   
   assert(0);
 }
 
 // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
-// Wrapper for calling type-specific versions of isLive without forcing the caller to care about the type of objects.
+// Wrapper for calling type-specific versions of mustEqual without forcing the caller to care about the type of objects.
 bool Composer::mustEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
 {
   //dbg << "Composer::mustEqual"<<endl;
@@ -63,19 +72,97 @@ bool Composer::mustEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgeP
     return mustEqualV(val1, val2, pedge, client);
   }
   
-  MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
-  if(ml1) { 
-    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
-    assert(ml2);
-    return mustEqualML(ml1, ml2, pedge, client);
-  }
-  
-  CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
+  /*CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
   if(cl1) { 
     CodeLocObjectPtr cl2 = boost::dynamic_pointer_cast<CodeLocObject>(ao2);
     assert(cl2);
     return mustEqualCL(cl1, cl2, pedge, client);
+  }*/
+  
+  MemRegionObjectPtr mr1 = boost::dynamic_pointer_cast<MemRegionObject>(ao1);
+  if(mr1) { 
+    MemRegionObjectPtr mr2 = boost::dynamic_pointer_cast<MemRegionObject>(ao2);
+    assert(mr2);
+    return mustEqualMR(mr1, mr2, pedge, client);
   }
+  
+  /*MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
+  if(ml1) { 
+    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
+    assert(ml2);
+    return mustEqualML(ml1, ml2, pedge, client);
+  }*/
+  
+  assert(0);
+}
+
+// Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
+// Wrapper for calling type-specific versions of equalSet without forcing the caller to care about the type of objects.
+bool Composer::equalSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
+{
+  ValueObjectPtr val1 = boost::dynamic_pointer_cast<ValueObject>(ao1);
+  if(val1) { 
+    ValueObjectPtr val2 = boost::dynamic_pointer_cast<ValueObject>(ao2);
+    assert(val2);
+    return equalSetV(val1, val2, pedge, client);
+  }
+  
+  /*CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
+  if(cl1) { 
+    CodeLocObjectPtr cl2 = boost::dynamic_pointer_cast<CodeLocObject>(ao2);
+    assert(cl2);
+    return equalSetCL(cl1, cl2, pedge, client);
+  }*/
+
+  MemRegionObjectPtr mr1 = boost::dynamic_pointer_cast<MemRegionObject>(ao1);
+  if(mr1) { 
+    MemRegionObjectPtr mr2 = boost::dynamic_pointer_cast<MemRegionObject>(ao2);
+    assert(mr2);
+    return equalSetMR(mr1, mr2, pedge, client);
+  }
+
+  /*MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
+  if(ml1) { 
+    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
+    assert(ml2);
+    return equalSetML(ml1, ml2, pedge, client);
+  }*/
+  
+  assert(0);
+}
+
+// Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
+// Wrapper for calling type-specific versions of subSet without forcing the caller to care about the type of objects.
+bool Composer::subSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
+{
+  //dbg << "Composer::subSet"<<endl;
+  ValueObjectPtr val1 = boost::dynamic_pointer_cast<ValueObject>(ao1);
+  if(val1) { 
+    ValueObjectPtr val2 = boost::dynamic_pointer_cast<ValueObject>(ao2);
+    assert(val2);
+    return subSetV(val1, val2, pedge, client);
+  }
+  
+  /*CodeLocObjectPtr cl1 = boost::dynamic_pointer_cast<CodeLocObject>(ao1);
+  if(cl1) { 
+    CodeLocObjectPtr cl2 = boost::dynamic_pointer_cast<CodeLocObject>(ao2);
+    assert(cl2);
+    return subSetCL(cl1, cl2, pedge, client);
+  }*/
+  
+  MemRegionObjectPtr mr1 = boost::dynamic_pointer_cast<MemRegionObject>(ao1);
+  if(mr1) { 
+    MemRegionObjectPtr mr2 = boost::dynamic_pointer_cast<MemRegionObject>(ao2);
+    assert(mr2);
+    return subSetMR(mr1, mr2, pedge, client);
+  }
+  
+  /*MemLocObjectPtr ml1 = boost::dynamic_pointer_cast<MemLocObject>(ao1);
+  if(ml1) { 
+    MemLocObjectPtr ml2 = boost::dynamic_pointer_cast<MemLocObject>(ao2);
+    assert(ml2);
+    return subSetML(ml1, ml2, pedge, client);
+  }*/
   
   assert(0);
 }
@@ -86,14 +173,16 @@ bool Composer::mustEqual(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgeP
 bool Composer::isLive(AbstractObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
 {
   ValueObjectPtr val = boost::dynamic_pointer_cast<ValueObject>(ao);
-  if(val) return isLiveVal(val, pedge, client);
+  if(val) return isLiveV(val, pedge, client);
   
-  MemLocObjectPtr ml = boost::dynamic_pointer_cast<MemLocObject>(ao);
-  if(ml) return isLiveMemLoc(ml, pedge, client);
+  /*CodeLocObjectPtr cl = boost::dynamic_pointer_cast<CodeLocObject>(ao);
+  if(cl) return isLiveCL(cl, pedge, client);*/
   
-  CodeLocObjectPtr cl = boost::dynamic_pointer_cast<CodeLocObject>(ao);
-  if(cl) return isLiveCodeLoc(cl, pedge, client);
+  MemRegionObjectPtr mr = boost::dynamic_pointer_cast<MemRegionObject>(ao);
+  if(mr) return isLiveMR(mr, pedge, client);
   
+  /*MemLocObjectPtr ml = boost::dynamic_pointer_cast<MemLocObject>(ao);
+  if(ml) return isLiveML(ml, pedge, client);*/
   assert(0);
 }
 
@@ -182,12 +271,10 @@ ChainComposer::ChainComposer(const list<ComposedAnalysis*>& analyses,
   // Inform each analysis of the composer's identity
   //cout << "#allAnalyses="<<allAnalyses.size()<<" #doneAnalyses="<<doneAnalyses.size()<<endl;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    //cout << "ChainComposer::ChainComposer: "<<(*a)<<" : "<<(*a)->str("") << endl;
-    cout.flush();
+    //cout << "ChainComposer::ChainComposer: "<<(*a)<<" : "<<(*a)->str("") << endl; cout.flush();
     (*a)->setComposer(this);
   }
   if(testAnalysis) testAnalysis->setComposer(this);
-
 }
 
 ChainComposer::ChainComposer(const ChainComposer& that) : 
@@ -195,18 +282,110 @@ ChainComposer::ChainComposer(const ChainComposer& that) :
   currentAnalysis(currentAnalysis), testAnalysis(testAnalysis), verboseTest(verboseTest)
 {} 
 
+
+// Calls the operation with the ComposedAnalysis* argument
+template<class RetType>
+class CallWithCA : public ChainComposer::CallWithEitherComposedAnalysisOrPartEdge<RetType> {
+  function<RetType (ComposedAnalysis*)> callOp;
+  public:
+  CallWithCA(function<RetType (ComposedAnalysis*)> callOp): callOp(callOp) {}
+  RetType operator()(PartEdgePtr pedge, ComposedAnalysis* analysis, Composer::reqType type) const
+  { return callOp(analysis); }
+};
+
+// Calls the operation with the PartEdgePtr argument
+template<class RetType>
+class CallWithPE : public ChainComposer::CallWithEitherComposedAnalysisOrPartEdge<RetType> {
+  function<RetType (PartEdgePtr)> callOp;
+  public:
+  CallWithPE(function<RetType (PartEdgePtr)> callOp): callOp(callOp) {}
+  RetType operator()(PartEdgePtr pedge, ComposedAnalysis* analysis, Composer::reqType type) const
+  { return callOp(pedge); }
+};
+
+// Calls the operation with both the ComposedAnalysis* and the PartEdgePtr arguments, in that order
+class CacheKey
+{
+  public:
+  SgNode* n;
+  PartEdgePtr pedge;
+  ComposedAnalysis* server;
+  Composer::reqType type;
+  CacheKey(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* server, Composer::reqType type):
+    n(n), pedge(pedge), server(server), type(type)
+  {}
+  
+  bool operator==(const CacheKey& that) const
+  { return n==that.n && pedge==that.pedge && server==that.server && type==that.type; }
+  
+  bool operator<(const CacheKey& that) const { 
+    return n<that.n ||
+           (n==that.n && pedge<that.pedge) ||
+           (n==that.n && pedge==that.pedge && type<that.type) ||
+           (n==that.n && pedge==that.pedge && type==that.type && server<that.server);
+  }
+};
+
+template<class RetType>
+class CallWithCAandPE : public ChainComposer::CallWithEitherComposedAnalysisOrPartEdge<RetType> {
+  static map<CacheKey, RetType> Expr2AnyCache;
+  
+  function<RetType (ComposedAnalysis*, PartEdgePtr)> callOp;
+  SgNode* n;
+  
+  public:
+  CallWithCAandPE(function<RetType (ComposedAnalysis*, PartEdgePtr)> callOp, SgNode* n): callOp(callOp), n(n) {}
+  RetType operator()(PartEdgePtr pedge, ComposedAnalysis* server, Composer::reqType type) const
+  { 
+    /*CacheKey key(n, pedge, server, type);
+    if(Expr2AnyCache.find(key) == Expr2AnyCache.end())
+      Expr2AnyCache[key] = callOp(server, pedge);
+    return Expr2AnyCache[key];*/
+    return callOp(server, pedge);
+  }
+};
+
+template<class RetType>
+map<CacheKey, RetType>   CallWithCAandPE<RetType>::Expr2AnyCache;
+
+//template<class RetType>
+//std::map<std::pair<SgNode*, Composer::reqType>, RetType> CallWithCAandPE::Expr2AnyCache;
+
 // Generic function that looks up the composition chain from the given client 
 // analysis and returns the result produced by the first instance of the function 
 // called by the caller object found along the way.
-template<class RetObject, class FuncCallerArgs>
-RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePtr pedge, ComposedAnalysis* client,
-                                   FuncCaller<RetObject, FuncCallerArgs>& caller, bool verbose) {
-  ostringstream label;
-  scope reg(txt()<<"ChainComposer::callServerAnalysisFunc() "<<caller.funcName()<<" #doneAnalyses="<<doneAnalyses.size()<<" client="<<(client? client->str(): "NULL"), scope::medium,
-            composerDebugLevel, (verbose? 1: composerDebugLevel+1));
+template<class RetType>
+RetType ChainComposer::callServerAnalysisFunc(
+         // The name of the operation being called
+         string opName,
+         // Calls some operation on an analysis
+         //function<RetType (ComposedAnalysis*)> callOp, 
+         const CallWithEitherComposedAnalysisOrPartEdge<RetType>& callOp,
+         // Returns whether a given analysis supports the operation or not
+         //function<bool (ComposedAnalysis*)> isSupported,
+         // The type of the request (any, memloc, codeloc, val, atsGraph)
+         Composer::reqType type,
+         // Returns whether a given analysis implements the operation tightly (it uses itself as 
+         // a server for the operation) or loosely (it implements the operation but uses other 
+         // analyses when it needs to call it)
+         function<ComposedAnalysis::implTightness (ComposedAnalysis*)> checkTightness,
+         // Returns a string representation of the result of the operation
+         function<string (RetType, string)> ret2Str,
+         // The PartEdge at which the operation is being called
+         PartEdgePtr pedge, 
+         // The client analysis calling the operation
+         ComposedAnalysis* client, 
+         // Flag that indicates whether the operation's invocation should be logged in detail
+         bool verbose) {
+  ostringstream label; if(verbose) label<<"ChainComposer::callServerAnalysisFunc() "<<opName<<" #doneAnalyses="<<doneAnalyses.size()<<" client="<<(client? client->str(): "NULL");
+  scope reg(label.str(), scope::medium, attrGE("composerDebugLevel", (verbose? 1: composerDebugLevel()+1)));
+//          attrGE("composerDebugLevel", 1));
   assert(doneAnalyses.size()>0);
   //assert(serverCache.find(client) != serverCache.end());
   list<ComposedAnalysis*> doneAnalyses_back;
+  
+  /*attr opAttr("ReqType", opName);
+  measure* opMeasure = startMeasure("OpTimes", "Elapsed");*/
   
   // If the ChainComposed has already found the server analysis that implements requests of this type
 /*  map<reqType, ComposedAnalysis*>::iterator server = serverCache[client].find(type);
@@ -215,7 +394,7 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
     doneAnalyses_back.splice(doneAnalyses_back.end(), doneAnalyses, doneAnalyses.rbegin(), doneAnalyses.rbegin() + serverCache[client][type]+2);
     
     // Now invoke the given caller routine on the appropriate PartEdge
-    RetObject v(caller(args, pedge, *server, client));
+    RetType v(caller(args, pedge, *server, client));
     
     // Restore doneAnalyses by pushing back all the analyses that were removed for the sake of recursive
     // calls to callServerAnalysisFunc().
@@ -227,210 +406,154 @@ RetObject ChainComposer::callServerAnalysisFunc(FuncCallerArgs& args, PartEdgePt
       dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<(*a)->str("")<<" : "<<(*a)<<endl;
   }*/
   
-  // Iterate backwards looking for an analysis that implements caller() behind in the chain of completed analyses
+  if(verbose>=1) {
+    dbg << "pedge="<<(pedge? pedge->str(): "NULL")<<endl;
+    if(client) dbg << "client="<<client->str()<<", tightness="<<(checkTightness(client)==ComposedAnalysis::loose? "loose": "tight")<<endl;
+    if(currentAnalysis) dbg << "currentAnalysis="<<currentAnalysis->str()<<", tightness="<<(checkTightness(currentAnalysis)==ComposedAnalysis::loose? "loose": "tight")<<endl;
+  }
+  
+  // If the current analysis is non-NULL and implements the desired operation tightly, call its implementation
+  if(client && checkTightness(client)) {
+    //endMeasure(opMeasure);
+    return callOp(pedge, client, type);
+  }
+  if(client==NULL && currentAnalysis && checkTightness(currentAnalysis)) {
+    //endMeasure(opMeasure);
+    return callOp(pedge, currentAnalysis, type);
+  }
+  assert((client==NULL          || queryInfo.find(client)         !=queryInfo.end()) &&
+         (currentAnalysis==NULL || queryInfo.find(currentAnalysis)!=queryInfo.end()));
+  CCQueryServers& info = queryInfo[client? client: currentAnalysis];
+  if(verbose) { dbg << "queryInfo="<<info.str()<<endl; }
+  
+  ComposedAnalysis* server;
+  int pedgeUnrollCnt;
+  switch(type) {
+    case Composer::codeloc:   server = info.lastCodeLocAnalysis;   pedgeUnrollCnt = info.ATSGraphsSinceLastCodeLocAnalysis;   break;
+    case Composer::val:       server = info.lastValAnalysis;       pedgeUnrollCnt = info.ATSGraphsSinceLastValAnalysis;       break;
+    case Composer::memloc:    server = info.lastMemLocAnalysis;    pedgeUnrollCnt = info.ATSGraphsSinceLastMemLocAnalysis;    break;
+    case Composer::memregion: server = info.lastMemRegionAnalysis; pedgeUnrollCnt = info.ATSGraphsSinceLastMemRegionAnalysis; break;
+    case Composer::atsGraph:  server = info.lastATSGraphAnalysis;  pedgeUnrollCnt = 0;                                        break;
+    default: assert(0);
+  }
+  assert(server);
+  
+  if(verbose) { dbg << "server="<<server->str()<<", pedgeUnrollCnt="<<pedgeUnrollCnt<<endl;  }
+  
+  // Set pedge to the PartEdge of the ATS graph on which the server analysis ran
+  for(int i=0; i<pedgeUnrollCnt; i++)
+    pedge = pedge->getParent();
+  
+  //endMeasure(opMeasure);
+  //cout << "server="<<server->str()<<endl;
+  RetType v = callOp(pedge, server, type);
+  if(verbose) dbg << "Returning "<<ret2Str(v, "")<<endl;
+  return v;
+  
+/*  // Otherwise, iterate backwards through the composition chain looking for a completed analysis 
+  // that implements the operation
   list<ComposedAnalysis*>::reverse_iterator a=doneAnalyses.rbegin();
   while(doneAnalyses.size() >= 0) {
-    scope reg(txt()<<caller.funcName() << "  : " << (*a)->str(""), scope::medium, 
-              composerDebugLevel, (verbose? 1: composerDebugLevel+1));
-    if(composerDebugLevel >= (verbose? 1: composerDebugLevel+1)) {
-      dbg << args.str() << endl;
+    scope reg(txt()<<opName << "  : " << (*a)->str(""), scope::medium, 
+              attrGE("composerDebugLevel", (verbose? 1: composerDebugLevel()+1)));
+    if(composerDebugLevel() >= (verbose? 1: composerDebugLevel()+1)) {
       dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdgePtr")<<endl;
     }
     
-    ComposedAnalysis* curAnalysis = *a;
+    ComposedAnalysis* curDoneAnalysis = *a;
     // Move the current analysis from doneAnalyses onto a backup list to ensure that in recursive calls
     // to callServerAnalysisFunc() doneAnalyses excludes the current analysis. doneAnalyses will be restored
     // at the end of this function.
-    doneAnalyses_back.push_front(curAnalysis);
+    doneAnalyses_back.push_front(curDoneAnalysis);
     doneAnalyses.pop_back();
     a=doneAnalyses.rbegin();
-       
-    // Now invoke the given caller routine on the appropriate PartEdge
-    try {
-      RetObject v(caller(args, pedge, curAnalysis, client));
-      // If control reaches here, we know that the current analysis does 
-      // implement this method, so reconstruct doneAnalyses and return its reply
-
+    
+    // If the current completed analysis implements the given operation, invoke it
+    //if(isSupported(curDoneAnalysis)) {
+    bool isSupported = false;
+    switch(type) {
+      case Composer::codeloc:   isSupported = curDoneAnalysis->implementsExpr2CodeLoc();   break;
+      case Composer::val:       isSupported = curDoneAnalysis->implementsExpr2Val();       break;
+      case Composer::memloc:    isSupported = curDoneAnalysis->implementsExpr2MemLoc();    break;
+      case Composer::memregion: isSupported = curDoneAnalysis->implementsExpr2MemRegion(); break;
+      case Composer::atsGraph:  isSupported = curDoneAnalysis->implementsATSGraph();       break;
+      default: assert(0);
+    }
+      // Now invoke the given caller routine on the appropriate PartEdge
+    if(isSupported) {
+      opMeasure->pause();
+      RetType v = callOp(pedge, curDoneAnalysis);
+      opMeasure->resume();
+      
+      // Now that we've reached the desired analysis, reconstruct doneAnalyses and return its reply
       // Restore doneAnalyses by pushing back all the analyses that were removed for the sake of recursive
       // calls to callServerAnalysisFunc().
       doneAnalyses.splice(doneAnalyses.end(), doneAnalyses_back);
       
-      /*dbg << "Final State of doneAnalysis="<<endl;
+      / *dbg << "Final State of doneAnalysis="<<endl;
       for(list<ComposedAnalysis*>::iterator a=doneAnalyses.begin(); a!=doneAnalyses.end(); a++)
-        dbg << "    "<<(*a)->str("        ")<<endl;*/
-      if(composerDebugLevel>=1 && verbose) dbg << "Returning "<<caller.retStr(v)<<endl;
+        dbg << "    "<<(*a)->str("        ")<<endl;* /
+      if(composerDebugLevel()>=1 && verbose) dbg << "Returning "<<ret2Str(v, "")<<endl;
+      endMeasure(opMeasure);
       return v;
-    } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1 && verbose) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<caller.funcName()<<" Not Implemented by "<<curAnalysis->str()<<". Advancing to "<<(*a)->str("")<<endl;
-      // If control reaches here then the current analysis must not implement 
-      // this method so we keep looking further back in the chain
+      // If the current analysis does not implement this method we keep looking further back in the chain
+    } else {
+      if(composerDebugLevel()>=1 && verbose) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<opName<<" Not Implemented by "<<curDoneAnalysis->str()<<". Advancing to "<<(*a)->str("")<<endl;
     }
     
     // If the current caller object is concerned with PartEdges and the current analysis implements partition graphs, 
     // convert the current PartEdge that it implemented to the corresponding PartEdge of its precessor on which the 
     // current PartEdge is based.
-    if(composerDebugLevel>=1 && verbose) dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<" curAnalysis->implementsPartGraph()="<<curAnalysis->implementsPartGraph()<<endl;
-    if(pedge && curAnalysis->implementsPartGraph())
-    { pedge = curAnalysis->convertPEdge(pedge); 
+    if(composerDebugLevel()>=1 && verbose) dbg << "pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<" curDoneAnalysis->implementsATSGraph()="<<curDoneAnalysis->implementsATSGraph()<<endl;
+    if(pedge && curDoneAnalysis->implementsATSGraph())
+    { pedge = curDoneAnalysis->convertPEdge(pedge); 
       //pedge = pedge->getParent();
-      if(composerDebugLevel>=1 && verbose) dbg << "Updated: pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<endl;
+      if(composerDebugLevel()>=1 && verbose) dbg << "Updated: pedge="<<(pedge? pedge->str(): "NULLPartEdge")<<endl;
     }
   }
   
   // The first analysis in the chain must implement every optional method so 
   // control should never reach this point
-  cerr << "ERROR: no analysis implements method "<<caller.funcName()<<"(SgExpression)";
-  assert(0);
+  cerr << "ERROR: no analysis implements method "<<opName<<"(SgExpression)";
+  assert(0);*/
 }
  
 // -------------------------------------
 // ----- Expression Interpretation -----
 // -------------------------------------
 
-// ----------------------
-// --- Calling Expr2* ---
-// ----------------------
+// Returns the AbstractObject that denotes the union of the objects in the list
+template<class RetPtrType, class UnionRetType>
+boost::shared_ptr<UnionRetType> unionAbstractObjects(std::list<RetPtrType> objects) {
+  boost::shared_ptr<UnionRetType> ret = boost::make_shared<UnionRetType>(objects);
+  if(composerDebugLevel()>=1) dbg << ret->str()<<endl;
+  return ret;
+}
 
-// Contains the arguments needed by Expr2* calls
-class FuncCallerArgs_Expr2Any
+// Returns the boolean value that denotes the disjunction of the booleans in the list
+bool unionBool(std::list<bool> vals) {
+  for(std::list<bool>::iterator v=vals.begin(); v!=vals.end(); v++)
+    if(!*v) return false;
+  return true;
+}
+
+// Invokes callOp on the PartEdge(s) that correspond to the given operand of SgNode n, with PartEdge
+// pedge guaranteed to terminate at n. Returns the union of all the returned values.
+template<class RetPtrType, class UnionRetType, class UnionRetPtrType>
+UnionRetPtrType ChainComposer::OperandExpr2Any
+                     (string OpName, SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client,
+                      function<RetPtrType (PartEdgePtr, ComposedAnalysis*)> callOp,
+                      function<UnionRetPtrType (std::list<RetPtrType>)> unionOp,
+                      // Returns a string representation of the result of the operation
+                      function<string (RetPtrType, string)> ret2Str)
 {
-  public:
-  SgNode* n;
-  
-  FuncCallerArgs_Expr2Any(SgNode* n) : n(n){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[n="<<SgNode2Str(n)<<"]";
-    return oss.str();
-  }
-};
-
-// --- Calling Expr2Val ---
-
-// These classes wrap the functionality of calling a specific function within an 
-// Analysis or a Part
-class Expr2ValCaller : public FuncCaller<ValueObjectPtr, FuncCallerArgs_Expr2Any>
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  ValueObjectPtr operator()(const FuncCallerArgs_Expr2Any& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { return server->Expr2Val(args.n, pedge); }
-  // Returns a string representation of the returned object
-  std::string retStr(ValueObjectPtr val) { return (val ? val->str() : "NULL"); }
-  string funcName() const{ return "Expr2Val"; }
-};
-
-// #SA
-// check if the MemLocObject is an ExprObj or not
-bool isExprObj(MemLocObjectPtr p)
-{ 
-  return (boost::dynamic_pointer_cast<ExprObj>(p) != NULL); 
-}
-
-ValueObjectPtr ChainComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
-  Expr2ValCaller c;
-  FuncCallerArgs_Expr2Any args(n);
-  return callServerAnalysisFunc<ValueObjectPtr, FuncCallerArgs_Expr2Any>(args, pedge, client, c, false);
-}
-
-// Variant of Expr2Val that inquires about the value of the memory location denoted by the operand of the 
-// given node n, where the part denotes the set of prefixes that terminate at SgNode n.
-ValueObjectPtr ChainComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
-  scope reg("ChainComposer::OperandExpr2Val()", scope::medium, composerDebugLevel, 2);
-  if(composerDebugLevel>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
-  
-  // Get the part edges of the execution prefixes that terminate at the operand before continuing directly 
-  // to SgNode n in the given part edge
-  list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  if(composerDebugLevel>=2) dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
-  for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    indent ind;
-    if(composerDebugLevel>=2) dbg << (*opE)->str("    ")<<endl;
-  }
-  
-  if(opPartEdges.size()>0) {
-    // The ValueObjects that represent the operand within different Parts in opParts
-    list<ValueObjectPtr> partVs; 
-    
-    // Iterate over all the parts to get the expression and memory MemLocObjects for operand within those parts
-    for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++)
-      partVs.push_back(Expr2Val(operand, *opE, client));
-
-    return boost::static_pointer_cast<ValueObject>(boost::make_shared<UnionValueObject>(partVs));
-  } else
-    return NULLValueObject;
-}
-
-// --- Calling Expr2MemLoc ---
-
-class Expr2MemLocCaller : public FuncCaller<MemLocObjectPtr, FuncCallerArgs_Expr2Any>
-{
-  public:
-  // Calls the given analysis' implementation of Expr2MemLoc within the given node
-  MemLocObjectPtr operator()(const FuncCallerArgs_Expr2Any& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { return server->Expr2MemLoc(args.n, pedge); }
-  // Returns a string representation of the returned object
-  std::string retStr(MemLocObjectPtr ml) { return (ml ? ml->str() : "NULL"); }
-  string funcName() const{ return "Expr2MemLoc"; }
-};
-
-MemLocObjectPtr ChainComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-  // Call Expr2MemLoc_ex() and wrap the results of the memory MemLocObject with a UnionMemLocObject
-  MemLocObjectPtr p = Expr2MemLoc_ex(n, pedge, client);
-  // create combined memlocobject for objects that correspond to actual memory
-  if(!boost::dynamic_pointer_cast<ExprObj> (p))
-    p = boost::static_pointer_cast<MemLocObject> (UnionMemLocObject::create(p));
-
-  // if(p.mem)  p.mem  = boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(p.mem));
-  // //if(p.expr) p.expr = boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(p.expr));
-  // //#SA: if the expr is valid, it better be cast as ExprObj
-  // if(p.expr)  assert(boost::dynamic_pointer_cast<ExprObj> (p.expr));
-  return p;
-}
-
-// #SA: Variant of Expr2MemLoc for an analysis to call its own Expr2MemLoc method to interpret complex expressions
-// Composer caches memory objects for the analysis
-MemLocObjectPtr ChainComposer::Expr2MemLocSelf(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* self) {
-  // call its own Expr2MemLoc
-  // TODO: Implement caching
-  return self->Expr2MemLoc(n, pedge);
-}
-
-MemLocObjectPtr ChainComposer::Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
-  // Return the pair of <object that specifies the expression temporary of n, 
-  //                     object that specifies the memory location that n corresponds to>
-  Expr2MemLocCaller c;
-  FuncCallerArgs_Expr2Any args(n);
-  MemLocObjectPtr mem = callServerAnalysisFunc<MemLocObjectPtr, FuncCallerArgs_Expr2Any>(args, pedge, client, c, false);
-  return mem; // #SA: return the object by server without any wrapping
-
-  // If mem is an expression object returned by the syntactic analysis, there is no object that
-  // specifies n's memory location
-  // if(boost::dynamic_pointer_cast<ExprObj>(mem))
-  //   // Return mem as n's expression object and do not return an object for n's memory location
-  //   return MemLocObjectPtrPair(mem, NULLMemLocObject);
-  // // If mem actually corresponds to a location in memory 
-  // else
-  //   // Generate a fresh object for n's expression temporary and return it along with mem
-  //   return MemLocObjectPtrPair(
-  //             isSgExpression(n) && !isSgVarRefExp(n) ? 
-  //               createExpressionMemLocObject(isSgExpression(n), isSgExpression(n)->get_type(), pedge) :
-  //               NULLMemLocObject,
-  //             mem);
-}
-
-// Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
-// the part denotes the set of prefixes that terminate at SgNode n.
-MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  scope reg("ChainComposer::OperandExpr2MemLoc()", scope::medium, composerDebugLevel, 2);
-  if(composerDebugLevel>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
+  scope reg(txt()<<"ChainComposer::Operand"<<OpName, scope::medium, attrGE("composerDebugLevel", 2));
+  if(composerDebugLevel()>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
   
   // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
   // to SgNode n in the given part
   list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  if(composerDebugLevel>=2) {
+  if(composerDebugLevel()>=2) {
     dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
     for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
       indent ind;
@@ -438,768 +561,557 @@ MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, Pa
     }
   }
   
-  // The memory and expression MemLocObjects that represent the operand within different Parts in opParts
-  //list<MemLocObjectPtr> partMLsExpr; 
-  MemLocObjectPtr partMLsExpr = NULLMemLocObject;
-  list<MemLocObjectPtr> partMLsMem;
+  // The MemRegionObjects that represent the operand within different Parts in opParts
+  list<RetPtrType > partObjects;
   
-  // Flags that indicate whether we have memory and expression objects from all/none of the sub-parts
-  // Exactly One of these must be true
-  bool expr4All=true, expr4None=true;
-  bool mem4All=true,  mem4None=true;
-  
-  // Iterate over all the part edges to get the expression and memory MemLocObjects for operand within those parts
+  // Iterate over all the part edges to get the expression and memory MemRegionObjects for operand within those parts
   for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    MemLocObjectPtr p = Expr2MemLoc_ex(operand, *opE, client);
-    if(composerDebugLevel>=2) {
+    RetPtrType p = callOp(*opE, client);
+    if(composerDebugLevel()>=2) {
       dbg << "opE="<<opE->get()->str()<<endl;
-      dbg << "p(expr="<<isExprObj(p)<<")="<<p->str()<<endl;
+      dbg << "p="<<ret2Str(p, "")<<endl;
     }
-    // if(!p.expr) expr4All=false;
-    // else        expr4None=false;
-    
-    // if(!p.mem) mem4All=false;
-    // else       mem4None=false;
-    // We must get either an expression or a memory object
-    assert(p);
-    if(isExprObj(p)) {
-      expr4None = false;
-      mem4All = false;
-    }
-    // p is a memory location
-    else if(p){
-      expr4All = false;
-      mem4None = false;
-    }
-    
-    //if(p.expr) partMLsExpr.push_back(p.expr);
-    // if(p.expr) {
-    //   // All expression objects must be the same and we record the first one we see in partMLsExpr
-    //   if(partMLsExpr) assert(partMLsExpr == p.expr);
-    //   else partMLsExpr = p.expr;
-    // }
-    if(isExprObj(p)) {
-      // All expression objects must be the same and we record the first one we see in partMLsExpr
-      if(partMLsExpr) assert(partMLsExpr == p);
-      else partMLsExpr = p;
-    }
-    // if(p.mem)  partMLsMem.push_back(p.mem);
-    // we have a MemLocObject
-    else  partMLsMem.push_back(p);
+    partObjects.push_back(p);
   }
-  
-  // Either we got expression/memory MemLocObjects from all parts or none of them
-  if(opPartEdges.size()>0) {
-    assert((expr4All && !expr4None) || (!expr4All && expr4None));
-    assert((mem4All  && !mem4None)  || (!mem4All  && mem4None));
-  }
-  
-  // Create a MemLocObjectPtrPair that includes UnionMemLocObjects that combine all the expression and memory
-  // MemLocObjects from all the Parts that terminate at operand, using the Null MemLocObjectPtr if either
-  // the expression or the memory MemLocObjects were not provided.
-  // if(expr4All && mem4All) 
-  //   return MemLocObjectPtrPair(partMLsExpr, // boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(partMLsExpr)),
-  //                              boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(partMLsMem)));
-  // else if(expr4All)
-  //   return MemLocObjectPtrPair(partMLsExpr, // boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(partMLsExpr)),
-  //                              NULLMemLocObject);
-  // else if(mem4All)
-  //   return MemLocObjectPtrPair(NULLMemLocObject,
-  //                              boost::static_pointer_cast<MemLocObject>(UnionMemLocObject::create(partMLsMem)));
-  // // We must get either an expression or a memory object
-  // else
-  //   assert(0);
 
-  scope reg2("Returning", scope::low, composerDebugLevel, 1);
+  scope reg2("Returning", scope::low, attrGE("composerDebugLevel", 1));
   if(opPartEdges.size()>0) {
-    // Create a MemLocObjectPtr that includes UnionMemLocObjects that combine all the memory
-    if(mem4All) {
-      UnionMemLocObjectPtr ret = UnionMemLocObject::create(partMLsMem);
-      if(composerDebugLevel>=1) dbg << ret->str()<<endl;
-      return boost::static_pointer_cast<MemLocObject>(ret);
-    }
-    else {
-      assert(expr4All);
-      if(composerDebugLevel>=1) dbg << (partMLsExpr? partMLsExpr->str() : "NULL")<<endl;
-      return partMLsExpr;
-    }
-  } else
-    return NULLMemLocObject;
-  /*// Find the Partition(s) that correspond to the given operand of n
-  std::vector<PartEdgePtr> in=part->inEdges();
-  list<PartPtr> opParts;
-  //for(std::vector<PartEdgePtr>::iterator e=in.begin(); e!=in.end(); e++) {
-  // Walk backwards through the partition graph until we reach the Part that includes the operand
-  // GB 2012-09-24: Note that there may be multiple such parts and right now we're only reaching the first one.
-  //                To fully support this we need to integrate partitions into SgNodes to create a fixed mapping 
-  //                between SgNodes and their containing Parts.
-  back_partIterator curPart(part); curPart++;
-  for(; curPart!=back_partIterator::end(); curPart++) {
-    indent ind;
-    dbg << "curPart="<<(*curPart)->str()<<endl;
-    std::vector<CFGNode> nodes = (*curPart)->CFGNodes();
-    indent ind2;
-    // Look to see if any of the CFGNodes within this source Part include this operand
-    for(std::vector<CFGNode>::iterator node=nodes.begin(); node!=nodes.end(); node++) {
-      dbg << "node("<<node->getNode()<<")="<<CFGNode2Str(*node)<<endl;
-      // If so, record it in opParts
-      if(node->getNode()==operand) opParts.push_back(*curPart);
-    }
-    // If we've reached the part that includes the operand, we're done with the search
-    if(opParts.size()>0) { break; }
+    // Return the union of all the objects
+    return unionOp(partObjects);
+  } else {
+    UnionRetPtrType NULLObj;
+    return NULLObj;
   }
-  if(opParts.size()==0) { dbg << "Empty opParts."<<endl; }
-  assert(opParts.size()>=1);
-  // We currently can only deal with the case where the operand appears in one source Part. To support the general
-  // case we need to implement support for intersections of analyses, where any query to multiple analyses comes back
-  // with the tightest result returned by any of them.
-  assert(opParts.size()==1);
-  PartPtr opPart = *opParts.begin();
-  
-  return Expr2MemLoc(operand, opPart, client);*/
 }
+
+// ----------------------
+// --- Calling Expr2* ---
+// ----------------------
+
+std::string bool2Str(bool b, string indent) { return (b ? "TRUE" : "FALSE"); }
+
+bool returnTrue(ComposedAnalysis*) { return true; }
+ComposedAnalysis::implTightness returnLoose(ComposedAnalysis*) { return ComposedAnalysis::loose; }
+ComposedAnalysis::implTightness returnTight(ComposedAnalysis*) { return ComposedAnalysis::tight; }
+
+// Implements a Ret (boost::shared_ptr<Arg>, string) operator by calling .get() on the Arg
+// argument and then calling the given function with the raw pointer as the first argument.
+template<class Arg, class ArgPtr>
+class CallGet2Arg
+{
+  function<string (Arg*, string)> op;
+  public:
+  CallGet2Arg(function<string (Arg*, string)> op) : op(op) {}
+
+  string operator()(ArgPtr arg1, string arg2)
+  { return op(arg1.get(), arg2); }
+};
+
 
 // --- CallingExpr2CodeLoc ---
 
-class Expr2CodeLocCaller : public FuncCaller<CodeLocObjectPtr, FuncCallerArgs_Expr2Any>
-{
-  public:
-  // Calls the given analysis' implementation of Expr2CodeLoc within the given node
-  CodeLocObjectPtr operator()(const FuncCallerArgs_Expr2Any& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { return server->Expr2CodeLoc(args.n, pedge);}
-  // Returns a string representation of the returned object
-  std::string retStr(CodeLocObjectPtr cl) { return (cl ? cl->str() : "NULL"); }
-  string funcName() const{ return "Expr2CodeLoc"; }
-};
-
-
-CodeLocObjectPtrPair ChainComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
-  // Return the pair of <object that specifies the expression temporary of n, 
-  //                     object that specifies the memory location that n corresponds to>
-  // GB: !!! Right now we don't have a firm idea of how to manage CodeLocObjects and have not yet implemented
-  //     !!! an ExprObj for them. When we have done so, this code will likely mirror the code for Expr2MemLoc.
-  Expr2CodeLocCaller c;
-  FuncCallerArgs_Expr2Any args(n);
-  return CodeLocObjectPtrPair(boost::make_shared<StxCodeLocObject>(n, pedge),
-                              callServerAnalysisFunc<CodeLocObjectPtr, FuncCallerArgs_Expr2Any>(args, pedge, client, c, false));
+CodeLocObjectPtr ChainComposer::Expr2CodeLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<CodeLocObjectPtr>(
+           "Expr2CodeLoc",
+           CallWithCAandPE<CodeLocObjectPtr>(
+               function<CodeLocObjectPtr (ComposedAnalysis*, PartEdgePtr)>(bind( &ComposedAnalysis::Expr2CodeLoc, _1, n, _2)), n),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           Composer::codeloc,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (CodeLocObjectPtr, string)>(
+                 CallGet2Arg<CodeLocObject, CodeLocObjectPtr>(function<string (CodeLocObject*, string)>(bind( &CodeLocObject::str, _1, _2)))),
+           pedge, client, false);
+}
+CodeLocObjectPtr ChainComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+  // Call Expr2CodeLoc_ex() and wrap the results with a UnionCodeLocObject
+  return boost::make_shared<UnionCodeLocObject>(Expr2CodeLoc_ex(n, pedge, client));
+}
+// Variant of Expr2CodeLoc that inquires about the value of the code location denoted by the operand of the 
+// given node n, where the part denotes the set of prefixes that terminate at SgNode n.
+CodeLocObjectPtr ChainComposer::OperandExpr2CodeLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<CodeLocObjectPtr, UnionCodeLocObject, UnionCodeLocObjectPtr>
+                ("Expr2CodeLoc", n, operand, pedge, client,
+                 function<CodeLocObjectPtr (PartEdgePtr, ComposedAnalysis*)>(bind(&ChainComposer::Expr2CodeLoc_ex, this, operand, _1, _2)),
+                 function<UnionCodeLocObjectPtr (std::list<CodeLocObjectPtr>)>(&unionAbstractObjects<CodeLocObjectPtr, UnionCodeLocObject>),
+                 function<string (CodeLocObjectPtr, string)>(
+                       CallGet2Arg<CodeLocObject, CodeLocObjectPtr>(function<string (CodeLocObject*, string)>(bind( &CodeLocObject::str, _1, _2)))));
 }
 
-/*
-// Calls the isLive() method of the given MemLocObject that denotes an operand of the given SgNode n within
-// the context of its own PartEdges and returns true if it may be live within any of them
-bool ChainComposer::OperandIsLive(SgNode* n, SgNode* operand, MemLocObjectPtr ml, PartEdgePtr pedge, ComposedAnalysis* client) {
-  // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
-  // to SgNode n in the given part
-  list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    if(ml->isLive(*opE)) return true;
-  }
-  return false;
+// --- Calling Expr2Val ---
+ValueObjectPtr ChainComposer::Expr2Val_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<ValueObjectPtr>(
+           "Expr2Val",
+           CallWithCAandPE<ValueObjectPtr>(
+               function<ValueObjectPtr (ComposedAnalysis*, PartEdgePtr)>(bind( &ComposedAnalysis::Expr2Val, _1, n, _2)), n),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (ValueObjectPtr, string)>(
+                 CallGet2Arg<ValueObject, ValueObjectPtr>(function<string (ValueObject*, string)>(bind( &ValueObject::str, _1, _2)))),
+           pedge, client, false);
+}
+ValueObjectPtr ChainComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  // Call Expr2Val_ex() and wrap the results with a UnionValueObject
+  return boost::make_shared<UnionValueObject>(Expr2Val_ex(n, pedge, client));
+}
+// Variant of Expr2Val that inquires about the value of the value denoted by the operand of the 
+// given node n, where the part denotes the set of prefixes that terminate at SgNode n.
+ValueObjectPtr ChainComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<ValueObjectPtr, UnionValueObject, UnionValueObjectPtr>
+                ("Expr2Val", n, operand, pedge, client,
+                 function<ValueObjectPtr (PartEdgePtr, ComposedAnalysis*)>(bind(&ChainComposer::Expr2Val_ex, this, operand, _1, _2)),
+                 function<UnionValueObjectPtr (std::list<ValueObjectPtr>)>(&unionAbstractObjects<ValueObjectPtr, UnionValueObject>),
+                 function<string (ValueObjectPtr, string)>(
+                       CallGet2Arg<ValueObject, ValueObjectPtr>(function<string (ValueObject*, string)>(bind( &ValueObject::str, _1, _2)))));
+}
+
+// --- Calling Expr2MemRegion ---
+MemRegionObjectPtr ChainComposer::Expr2MemRegion_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<MemRegionObjectPtr>(
+           "Expr2MemRegion",
+           CallWithCAandPE<MemRegionObjectPtr>(
+               function<MemRegionObjectPtr (ComposedAnalysis *, PartEdgePtr)>(bind( &ComposedAnalysis::Expr2MemRegion, _1, n, _2)), n),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (MemRegionObjectPtr, string)>(
+                 CallGet2Arg<MemRegionObject, MemRegionObjectPtr>(function<string (MemRegionObject*, string)>(bind( &MemRegionObject::str, _1, _2)))),
+           pedge, client, false);
+}
+MemRegionObjectPtr ChainComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+  // Call Expr2MemRegion_ex() and wrap the results with a UnionMemRegionObject
+  return boost::make_shared<UnionMemRegionObject>(Expr2MemRegion_ex(n, pedge, client));
+}
+// Variant of Expr2MemRegion that inquires about the value of the memory region denoted by the operand of the 
+// given node n, where the part denotes the set of prefixes that terminate at SgNode n.
+MemRegionObjectPtr ChainComposer::OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<MemRegionObjectPtr, UnionMemRegionObject, UnionMemRegionObjectPtr>
+                ("Expr2MemRegion", n, operand, pedge, client,
+                 function<MemRegionObjectPtr (PartEdgePtr, ComposedAnalysis*)>(bind(&ChainComposer::Expr2MemRegion_ex, this, operand, _1, _2)),
+                 function<UnionMemRegionObjectPtr (std::list<MemRegionObjectPtr>)>(&unionAbstractObjects<MemRegionObjectPtr, UnionMemRegionObject>),
+                 function<string (MemRegionObjectPtr, string)>(
+                       CallGet2Arg<MemRegionObject, MemRegionObjectPtr>(function<string (MemRegionObject*, string)>(bind( &MemRegionObject::str, _1, _2)))));
+}
+
+// --- Calling Expr2MemLoc ---
+MemLocObjectPtr ChainComposer::Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<MemLocObjectPtr>(
+             "Expr2MemLoc",
+             CallWithCAandPE<MemLocObjectPtr>(
+                 function<MemLocObjectPtr (ComposedAnalysis*, PartEdgePtr)>(bind( &ComposedAnalysis::Expr2MemLoc, _1, n, _2)), n),
+             //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+             Composer::memloc,
+             function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+             function<string (MemLocObjectPtr, string)>(
+                 CallGet2Arg<MemLocObject, MemLocObjectPtr>(function<string (MemLocObject*, string)>(bind( &MemLocObject::str, _1, _2)))),
+             pedge, client, false);
+}
+MemLocObjectPtr ChainComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+  // Call Expr2MemLoc_ex() and wrap the results with a UnionMemLocObject
+  return boost::make_shared<UnionMemLocObject>(Expr2MemLoc_ex(n, pedge, client));
+}
+// Variant of Expr2MemLoc that inquires about the value of the code location denoted by the operand of the 
+// given node n, where the part denotes the set of prefixes that terminate at SgNode n.
+MemLocObjectPtr ChainComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<MemLocObjectPtr, UnionMemLocObject, UnionMemLocObjectPtr>
+                ("Expr2MemLoc", n, operand, pedge, client,
+                 function<MemLocObjectPtr (PartEdgePtr, ComposedAnalysis*)>(bind(&ChainComposer::Expr2MemLoc_ex, this, operand, _1, _2)),
+                 function<UnionMemLocObjectPtr (std::list<MemLocObjectPtr>)>(&unionAbstractObjects<MemLocObjectPtr, UnionMemLocObject>),
+                 function<string (MemLocObjectPtr, string)>(
+                       CallGet2Arg<MemLocObject, MemLocObjectPtr>(function<string (MemLocObject*, string)>(bind( &MemLocObject::str, _1, _2)))));
+}
+
+// -------------------------
+// --- Calling mayEqual* ---
+// Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
+// -------------------------
+
+bool ChainComposer::mayEqualV (ValueObjectPtr val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("mayEqualV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::mayEqualV, val1, val2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val, 
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::mayEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("mayEqualCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::mayEqualCL, cl1, cl2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::mayEqualMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+    return callServerAnalysisFunc<bool>("mayEqualMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::mayEqualMR, mr1, mr2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::mayEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+    return callServerAnalysisFunc<bool>("mayEqualML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::mayEqualML, ml1, ml2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }*/
 
-// --- Calling mayEqual* or mustEqual* ---
-// Contains the arguments needed by mayEqual* and mustEqual calls
-template<class FocusObject>
-class FuncCallerArgs_maymustEqual
-{
-  public:
-  FocusObject obj1;
-  FocusObject obj2;
-  
-  FuncCallerArgs_maymustEqual(FocusObject obj1, FocusObject obj2) : obj1(obj1), obj2(obj2){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[obj1="<<obj1->str()<<", obj2="<<obj2->str()<<"]";
-    return oss.str();
-  }
-};
-
-// --- Calling mayEqual* ---
-
-// Wrap the functionality of calling a mayEqualV within an Analysis or a Part
-class mayEqualVCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<ValueObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<ValueObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    //dbg << "mayEqualVCaller() client="<<client->str()<<" client->implementsExpr2Val()="<<client->implementsExpr2Val()<<endl;
-    // If the current analysis implements Expr2Value, call these objects' mayEqualV method
-    if(server->implementsExpr2Val()) { return args.obj1->mayEqualV(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mayEqualV"; }
-};
-
-// Returns whether the given pair of ValueObjects are may-equal at the given PartEdge
-bool ChainComposer::mayEqualV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-  mayEqualVCaller c;
-  FuncCallerArgs_maymustEqual<ValueObjectPtr> args(val1, val2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<ValueObjectPtr> >(args, pedge, client, c, false);
-}
-
-// Wrap the functionality of calling a mayEqualML within an Analysis or a Part
-class mayEqualMLCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<MemLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<MemLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    //dbg << "ChainComposer::mayEqualMLCaller() server="<<server->str()<<" client="<<client->str()<<endl;
-    // If the current analysis implements Expr2Value, call these objects' mayEqualML method
-    if(server->implementsExpr2MemLoc()) { return args.obj1->mayEqualML(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mayEqualML"; }
-};
-
-// Returns whether the given pair of MemLocObjects are may-equal at the given PartEdge
-bool ChainComposer::mayEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
-  //dbg << "ChainComposer::mayEqualML() #doneAnalyses="<<doneAnalyses.size()<<" last doneAnalysis="<<doneAnalyses.back()->str()<<" currentAnalysis="<<currentAnalysis->str()<<" client="<<client->str()<<endl;
-  mayEqualMLCaller c;
-  FuncCallerArgs_maymustEqual<MemLocObjectPtr> args(ml1, ml2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<MemLocObjectPtr> >(args, pedge, client, c, false);
-}
-
-// Wrap the functionality of calling a mayEqualCL within an Analysis or a Part
-class mayEqualCLCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<CodeLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<CodeLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2CodeLoc, call these objects' mayEqualCL method
-    if(server->implementsExpr2CodeLoc()) { return args.obj1->mayEqualCL(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mayEqualCL"; }
-};
-
-// Returns whether the given pair of CodeLocObjects are may-equal at the given PartEdge
-bool ChainComposer::mayEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
-  mayEqualCLCaller c;
-  FuncCallerArgs_maymustEqual<CodeLocObjectPtr> args(cl1, cl2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<CodeLocObjectPtr> >(args, pedge, client, c, false);
-}
-
+// --------------------------
 // --- Calling mustEqual* ---
-
-// Wrap the functionality of calling a mustEqualV within an Analysis or a Part
-class mustEqualVCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<ValueObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<ValueObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call these objects' mayEqualV method
-    if(server->implementsExpr2Val()) { return args.obj1->mustEqualV(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mustEqualV"; }
-};
-
-// Returns whether the given pair of ValueObjects are may-equal at the given PartEdge
-bool ChainComposer::mustEqualV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-  mustEqualVCaller c;
-  FuncCallerArgs_maymustEqual<ValueObjectPtr> args(val1, val2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<ValueObjectPtr> >(args, pedge, client, c, false);
+// Returns whether the given pair of AbstractObjects are must-equal at the given PartEdge
+// --------------------------
+bool ChainComposer::mustEqualV (ValueObjectPtr val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("mustEqualV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::mustEqualV, val1, val2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val, 
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
-
-// Wrap the functionality of calling a mustEqualML within an Analysis or a Part
-class mustEqualMLCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<MemLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<MemLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call these objects' mayEqualML method
-    if(server->implementsExpr2MemLoc()) { return args.obj1->mustEqualML(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mustEqualML"; }
-};
-
-// Returns whether the given pair of MemLocObjects are may-equal at the given PartEdge
-bool ChainComposer::mustEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
-  //dbg << "ChainComposer::mustEqualML"<<endl;
-  mustEqualMLCaller c;
-  FuncCallerArgs_maymustEqual<MemLocObjectPtr> args(ml1, ml2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<MemLocObjectPtr> >(args, pedge, client, c, false);
+/*bool ChainComposer::mustEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("mustEqualCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::mustEqualCL, cl1, cl2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::mustEqualMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("mustEqualMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::mustEqualMR, mr1, mr2, _1))),
+           Composer::memregion, 
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
-
-// Wrap the functionality of calling a mustEqualCL within an Analysis or a Part
-class mustEqualCLCaller : public FuncCaller<bool, FuncCallerArgs_maymustEqual<CodeLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_maymustEqual<CodeLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2CodeLoc, call these objects' mayEqualCL method
-    if(server->implementsExpr2CodeLoc()) { return args.obj1->mustEqualCL(args.obj2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "mustEqualCL"; }
-};
-
-// Returns whether the given pair of CodeLocObjects are may-equal at the given PartEdge
-bool ChainComposer::mustEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
-  mustEqualCLCaller c;
-  FuncCallerArgs_maymustEqual<CodeLocObjectPtr> args(cl1, cl2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_maymustEqual<CodeLocObjectPtr> >(args, pedge, client, c, false);
-}
-
+/*bool ChainComposer::mustEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("mustEqualML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::mustEqualML, ml1, ml2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
 // ------------------------
 // --- Calling equalSet ---
+// Returns whether the two abstract objects denote the same set of concrete objects
 // ------------------------
-// Contains the arguments needed by mayEqual, mustEqual, equalSet and subSet calls
-class FuncCallerArgs_equality
-{
-  public:
-  AbstractObjectPtr ao1;
-  AbstractObjectPtr ao2;
-  
-  FuncCallerArgs_equality(AbstractObjectPtr ao1, AbstractObjectPtr ao2) : ao1(ao1), ao2(ao2){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[ao1="<<ao1->str()<<", ao2="<<ao2->str()<<"]";
-    return oss.str();
-  }
-};
 
-// Wraps the functionality of calling a equalSet() within an Analysis or a Part
-class equalSetCaller : public FuncCaller<bool, FuncCallerArgs_equality>
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_equality& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If this server analysis implements the type of AbstractObject that ao is, call its isFull method
-    if((args.ao1->isMemLocObject()  && args.ao2->isMemLocObject()  && server->implementsExpr2MemLoc()) ||
-       (args.ao1->isCodeLocObject() && args.ao2->isCodeLocObject() && server->implementsExpr2MemLoc()) ||
-       (args.ao1->isValueObject()   && args.ao2->isValueObject()   && server->implementsExpr2MemLoc()))
-    { return args.ao1->equalSet(args.ao2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "equalSet"; }
-};
-
-// Returns whether the given AbstractObject corresponds to the set of all sub-executions or the empty set
-bool ChainComposer::equalSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  equalSetCaller c;
-  FuncCallerArgs_equality args(ao1, ao2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_equality>(args, pedge, client, c, false);
+bool ChainComposer::equalSetV (ValueObjectPtr val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("equalSetV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::equalSetV, val1, val2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val, 
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
+/*bool ChainComposer::equalSetCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("equalSetCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::equalSetCL, cl1, cl2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::equalSetMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("equalSetMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::equalSetMR, mr1, mr2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion, 
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::equalSetML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("equalSetML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::equalSetML, ml1, ml2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
 
-
-// Wraps the functionality of calling a subSet() within an Analysis or a Part
-class subSetCaller : public FuncCaller<bool, FuncCallerArgs_equality>
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_equality& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If this server analysis implements the type of AbstractObject that ao is, call its isFull method
-    if((args.ao1->isMemLocObject()  && args.ao2->isMemLocObject()  && server->implementsExpr2MemLoc()) ||
-       (args.ao1->isCodeLocObject() && args.ao2->isCodeLocObject() && server->implementsExpr2MemLoc()) ||
-       (args.ao1->isValueObject()   && args.ao2->isValueObject()   && server->implementsExpr2MemLoc()))
-    { return args.ao1->subSet(args.ao2, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "subSet"; }
-};
-
+// ----------------------
+// --- Calling subSet ---
 // Returns whether abstract object ao1 denotes a non-strict subset (the sets may be equal) of the set denoted
 // by the abstract object ao2.
-bool ChainComposer::subSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  subSetCaller c;
-  FuncCallerArgs_equality args(ao1, ao2);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_equality>(args, pedge, client, c, false);
+// ----------------------
+
+bool ChainComposer::subSetV (ValueObjectPtr val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("subSetV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::subSetV, val1, val2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
+/*bool ChainComposer::subSetCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("subSetCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::subSetCL, cl1, cl2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::subSetMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("subSetMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::subSetMR, mr1, mr2, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion, 
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::subSetML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("subSetML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &AbstractObject::subSetML, ml1, ml2, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
 
 // -----------------------
 // --- Calling isLive* ---
+// Returns whether the given AbstractObject is live at the given part edge
 // -----------------------
 
-template<class FocusObject>
-class FuncCallerArgs_isLiveAny
-{
-  public:
-  FocusObject obj;
-  
-  FuncCallerArgs_isLiveAny(FocusObject obj, PartEdgePtr pedge) : obj(obj){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[obj="<<obj->str()<<"]";
-    return oss.str();
-  }
-};
-
-// --- Calling isLiveVal ---
-
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class isLiveValCaller : public FuncCaller<bool, FuncCallerArgs_isLiveAny<ValueObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_isLiveAny<ValueObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call this objects' isLive method
-    if(server->implementsExpr2Val()) { return args.obj->isLiveV(pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "isLiveVal"; }
-};
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::isLiveVal(ValueObjectPtr val,  PartEdgePtr pedge, ComposedAnalysis* client) {
-  isLiveValCaller c;
-  FuncCallerArgs_isLiveAny<ValueObjectPtr> args(val, pedge);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_isLiveAny<ValueObjectPtr> >(args, pedge, client, c, false);
+bool ChainComposer::isLiveV (ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isLiveV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::isLiveV, val, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
-
-// Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
+// Calls the isLiveV() method of the given AbstractObject that denotes an operand of the given SgNode n within
 // the context of its own PartEdges and returns true if it may be live within any of them
-bool ChainComposer::OperandIsLiveVal(SgNode* n, SgNode* operand, ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
-  // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
-  // to SgNode n in the given part
-  list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    if(isLiveVal(val, *opE, client)) {
-      return true;
-    }
-  }
-  return false;
+bool ChainComposer::OperandIsLiveV(SgNode* n, SgNode* operand, ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<bool, bool, bool>
+                ("isLiveV", n, operand, pedge, client,
+                 function<bool (PartEdgePtr, ComposedAnalysis*)>(/*CallWithPE<bool>(
+                     function<bool (PartEdgePtr)>(*/bind( &ValueObject::isLiveV, val.get(), _1))/*))*/,
+                 function<bool (std::list<bool>)>(&unionBool),
+                 function<string (bool, string)>(&bool2Str));
 }
 
-// --- Calling isLiveMemLoc ---
-
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class isLiveMemLocCaller : public FuncCaller<bool, FuncCallerArgs_isLiveAny<MemLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_isLiveAny<MemLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    //dbg << "ChainComposer::isLiveMemLocCaller() server="<<server->str()<<" client="<<client->str()<<endl;
-    // If the current analysis implements Expr2MemLoc, call this objects' isLive method
-    if(server->implementsExpr2MemLoc()) { return args.obj->isLiveML(pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "isLiveMemLoc"; }
-};
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::isLiveMemLoc(MemLocObjectPtr ml, PartEdgePtr pedge, ComposedAnalysis* client) {
-  //dbg << "ChainComposer::isLiveMemLoc() #doneAnalyses="<<doneAnalyses.size()<<" last doneAnalysis="<<doneAnalyses.back()->str()<<" currentAnalysis="<<currentAnalysis->str()<<" client="<<client->str()<<endl;
-  isLiveMemLocCaller c;
-  FuncCallerArgs_isLiveAny<MemLocObjectPtr> args(ml, pedge);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_isLiveAny<MemLocObjectPtr> >(args, pedge, client, c, false);
+/*bool ChainComposer::isLiveCL(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isLiveCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isLiveCL, cl, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::isLiveMR(MemRegionObjectPtr  mr, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isLiveMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::isLiveMR, mr, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
-
-// Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
+// Calls the isLiveMR() method of the given AbstractObject that denotes an operand of the given SgNode n within
 // the context of its own PartEdges and returns true if it may be live within any of them
-bool ChainComposer::OperandIsLiveMemLoc(SgNode* n, SgNode* operand, MemLocObjectPtr ml, PartEdgePtr pedge, ComposedAnalysis* client) {
-  //assert(0);
-  // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
-  // to SgNode n in the given part
-  scope reg(txt()<<"ChainComposer::OperandIsLiveMemLoc(n="<<SgNode2Str(n)<<", operand="<<SgNode2Str(operand)<<")", scope::medium);
-  dbg << "pedge="<<pedge->str("    ")<<endl;
-  list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  dbg << "#opPartEdges="<<opPartEdges.size()<<endl;
-  for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    indent ind;
-    dbg << "opE="<<opE->get()->str("    ")<<endl;
-    if(isLiveMemLoc(ml, *opE, client)) return true;
-  }
-  return false;
+bool ChainComposer::OperandIsLiveMR(SgNode* n, SgNode* operand, MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return OperandExpr2Any<bool, bool, bool>
+                ("isLiveMR", n, operand, pedge, client,
+                 function<bool (PartEdgePtr, ComposedAnalysis*)>(/*CallWithPE<bool>(
+                     function<bool (PartEdgePtr)>(*/bind( &MemRegionObject::isLiveMR, mr.get(), _1))/*))*/,
+                 function<bool (std::list<bool>)>(&unionBool),
+                 function<string (bool, string)>(&bool2Str));
 }
+/*bool ChainComposer::isLiveML(MemLocObjectPtr  ml, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isLiveML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isLiveML, ml, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
 
-// --- Calling isLiveCodeLoc ---
+// --------------------------
+// --- Calling meetUpdate ---
+// Returns whether abstract object ao1 denotes a non-strict meetUpdate (the sets may be equal) of the set denoted
+// by the abstract object ao2.
+// --------------------------
 
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class isLiveCodeLocCaller : public FuncCaller<bool, FuncCallerArgs_isLiveAny<CodeLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of Expr2Val within the given node
-  bool operator()(const FuncCallerArgs_isLiveAny<CodeLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2CodeLoc, call this objects' isLive method
-    if(server->implementsExpr2CodeLoc()) { return args.obj->isLiveCL(pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "isLiveCodeLoc"; }
-};
-
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::isLiveCodeLoc(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client) {
-  isLiveCodeLocCaller c;
-  FuncCallerArgs_isLiveAny<CodeLocObjectPtr> args(cl, pedge);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_isLiveAny<CodeLocObjectPtr> >(args, pedge, client, c, false);
+bool ChainComposer::meetUpdateV (ValueObjectPtr toV, ValueObjectPtr fromV, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("meetUpdateV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::meetUpdateV, toV, fromV, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
-
-// Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
-// the context of its own PartEdges and returns true if it may be live within any of them
-bool ChainComposer::OperandIsLiveCodeLoc(SgNode* n, SgNode* operand, CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client) {
-  // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
-  // to SgNode n in the given part
-  list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-  for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE!=opPartEdges.end(); opE++) {
-    if(isLiveCodeLoc(cl, *opE, client)) return true;
-  }
-  return false;
+/*bool ChainComposer::meetUpdateCL(CodeLocObjectPtr toCL, CodeLocObjectPtr fromCL, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("meetUpdateCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::meetUpdateCL, toCL, fromCL, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::meetUpdateMR(MemRegionObjectPtr toMR, MemRegionObjectPtr fromMR, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("meetUpdateMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::meetUpdateMR, toMR, fromMR, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
 }
+/*bool ChainComposer::meetUpdateML(MemLocObjectPtr toML, MemLocObjectPtr fromML, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("meetUpdateML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::meetUpdateML, toML, fromML, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+
+// ----------------------
+// --- Calling isFull ---
+// Returns whether the given AbstractObject corresponds to the set of all sub-executions
+// ----------------------
+
+bool ChainComposer::isFullV (ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isFullV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::isFullV, val, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::isFullCL(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isFullCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isFullCL, cl, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::isFullMR(MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isFullMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::isFullMR, mr, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::isFullML(MemLocObjectPtr ml, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isFullML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isFullML, ml, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+
+// -----------------------
+// --- Calling isEmpty ---
+// Returns whether the given AbstractObject corresponds to the empty set
+// -----------------------
+
+bool ChainComposer::isEmptyV (ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isEmptyV",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &ValueObject::isEmptyV, val, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2Val, _1)),
+           Composer::val,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2ValTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::isEmptyCL(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client) {
+  return callServerAnalysisFunc<bool>("isEmptyCL",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isEmptyCL, cl, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2CodeLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2CodeLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
+bool ChainComposer::isEmptyMR(MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isEmptyMR",
+           CallWithPE<bool>(
+               function<bool (PartEdgePtr)>(bind( &MemRegionObject::isEmptyMR, mr, _1))),
+           //function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemRegion, _1)),
+           Composer::memregion,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemRegionTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}
+/*bool ChainComposer::isEmptyML(MemLocObjectPtr ml, PartEdgePtr pedge, ComposedAnalysis* client)  {
+  return callServerAnalysisFunc<bool>("isEmptyML",
+           CallWithPE(function<MemLocObjectPtr (ComposedAnalysis*)>(bind( &ComposedAnalysis::isEmptyML, ml, _1)),
+           function<bool (ComposedAnalysis*)>(bind( &ComposedAnalysis::implementsExpr2MemLoc, _1)),
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(bind( &ComposedAnalysis::Expr2MemLocTightness, _1)),
+           function<string (bool, string)>(&bool2Str),
+           pedge, client, false);
+}*/
 
 // ---------------------------
-// --- Calling meetUpdate* ---
+// --- Calling Get*AStates ---
+// Return the anchor Parts of an application
 // ---------------------------
-template<class FocusObject>
-class FuncCallerArgs_meetUpdateAny
-{
-  public:
-  FocusObject to;
-  FocusObject from;
-  
-  FuncCallerArgs_meetUpdateAny(FocusObject to, FocusObject from) : to(to), from(from){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[to="<<to->str()<<", from="<<from->str()<<"]";
-    return oss.str();
+
+std::string PartSet2Str(const set<PartPtr>& parts, string indent) { 
+  ostringstream oss;
+  for(set<PartPtr>::const_iterator p=parts.begin(); p!=parts.end(); p++) {
+    if(p!=parts.begin()) oss << ","<<endl<<indent;
+    oss << p->get()->str(indent+"    ");
   }
-};
-
-// --- Calling meetUpdateVal ---
-
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class meetUpdateValCaller : public FuncCaller<bool, FuncCallerArgs_meetUpdateAny<ValueObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_meetUpdateAny<ValueObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call this objects' meetUpdateV method
-    if(server->implementsExpr2Val()) { return args.to->meetUpdateV(args.from, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "meetUpdateVal"; }
-};
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::meetUpdateVal(ValueObjectPtr to, ValueObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  meetUpdateValCaller c;
-  FuncCallerArgs_meetUpdateAny<ValueObjectPtr> args(to, from);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_meetUpdateAny<ValueObjectPtr> >(args, pedge, client, c, false);
+  return oss.str();
 }
 
-// --- Calling meetUpdateMemLoc ---
-
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class meetUpdateMemLocCaller : public FuncCaller<bool, FuncCallerArgs_meetUpdateAny<MemLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_meetUpdateAny<MemLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call this objects' meetUpdateML method
-    if(server->implementsExpr2MemLoc()) { return args.to->meetUpdateML(args.from, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "meetUpdateML"; }
-};
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::meetUpdateMemLoc(MemLocObjectPtr to, MemLocObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  meetUpdateMemLocCaller c;
-  FuncCallerArgs_meetUpdateAny<MemLocObjectPtr> args(to, from);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_meetUpdateAny<MemLocObjectPtr> >(args, pedge, client, c, false);
+set<PartPtr> ChainComposer::GetStartAStates(ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<set<PartPtr> >("GetStartAStates",
+           CallWithCA<set<PartPtr> >(
+               function<set<PartPtr> (ComposedAnalysis*)>(&ComposedAnalysis::GetStartAStates)),
+           //function<bool (ComposedAnalysis*)>(&ComposedAnalysis::implementsATSGraph, _1),
+           Composer::atsGraph,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(&returnLoose),
+           function<string (const set<PartPtr>&, string)>(&PartSet2Str),
+           NULLPartEdge, client, false);
 }
 
-// --- Calling meetUpdateCodeLoc ---
-
-// These classes wrap the functionality of calling a specific function within an Analysis or a Part
-class meetUpdateCodeLocCaller : public FuncCaller<bool, FuncCallerArgs_meetUpdateAny<CodeLocObjectPtr> >
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_meetUpdateAny<CodeLocObjectPtr>& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If the current analysis implements Expr2Value, call this objects' meetUpdateCL method
-    if(server->implementsExpr2CodeLoc()) { return args.to->meetUpdateCL(args.from, pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "meetUpdateCL"; }
-};
-
-// Returns whether the given AbstractObject is live at the given part edge
-bool ChainComposer::meetUpdateCodeLoc(CodeLocObjectPtr to, CodeLocObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  meetUpdateCodeLocCaller c;
-  FuncCallerArgs_meetUpdateAny<CodeLocObjectPtr> args(to, from);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_meetUpdateAny<CodeLocObjectPtr> >(args, pedge, client, c, false);
-}
-
-// ----------------------------------
-// --- Calling isFull and isEmpty ---
-// ----------------------------------
-class FuncCallerArgs_isFullEmpty
-{
-  public:
-  AbstractObjectPtr ao;
-  FuncCallerArgs_isFullEmpty(AbstractObjectPtr ao) : ao(ao){}
-  
-  std::string str(std::string indent="") {
-    ostringstream oss;
-    oss << "[ao="<<ao->str()<<"]";
-    return oss.str();
-  }
-};
-
-// Wraps the functionality of calling a isFull() within an Analysis or a Part
-class isFullCaller : public FuncCaller<bool, FuncCallerArgs_isFullEmpty>
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_isFullEmpty& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If this server analysis implements the type of AbstractObject that ao is, call its isFull method
-    if((args.ao->isMemLocObject()  && server->implementsExpr2MemLoc()) ||
-       (args.ao->isCodeLocObject() && server->implementsExpr2MemLoc()) ||
-       (args.ao->isValueObject()   && server->implementsExpr2MemLoc()))
-    { return args.ao->isFull(pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "isFull"; }
-};
-
-// Returns whether the given AbstractObject corresponds to the set of all sub-executions or the empty set
-bool ChainComposer::isFull(AbstractObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  isFullCaller c;
-  FuncCallerArgs_isFullEmpty args(ao);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_isFullEmpty>(args, pedge, client, c, false);
-}
-
-
-// Wraps the functionality of calling a isEmpty() within an Analysis or a Part
-class isEmptyCaller : public FuncCaller<bool, FuncCallerArgs_isFullEmpty>
-{
-  public:
-  // Calls the given analysis' implementation of meetUpdateV within the given node
-  bool operator()(const FuncCallerArgs_isFullEmpty& args, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client) {
-    // If this server analysis implements the type of AbstractObject that ao is, call its isEmpty method
-    if((args.ao->isMemLocObject()  && server->implementsExpr2MemLoc()) ||
-       (args.ao->isCodeLocObject() && server->implementsExpr2MemLoc()) ||
-       (args.ao->isValueObject()   && server->implementsExpr2MemLoc()))
-    { return args.ao->isEmpty(pedge); }
-    // Otherwise, throw an exception to indicate that this ComposedAnalysis cannot determine the equality of the given objects
-    else { throw NotImplementedException(); }
-  }
-  // Returns a string representation of the returned object
-  std::string retStr(bool r) { return (r ? "TRUE" : "FALSE"); }
-  string funcName() const{ return "isEmpty"; }
-};
-
-bool ChainComposer::isEmpty(AbstractObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
-{
-  isEmptyCaller c;
-  FuncCallerArgs_isFullEmpty args(ao);
-  return callServerAnalysisFunc<bool, FuncCallerArgs_isFullEmpty>(args, pedge, client, c, false);
-}
-
-// --------------------------------
-// --- Calling GetFunction*Part ---
-// --------------------------------
-
-class dummyClass: public dbglog::printable
-{ public: std::string str(std::string indent="") { return ""; } };
-
-// --- Calling GetStartAStates ---
-class GetStartAStatesCaller : public FuncCaller<std::set<PartPtr>, dummyClass>
-{
-  public:
-  // Calls the given analysis' implementation of GetStartAStates within the given node
-  std::set<PartPtr> operator()(const dummyClass& dummy, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { 
-    return server->GetStartAStates(); }
-  // Returns a string representation of the returned object
-  std::string retStr(std::set<PartPtr> parts) { 
-    ostringstream oss;
-    for(std::set<PartPtr>::iterator i=parts.begin(); i!=parts.end(); i++) {
-      if(i==parts.begin()) oss << ", ";
-      oss << i->get()->str();
-    }
-    return oss.str();
-  }
-  string funcName() const{ return "GetStartAStates"; }
-};
-
-std::set<PartPtr> ChainComposer::GetStartAStates(ComposedAnalysis* client) { 
-  dummyClass dummy; GetStartAStatesCaller c;
-  //dbg << "ChainComposer::GetStartAStates"<<endl;
-  return callServerAnalysisFunc<set<PartPtr>, dummyClass>(dummy, NULLPartEdge, client, c, false);
-}
-
-
-// --- Calling GetEndAStates ---
-class GetEndAStatesCaller : public FuncCaller<std::set<PartPtr>, dummyClass>
-{
-  public:
-  // Calls the given analysis' implementation of GetEndAStates within the given node
-  std::set<PartPtr> operator()(const dummyClass& dummy, PartEdgePtr pedge, ComposedAnalysis* server, ComposedAnalysis* client)
-  { return server->GetEndAStates(); }
-  // Returns a string representation of the returned object
-  std::string retStr(std::set<PartPtr> parts) { 
-    ostringstream oss;
-    for(std::set<PartPtr>::iterator i=parts.begin(); i!=parts.end(); i++) {
-      if(i==parts.begin()) oss << ", ";
-      oss << i->get()->str();
-    }
-    return oss.str();
-  }
-  string funcName() const{ return "GetEndAStates"; }
-};
-
-std::set<PartPtr> ChainComposer::GetEndAStates(ComposedAnalysis* client) { 
-  dummyClass dummy; GetEndAStatesCaller c;
-  return callServerAnalysisFunc<set<PartPtr>, dummyClass>(dummy, NULLPartEdge, client, c, false);
+set<PartPtr> ChainComposer::GetEndAStates(ComposedAnalysis* client) { 
+  return callServerAnalysisFunc<set<PartPtr> >("GetEndAStates",
+           CallWithCA<set<PartPtr> >(
+               function<set<PartPtr> (ComposedAnalysis*)>(&ComposedAnalysis::GetEndAStates, _1)),
+           //function<bool (ComposedAnalysis*)>(&ComposedAnalysis::implementsATSGraph, _1),
+           Composer::atsGraph,
+           function<ComposedAnalysis::implTightness (ComposedAnalysis*)>(&returnLoose),
+           function<string (const set<PartPtr>&, string)>(&PartSet2Str),
+           NULLPartEdge, client, false);
 }
 
 // -----------------------------------------
@@ -1216,38 +1128,42 @@ void ChainComposer::runAnalysis()
     cout.flush();
   }*/
   
-  string lastAnalysisName = "";
-  ComposedAnalysis* lastAnalysis=NULL;
-  
   int i=1;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++, i++) {
-    if((lastAnalysis || doneAnalyses.size()>0) && composerDebugLevel>=1) {
-      set<PartPtr> startStates = GetStartAStates(lastAnalysis);
-      set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
-      ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
+    //list<string> contextAttrs;
+    //contextAttrs.push_back("ReqType");
+    //trace opTimesT("OpTimes", contextAttrs, trace::showEnd, trace::boxplot);
+    
+    currentAnalysis = *a;
+    ostringstream label; if(composerDebugLevel()>=1) label << "ChainComposer Running Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("");
+    scope reg(label.str(), scope::high, attrGE("composerDebugLevel", 1));
+    //scope s(txt()<<"Analysis "<<i<<": "<<currentAnalysis<<" : "<<currentAnalysis->str(""), scope::medium);
+    //cout << "ChainComposer Analysis "<<i<<": "<<currentAnalysis<<" : "<<currentAnalysis->str("") << endl;
+    
+    // Create a CCQueryServers object to route queries from the upcoming analysis to the corresponding servers 
+    // If this is the first analysis to follow the syntactic analysis
+    if(doneAnalyses.size()==1) queryInfo[currentAnalysis] = CCQueryServers(doneAnalyses.back());
+    else                       queryInfo[currentAnalysis] = CCQueryServers(queryInfo[doneAnalyses.back()], doneAnalyses.back());
+    
+    if(doneAnalyses.size()>0 && composerDebugLevel()>=1) {
+      set<PartPtr> startStates = GetStartAStates(currentAnalysis);
+      set<PartPtr> endStates   = GetEndAStates(currentAnalysis);
+      ostringstream fName; fName << "ats." << i << "." << doneAnalyses.back()->str();
       ats2dot(fName.str(), "ATS", startStates, endStates);
       ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
     }
     
-    cout << "ChainComposer Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("") << endl;
-    ostringstream label; 
-    if(composerDebugLevel>=1) {
-      label << "ChainComposer Running Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str("");
-      lastAnalysisName = (*a)->str();
-      lastAnalysis = *a;
-    }
-    scope reg(label.str(), scope::high, composerDebugLevel, 1);
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
     
-    /*
-    // Initialize a map for this analysis in the serverCacheMap
-    std::map<reqType, list<ComposedAnalysis*> > init;
-    serverCache[*a] = init;*/
+    currentAnalysis->runAnalysis();
     
-    currentAnalysis = *a;
-    (*a)->runAnalysis();
+    gettimeofday(&end, NULL);
+    cout << "  "<<(*a)->str("")<<" Elapsed="<<((end.tv_sec*1000000+end.tv_usec) - 
+                                               (start.tv_sec*1000000+start.tv_usec))/1000000.0<<"s"<<endl;
     
-    /*if(composerDebugLevel >= 3) {
-      scope reg("Final State", scope::medium, composerDebugLevel, 3);
+    /*if(composerDebugLevel() >= 3) {
+      scope reg("Final State", scope::medium, attrGE("composerDebugLevel", 3));
       std::vector<int> factNames;
       std::vector<int> latticeNames;
       latticeNames.push_back(0);
@@ -1260,18 +1176,27 @@ void ChainComposer::runAnalysis()
     doneAnalyses.push_back(*a);
     currentAnalysis = NULL;
   }
-
-  if(lastAnalysis && composerDebugLevel>=1) {
-    set<PartPtr> startStates = GetStartAStates(lastAnalysis);
-dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
-    set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
-    ostringstream fName; fName << "ats." << i << "." << lastAnalysisName;
-    ats2dot(fName.str(), "ATS", startStates, endStates);
-    ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
-  }
   
   if(testAnalysis) {
-    scope s("---", scope::high, composerDebugLevel, 1);
+    // Create a CCQueryServers object to route queries from the upcoming analysis to the corresponding servers 
+    // If this is the first analysis to follow the syntactic analysis
+    if(doneAnalyses.size()==1) queryInfo[testAnalysis] = CCQueryServers(doneAnalyses.back());
+    else                       queryInfo[testAnalysis] = CCQueryServers(queryInfo[doneAnalyses.back()], doneAnalyses.back());
+
+    if(doneAnalyses.size()>1 && composerDebugLevel()>=1) {
+      set<PartPtr> startStates = GetStartAStates(doneAnalyses.back());
+      dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
+      set<PartPtr> endStates   = GetEndAStates(*(allAnalyses.begin()));
+      ostringstream fName; fName << "ats." << i << "." << doneAnalyses.back()->str();
+      ats2dot(fName.str(), "ATS", startStates, endStates);
+      ats2dot_bw(fName.str()+".BW", "ATS", startStates, endStates);
+    }
+    
+    /*list<string> contextAttrs;
+    contextAttrs.push_back("ReqType");
+    trace opTimesT("OpTimes", contextAttrs, trace::showEnd, trace::boxplot);*/
+    
+    scope s("---", scope::high, attrGE("composerDebugLevel", 1));
     //UnstructuredPassInterDataflow inter_up(testAnalysis);
     /*ContextInsensitiveInterProceduralDataflow inter_up(testAnalysis, getCallGraph());
     inter_up.runAnalysis();*/
@@ -1293,14 +1218,20 @@ dbg << "ChainComposer::runAnalysis() #startStates="<<startStates.size()<<endl;
 ValueObjectPtr   ChainComposer::Expr2Val(SgNode* n, PartEdgePtr pedge)
 { return Expr2Val(n, pedge, this); }
 
-MemLocObjectPtr  ChainComposer::Expr2MemLoc (SgNode* n, PartEdgePtr pedge)
+CodeLocObjectPtr ChainComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge)
+{ return Expr2CodeLoc(n, pedge, this); }
+
+MemRegionObjectPtr  ChainComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge)
+{ return Expr2MemRegion(n, pedge, this); }
+
+MemLocObjectPtr  ChainComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge)
 { return Expr2MemLoc(n, pedge, this); }
 
-CodeLocObjectPtr ChainComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge) {
-  CodeLocObjectPtrPair p = Expr2CodeLoc(n, pedge, this);
-  if(p.mem) return p.mem;
-  else      return p.expr;
-}
+
+// ---------------------------
+// ---- implementsExpr2* -----
+// Return true if the class implements Expr2* and false otherwise
+// ---------------------------
 
 // Return true if the class implements Expr2* and false otherwise
 bool ChainComposer::implementsExpr2Val()
@@ -1308,6 +1239,22 @@ bool ChainComposer::implementsExpr2Val()
   // If any analyses composed in series returns true, this function returns true
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
     if((*a)->implementsExpr2Val()) { return true; }
+  return false;
+}
+
+bool ChainComposer::implementsExpr2CodeLoc()
+{
+  // If any analyses composed in series returns true, this function returns true
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
+    if((*a)->implementsExpr2CodeLoc()) { return true; }
+  return false;
+}
+
+bool ChainComposer::implementsExpr2MemRegion()
+{
+  // If any analyses composed in series returns true, this function returns true
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
+    if((*a)->implementsExpr2MemRegion()) { return true; }
   return false;
 }
 
@@ -1319,13 +1266,59 @@ bool ChainComposer::implementsExpr2MemLoc()
   return false;
 }
 
-bool ChainComposer::implementsExpr2CodeLoc()
-{
-  // If any analyses composed in series returns true, this function returns true
-  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
-    if((*a)->implementsExpr2CodeLoc()) { return true; }
-  return false;
+// --------------------------
+// ---- Expr2*Tightness -----
+// Returns whether the class implements Expr* loosely or tightly (if it does at all)
+// --------------------------
+
+ComposedAnalysis::implTightness ChainComposer::Expr2ValTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2ValTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2ValTightness());
+  }
+  return t;
 }
+
+ComposedAnalysis::implTightness ChainComposer::Expr2CodeLocTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2CodeLocTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2CodeLocTightness());
+  }
+  return t;
+}
+
+ComposedAnalysis::implTightness ChainComposer::Expr2MemRegionTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2MemRegionTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2MemRegionTightness());
+  }
+  return t;
+}
+
+ComposedAnalysis::implTightness ChainComposer::Expr2MemLocTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2MemLocTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2MemLocTightness());
+  }
+  return t;
+}
+
 
 // Return the anchor Parts of the application
 set<PartPtr> ChainComposer::GetStartAStates_Spec()
@@ -1376,89 +1369,167 @@ LooseParallelComposer::LooseParallelComposer(const list<ComposedAnalysis*>& anal
 // Abstract interpretation functions that return this analysis' abstractions that 
 // represent the outcome of the given SgExpression. 
 // The objects returned by these functions are expected to be deallocated by their callers.
-ValueObjectPtr LooseParallelComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->Expr2Val(n, pedge, this); }
+ValueObjectPtr LooseParallelComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  if(client->implementsExpr2Val() && client->Expr2ValTightness()==ComposedAnalysis::tight)
+    return client->Expr2Val(n, pedge);
+  else
+    return getComposer()->Expr2Val(n, pedge, this);
+}
 
 // Variant of Expr2Val that inquires about the value of the memory location denoted by the operand of the 
 // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
-ValueObjectPtr LooseParallelComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->OperandExpr2Val(n, operand, pedge, this); }
+ValueObjectPtr LooseParallelComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  if(client->implementsExpr2Val() && client->Expr2ValTightness()==ComposedAnalysis::tight)
+    // Nee to port from ChainComposer;
+    assert(0);
+  else
+   return getComposer()->OperandExpr2Val(n, operand, pedge, this);
+}
 
-MemLocObjectPtr LooseParallelComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->Expr2MemLoc(n, pedge, this); }
+CodeLocObjectPtr LooseParallelComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  if(client->implementsExpr2CodeLoc() && client->Expr2CodeLocTightness()==ComposedAnalysis::tight)
+    return client->Expr2CodeLoc(n, pedge);
+  else
+    return getComposer()->Expr2CodeLoc(n, pedge, this);
+}
+
+// Variant of Expr2CodeLoc that inquires about the code location denoted by the operand of the given node n, where
+// the part denotes the set of prefixes that terminate at SgNode n.
+CodeLocObjectPtr LooseParallelComposer::OperandExpr2CodeLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  if(client->implementsExpr2CodeLoc() && client->Expr2CodeLocTightness()==ComposedAnalysis::tight)
+    // Nee to port from ChainComposer;
+    assert(0);
+  else
+   return getComposer()->OperandExpr2CodeLoc(n, operand, pedge, this);
+}
+
+MemRegionObjectPtr LooseParallelComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  if(client->implementsExpr2MemRegion() && client->Expr2MemRegionTightness()==ComposedAnalysis::tight)
+    return boost::make_shared<UnionMemRegionObject>(client->Expr2MemRegion(n, pedge));
+  else
+    return getComposer()->Expr2MemRegion(n, pedge, this);
+}
+
+// Variant of Expr2MemRegion that inquires about the memory location denoted by the operand of the given node n, where
+// the part denotes the set of prefixes that terminate at SgNode n.
+MemRegionObjectPtr LooseParallelComposer::OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  if(client->implementsExpr2MemRegion() && client->Expr2MemRegionTightness()==ComposedAnalysis::tight)
+    // Nee to port from ChainComposer;
+    assert(0);
+  else
+   return getComposer()->OperandExpr2MemRegion(n, operand, pedge, this);
+}
+
+MemLocObjectPtr LooseParallelComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) { 
+  if(client->implementsExpr2MemLoc() && client->Expr2MemLocTightness()==ComposedAnalysis::tight)
+    return boost::make_shared<UnionMemLocObject>(client->Expr2MemLoc(n, pedge));
+  else
+    return getComposer()->Expr2MemLoc(n, pedge, this);
+}
 
 // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
 // the part denotes the set of prefixes that terminate at SgNode n.
-MemLocObjectPtr LooseParallelComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->OperandExpr2MemLoc(n, operand, pedge, this); }
-
-// #SA: Variant of Expr2MemLoc for an analysis to call its own Expr2MemLoc method to interpret complex expressions
-// Composer caches memory objects for the analysis
-MemLocObjectPtr LooseParallelComposer::Expr2MemLocSelf(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* self) {
-  // call its own Expr2MemLoc
-  // TODO: Implement caching
-  return self->Expr2MemLoc(n, pedge);
+MemLocObjectPtr LooseParallelComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+  if(client->implementsExpr2MemLoc() && client->Expr2MemLocTightness()==ComposedAnalysis::tight)
+    // Nee to port from ChainComposer;
+    assert(0);
+  else
+   return getComposer()->OperandExpr2MemLoc(n, operand, pedge, this);
 }
 
-CodeLocObjectPtrPair LooseParallelComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->Expr2CodeLoc(n, pedge, this); }
 
 // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
 bool LooseParallelComposer::mayEqualV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client)
 { return getComposer()->mayEqualV(val1, val2, pedge, this); }
-bool LooseParallelComposer::mayEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->mayEqualML(ml1, ml2, pedge, this); }
-bool LooseParallelComposer::mayEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->mayEqualCL(cl1, cl2, pedge, this); }
+/*bool LooseParallelComposer::mayEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mayEqualCL(cl1, cl2, pedge, this); }*/
+bool LooseParallelComposer::mayEqualMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mayEqualMR(mr1, mr2, pedge, this); }
+/*bool LooseParallelComposer::mayEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mayEqualML(ml1, ml2, pedge, this); }*/
 
 // Returns whether the given pair of AbstractObjects are must-equal at the given PartEdge
 bool LooseParallelComposer::mustEqualV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client)
 { return getComposer()->mustEqualV(val1, val2, pedge, this); }
-bool LooseParallelComposer::mustEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->mustEqualML(ml1, ml2, pedge, this); }
-bool LooseParallelComposer::mustEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->mustEqualCL(cl1, cl2, pedge, this); }
+/*bool LooseParallelComposer::mustEqualCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mustEqualCL(cl1, cl2, pedge, this); }*/
+bool LooseParallelComposer::mustEqualMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mustEqualMR(mr1, mr2, pedge, this); }
+/*bool LooseParallelComposer::mustEqualML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->mustEqualML(ml1, ml2, pedge, this); }*/
 
 // Returns whether the two abstract objects denote the same set of concrete objects
-bool LooseParallelComposer::equalSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->equalSet(ao1, ao2, pedge, this); }
+bool LooseParallelComposer::equalSetV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->equalSetV(val1, val2, pedge, this); }
+/*bool LooseParallelComposer::equalSetCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->equalSetCL(cl1, cl2, pedge, this); }*/
+bool LooseParallelComposer::equalSetMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->equalSetMR(mr1, mr2, pedge, this); }
+/*bool LooseParallelComposer::equalSetML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->equalSetML(ml1, ml2, pedge, this); }*/
 
 // Returns whether abstract object ao1 denotes a non-strict subset (the sets may be equal) of the set denoted
 // by the abstract object ao2.
-bool LooseParallelComposer::subSet(AbstractObjectPtr ao1, AbstractObjectPtr ao2, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->subSet(ao1, ao2, pedge, this); }
+bool LooseParallelComposer::subSetV (ValueObjectPtr  val1, ValueObjectPtr  val2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->subSetV(val1, val2, pedge, this); }
+/*bool LooseParallelComposer::subSetCL(CodeLocObjectPtr cl1, CodeLocObjectPtr cl2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->subSetCL(cl1, cl2, pedge, this); }*/
+bool LooseParallelComposer::subSetMR(MemRegionObjectPtr  mr1, MemRegionObjectPtr  mr2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->subSetMR(mr1, mr2, pedge, this); }
+/*bool LooseParallelComposer::subSetML(MemLocObjectPtr  ml1, MemLocObjectPtr  ml2, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->subSetML(ml1, ml2, pedge, this); }*/
 
 // Returns whether the given AbstractObject is live at the given part edge
-bool LooseParallelComposer::isLiveVal    (ValueObjectPtr val,  PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->isLiveVal(val, pedge, this); }
-bool LooseParallelComposer::isLiveMemLoc (MemLocObjectPtr ml,  PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->isLiveMemLoc(ml, pedge, this); }
-bool LooseParallelComposer::isLiveCodeLoc(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->isLiveCodeLoc(cl, pedge, this); }
+bool LooseParallelComposer::isLiveV (ValueObjectPtr val,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isLiveV(val, pedge, this); }
+/*bool LooseParallelComposer::isLiveCL(CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isLiveCL(cl, pedge, this); }*/
+bool LooseParallelComposer::isLiveMR(MemRegionObjectPtr mr,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isLiveMR(mr, pedge, this); }
+/*bool LooseParallelComposer::isLiveML(MemLocObjectPtr ml,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isLiveML(ml, pedge, this); }*/
 
 // Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
 // the context of its own PartEdges and returns true if it may be live within any of them
-bool LooseParallelComposer::OperandIsLiveVal    (SgNode* n, SgNode* operand, ValueObjectPtr val,  PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->OperandIsLiveVal(n, operand, val, pedge, this); }
-bool LooseParallelComposer::OperandIsLiveMemLoc (SgNode* n, SgNode* operand, MemLocObjectPtr ml,  PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->OperandIsLiveMemLoc(n, operand, ml, pedge, this); }
-bool LooseParallelComposer::OperandIsLiveCodeLoc(SgNode* n, SgNode* operand, CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->OperandIsLiveCodeLoc(n, operand, cl, pedge, this); }
+bool LooseParallelComposer::OperandIsLiveV (SgNode* n, SgNode* operand, ValueObjectPtr val,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->OperandIsLiveV(n, operand, val, pedge, this); }
+/*bool LooseParallelComposer::OperandIsLiveCL(SgNode* n, SgNode* operand, CodeLocObjectPtr cl, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->OperandIsLiveCL(n, operand, cl, pedge, this); }*/
+bool LooseParallelComposer::OperandIsLiveMR(SgNode* n, SgNode* operand, MemRegionObjectPtr mr,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->OperandIsLiveMR(n, operand, mr, pedge, this); }
+/*bool LooseParallelComposer::OperandIsLiveML(SgNode* n, SgNode* operand, MemLocObjectPtr ml,  PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->OperandIsLiveML(n, operand, ml, pedge, this); }*/
 
 // Computes the meet of from and to and saves the result in to.
 // Returns true if this causes this to change and false otherwise.
-bool LooseParallelComposer::meetUpdateVal    (ValueObjectPtr   to, ValueObjectPtr   from, PartEdgePtr pedge, ComposedAnalysis* analysis)
-{ return getComposer()->meetUpdateVal(to, from, pedge, this); }
-bool LooseParallelComposer::meetUpdateMemLoc (MemLocObjectPtr  to, MemLocObjectPtr  from, PartEdgePtr pedge, ComposedAnalysis* analysis)
-{ return getComposer()->meetUpdateMemLoc(to, from, pedge, this); }
-bool LooseParallelComposer::meetUpdateCodeLoc(CodeLocObjectPtr to, CodeLocObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* analysis)
-{ return getComposer()->meetUpdateCodeLoc(to, from, pedge, this); }
+bool LooseParallelComposer::meetUpdateV    (ValueObjectPtr   to, ValueObjectPtr   from, PartEdgePtr pedge, ComposedAnalysis* analysis)
+{ return getComposer()->meetUpdateV(to, from, pedge, this); }
+/*bool LooseParallelComposer::meetUpdateCL(CodeLocObjectPtr to, CodeLocObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* analysis)
+{ return getComposer()->meetUpdateCL(to, from, pedge, this); }*/
+bool LooseParallelComposer::meetUpdateMR (MemRegionObjectPtr  to, MemRegionObjectPtr  from, PartEdgePtr pedge, ComposedAnalysis* analysis)
+{ return getComposer()->meetUpdateMR(to, from, pedge, this); }
+/*bool LooseParallelComposer::meetUpdateML (MemLocObjectPtr  to, MemLocObjectPtr  from, PartEdgePtr pedge, ComposedAnalysis* analysis)
+{ return getComposer()->meetUpdateML(to, from, pedge, this); }*/
+// Returns whether the given AbstractObject corresponds to the set of all sub-executions
+bool LooseParallelComposer::isFullV (ValueObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isFullV(ao, pedge, this); }
+/*bool LooseParallelComposer::isFullCL(CodeLocObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isFullCL(ao, pedge, this); }*/
+bool LooseParallelComposer::isFullMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isFullMR(ao, pedge, this); }
+/*bool LooseParallelComposer::isFullML(MemLocObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isFullML(ao, pedge, this); }*/
 
-// Returns whether the given AbstractObject corresponds to the set of all sub-executions or the empty set
-bool LooseParallelComposer::isFull (AbstractObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->isFull(ao, pedge, this); }
-bool LooseParallelComposer::isEmpty(AbstractObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
-{ return getComposer()->isFull(ao, pedge, this); }
+
+// Returns whether the given AbstractObject corresponds to the the empty set of sub-executions 
+bool LooseParallelComposer::isEmptyV (ValueObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isEmptyV(ao, pedge, this); }
+/*bool LooseParallelComposer::isEmptyCL(CodeLocObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isEmptyCL(ao, pedge, this); }*/
+bool LooseParallelComposer::isEmptyMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isEmptyMR(ao, pedge, this); }
+/*bool LooseParallelComposer::isEmptyML(MemLocObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* client)
+{ return getComposer()->isEmptyML(ao, pedge, this); }*/
 
 // Return the anchor Parts of a given function
 set<PartPtr> LooseParallelComposer::GetStartAStates(ComposedAnalysis* client)
@@ -1477,14 +1548,14 @@ void LooseParallelComposer::runAnalysis()
   // Run all the analyses without any interactions between them
   int i=1;
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++, i++) {
-    scope reg(txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, composerDebugLevel, 1);
+    scope reg(txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, attrGE("composerDebugLevel", 1));
     
     (*a)->runAnalysis();
     
     dbg << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Analysis finished" << endl;
     
-    /*if(composerDebugLevel >= 3) {
-      scope reg(Final State", scope::medium, composerDebugLevel, 3);
+    /*if(composerDebugLevel() >= 3) {
+      scope reg(Final State", scope::medium, attrGE("composerDebugLevel", 3));
       std::vector<int> factNames;
       std::vector<int> latticeNames;
       latticeNames.push_back(0);
@@ -1512,14 +1583,14 @@ ValueObjectPtr   LooseParallelComposer::Expr2Val(SgNode* n, PartEdgePtr pedge)
   list<ValueObjectPtr> vals;
   
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+    scope reg(txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
     
     try {
       ValueObjectPtr val = (*a)->Expr2Val(n, getEdgeForAnalysis(pedge, *a));
       dbg << "Returning "<<val->str("")<<endl;
       vals.push_back(val);
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2Val() Not Implemented."<<endl;
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2Val() Not Implemented."<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we ask the remaining analyses
       continue;
@@ -1533,44 +1604,20 @@ ValueObjectPtr   LooseParallelComposer::Expr2Val(SgNode* n, PartEdgePtr pedge)
     return boost::make_shared<IntersectValueObject>(vals);
 }
 
-MemLocObjectPtr  LooseParallelComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge)
-{
-  // List of memory location that will be intersected and returned
-  list<MemLocObjectPtr> mls;
-  
-  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
-    
-    try {
-      MemLocObjectPtr ml = (*a)->Expr2MemLoc(n, getEdgeForAnalysis(pedge, *a));
-      if(composerDebugLevel >= 1) { dbg << "Returning "<<ml->str("")<<endl; }
-      mls.push_back(ml);
-    } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2MemLoc() Not Implemented."<<endl;
-      // If control reaches here then the current analysis must not implement 
-      // this method so we ask the remaining analyses
-      continue;
-    }
-  }
-  
-  // If no sub-analysis implements this query, forward it to the composer
-  return IntersectMemLocObject::create(mls);
-}
-
 CodeLocObjectPtr LooseParallelComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge)
 {
   // List of code location that will be intersected and returned
   list<CodeLocObjectPtr> cls;
   
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+    scope reg(txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
     try {
       CodeLocObjectPtr cl = (*a)->Expr2CodeLoc(n, getEdgeForAnalysis(pedge, *a));
-      if(composerDebugLevel >= 1) dbg << "Returning "<<cl->str("")<<endl;
+      if(composerDebugLevel() >= 1) dbg << "Returning "<<cl->str("")<<endl;
       cls.push_back(cl);
     } catch (NotImplementedException exc) {
-      if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2CodeLoc() Not Implemented."<<endl;
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2CodeLoc() Not Implemented."<<endl;
       // If control reaches here then the current analysis must not implement 
       // this method so we ask the remaining analyses
       continue;
@@ -1579,20 +1626,87 @@ CodeLocObjectPtr LooseParallelComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedg
   
   // If no sub-analysis implements this query, forward it to the composer
   if(cls.size()==0) {
-    CodeLocObjectPtrPair p = getComposer()->Expr2CodeLoc(n, pedge, this);
-    if(p.mem) return p.mem;
-    else      return p.expr;
+    return getComposer()->Expr2CodeLoc(n, pedge, this);
   } else 
     return boost::make_shared<IntersectCodeLocObject>(cls);
 }
 
+
+MemRegionObjectPtr  LooseParallelComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge)
+{
+  // List of memory location that will be intersected and returned
+  list<MemRegionObjectPtr> mrs;
+  
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    scope reg(txt()<<"Expr2MemRegion  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+    
+    try {
+      MemRegionObjectPtr mr = (*a)->Expr2MemRegion(n, getEdgeForAnalysis(pedge, *a));
+      if(composerDebugLevel() >= 1) { dbg << "Returning "<<mr->str("")<<endl; }
+      mrs.push_back(mr);
+    } catch (NotImplementedException exc) {
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2MemRegion() Not Implemented."<<endl;
+      // If control reaches here then the current analysis must not implement 
+      // this method so we ask the remaining analyses
+      continue;
+    }
+  }
+  
+  // If no sub-analysis implements this query, forward it to the composer
+  return boost::make_shared<IntersectMemRegionObject>(mrs);
+}
+
+
+MemLocObjectPtr  LooseParallelComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge)
+{
+  // List of memory location that will be intersected and returned
+  list<MemLocObjectPtr> mls;
+  
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    scope reg(txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+    
+    try {
+      MemLocObjectPtr ml = (*a)->Expr2MemLoc(n, getEdgeForAnalysis(pedge, *a));
+      if(composerDebugLevel() >= 1) { dbg << "Returning "<<ml->str("")<<endl; }
+      mls.push_back(ml);
+    } catch (NotImplementedException exc) {
+      if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Expr2MemLoc() Not Implemented."<<endl;
+      // If control reaches here then the current analysis must not implement 
+      // this method so we ask the remaining analyses
+      continue;
+    }
+  }
+  
+  // If no sub-analysis implements this query, forward it to the composer
+  return boost::make_shared<IntersectMemLocObject>(mls);
+}
+
+// ---------------------------
+// ---- implementsExpr2* -----
 // Return true if the class implements Expr2* and false otherwise
+// ---------------------------
 
 bool LooseParallelComposer::implementsExpr2Val()
 {
   // If any analyses composed in parallel returns true, this function returns true
   for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
     if((*a)->implementsExpr2Val()) { return true; }
+  return false;
+}
+
+bool LooseParallelComposer::implementsExpr2CodeLoc()
+{
+  // If any analyses composed in parallel returns true, this function returns true
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
+    if((*a)->implementsExpr2CodeLoc()) { return true; }
+  return false;
+}
+
+bool LooseParallelComposer::implementsExpr2MemRegion()
+{
+  // If any analyses composed in parallel returns true, this function returns true
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
+    if((*a)->implementsExpr2MemRegion()) { return true; }
   return false;
 }
 
@@ -1604,12 +1718,57 @@ bool LooseParallelComposer::implementsExpr2MemLoc()
   return false;
 }
 
-bool LooseParallelComposer::implementsExpr2CodeLoc()
-{
-  // If any analyses composed in parallel returns true, this function returns true
-  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++)
-    if((*a)->implementsExpr2CodeLoc()) { return true; }
-  return false;
+// --------------------------
+// ---- Expr2*Tightness -----
+// Returns whether the class implements Expr* loosely or tightly (if it does at all)
+// --------------------------
+
+ComposedAnalysis::implTightness LooseParallelComposer::Expr2ValTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2ValTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2ValTightness());
+  }
+  return t;
+}
+
+ComposedAnalysis::implTightness LooseParallelComposer::Expr2CodeLocTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2CodeLocTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2CodeLocTightness());
+  }
+  return t;
+}
+
+ComposedAnalysis::implTightness LooseParallelComposer::Expr2MemRegionTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2MemRegionTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2MemRegionTightness());
+  }
+  return t;
+}
+
+ComposedAnalysis::implTightness LooseParallelComposer::Expr2MemLocTightness() {
+  ComposedAnalysis::implTightness t = ComposedAnalysis::loose;
+  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
+    // If this is the first analysis, just assign its tightness to t
+    if(a==allAnalyses.begin()) t = (*a)->Expr2MemLocTightness();
+    else
+      // All analyses must have the same tightness for now
+      assert(t == (*a)->Expr2MemLocTightness());
+  }
+  return t;
 }
 
 /*// Return the anchor Parts of the application
@@ -1622,14 +1781,14 @@ set<PartPtr> LooseParallelComposer::GetStartAState_Spec()
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         PartPtr part = (*a)->GetStartAState();
-        if(composerDebugLevel >= 1) dbg << "Returning "<<part->str("")<<endl;
+        if(composerDebugLevel() >= 1) dbg << "Returning "<<part->str("")<<endl;
         parts[*a] = part;
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetStartAState() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetStartAState() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1695,7 +1854,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         //set<PartPtr> curParts = (*a)->GetEndAStates();
@@ -1740,7 +1899,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
           // Parts in curParts will not be included in the intersection and we don't need to do anything to ensure this.
         }
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<funcName<<"() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<funcName<<"() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1760,7 +1919,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   } else {
     assert(intersection.size()>0);
     
-    if(composerDebugLevel >= 1) {
+    if(composerDebugLevel() >= 1) {
       dbg << "Returning ";
       for(map<PartPtr, map<ComposedAnalysis*, PartPtr> >::iterator i=intersection.begin(); i!=intersection.end(); i++) {
         indent ind();
@@ -1790,7 +1949,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   // that at least one implements or if we don't yet know if any do
   if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      scope reg(txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, composerDebugLevel, 1);
+      scope reg(txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
       try {
         set<PartPtr> curParts = (*a)->GetEndAStates();
@@ -1825,7 +1984,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
           // Parts in curParts will not be included in the intersection and we don't need to do anything to ensure this.
         }
       } catch (NotImplementedException exc) {
-        if(composerDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetEndAState() Not Implemented."<<endl;
+        if(composerDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;GetEndAState() Not Implemented."<<endl;
         // If control reaches here then the current analysis must not implement 
         // this method so we ask the remaining analyses
         continue;
@@ -1844,7 +2003,7 @@ set<PartPtr> LooseParallelComposer::GetStartOrEndAStates_Spec(callStartOrEndASta
   } else {
     assert(parts.size()>0);
     
-    if(composerDebugLevel >= 1) {
+    if(composerDebugLevel() >= 1) {
       dbg << "Returning ";
       for(set<PartPtr>::iterator i=parts.begin(); i!=parts.end(); i++) {
         if(i==parts.begin()) dbg << ", ";

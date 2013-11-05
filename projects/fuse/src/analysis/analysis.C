@@ -12,6 +12,10 @@
 #include <set>
 #include <map>
 #include <boost/make_shared.hpp>
+#include "sight.h"
+
+using namespace std;
+using namespace sight;
 
 /* GB 2012-10-23: DESIGN NOTE
  * At the start of an intra-procedural analysis of a given function the function's initial dataflow state is copied 
@@ -28,10 +32,16 @@
  */
 
 using namespace std;
-using namespace dbglog;
+
 namespace fuse {
-  
-int analysisDebugLevel=1;
+
+DEBUG_LEVEL(analysisDebugLevel, 0);
+
+// Initializes Fuse
+void FuseInit(int argc, char **argv) {
+  setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/projects/fuse/src/fuseLayout").c_str(), 1);
+  SightInit(argc, argv);
+}
 
 /****************
  *** Analysis ***
@@ -55,7 +65,7 @@ Analysis::~Analysis() {}
 // state - the function's NodeState
 void UnstructuredPassAnalysis::runAnalysis()
 {
-  if(analysisDebugLevel>=2)
+  if(analysisDebugLevel()>=2)
     dbg << "UnstructuredPassAnalysis::runAnalysis()"<<endl;
   
   // Iterate over all the nodes in this function
@@ -77,7 +87,7 @@ void UnstructuredPassAnalysis::runAnalysis()
 void InitDataflowState::visit(PartPtr p, NodeState& state)
 {
   /*ostringstream label; label << "InitDataflowState::visit() p="<<p->str()<<", analysis="<<analysis<<"="<<analysis->str()<<" state="<<&state<<endl;
-  scope reg(label.str(), scope::medium, analysisDebugLevel, 1);*/
+  scope reg(label.str(), scope::medium, attrGE("analysisDebugLevel", 1));*/
   
   // generate a new initial state for this node
   analysis->initializeState(p, state);
@@ -94,20 +104,20 @@ bool ComposedAnalysis::propagateStateToNextNode(
                 map<PartEdgePtr, vector<Lattice*> >& curNodeState, PartPtr curNode, 
                 map<PartEdgePtr, vector<Lattice*> >& nextNodeState, PartPtr nextNode)
 {
-  scope reg("propagateStateToNextNode", scope::medium, analysisDebugLevel, 1);
+  scope reg("propagateStateToNextNode", scope::medium, attrGE("analysisDebugLevel", 1));
   bool modified = false;
   
   // curNodeState should have a single mapping to the NULLPartEdge
   assert(curNodeState.begin()->first == NULLPartEdge);
   
   vector<Lattice*>::const_iterator itC, itN;
-  if(analysisDebugLevel>=1) {
+  if(analysisDebugLevel()>=1) {
     dbg << endl << "Propagating to Next Node: "<<nextNode->str()<<endl;
     dbg << "Cur Node Lattice "<<endl;
-    { indent ind(analysisDebugLevel, 1); dbg<<NodeState::str(curNodeState); }
+    { indent ind(attrGE("analysisDebugLevel", 1)); dbg<<NodeState::str(curNodeState); }
     
     dbg << "Next Node Lattice "<<endl;
-    { indent ind(analysisDebugLevel, 1); dbg<<NodeState::str(nextNodeState); }
+    { indent ind(attrGE("analysisDebugLevel", 1)); dbg<<NodeState::str(nextNodeState); }
   }
 
   // Update forward info above nextNode from the forward info below curNode.
@@ -116,7 +126,7 @@ bool ComposedAnalysis::propagateStateToNextNode(
   // next node's current state one Lattice at a time and save the result above the next node.
   
   // If nextNodeState is non-empty, we union curNodeState into it
-  if(analysisDebugLevel>=1) dbg << "---------------------- #nextNodeState="<<nextNodeState.size()<<endl;
+  if(analysisDebugLevel()>=1) dbg << "---------------------- #nextNodeState="<<nextNodeState.size()<<endl;
   if(nextNodeState.size()>0)
     modified = NodeState::unionLatticeMaps(nextNodeState, curNodeState) || modified;
   // Otherwise, we copy curNodeState[NULLPartEdge] over it
@@ -126,14 +136,14 @@ bool ComposedAnalysis::propagateStateToNextNode(
   }
 
   //dbg << "Result:"<<endl;  
-  //{ indent ind(analysisDebugLevel, 1); dbg<<NodeState::str(nextNodeState); }
+  //{ indent ind(attrGE("analysisDebugLevel", 1)); dbg<<NodeState::str(nextNodeState); }
 
-  if(analysisDebugLevel>=1) {
-    indent ind(analysisDebugLevel, 1);
+  if(analysisDebugLevel()>=1) {
+    indent ind(attrGE("analysisDebugLevel", 1));
     if(modified) {
       dbg << "Next node's in-data modified. Adding..."<<endl;
       dbg << "Propagated: Lattice "<<endl;
-      { indent ind(analysisDebugLevel, 1); dbg<<NodeState::str(nextNodeState); }
+      { indent ind(attrGE("analysisDebugLevel", 1)); dbg<<NodeState::str(nextNodeState); }
     }
     else
       dbg << "  No modification on this node"<<endl;

@@ -19,7 +19,7 @@ class NotImplementedException
 class ComposedAnalysis;
 typedef boost::shared_ptr<ComposedAnalysis> ComposedAnalysisPtr;
 
-class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
+class ComposedAnalysis : public virtual Dataflow, public sight::printable
 {
   public:
   Composer* composer;
@@ -49,14 +49,27 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   // any of these functions, the Composer is informed.
   //
   // The objects returned by these functions are expected to be deallocated by their callers.
-  virtual ValueObjectPtr   Expr2Val    (SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
-  virtual MemLocObjectPtr  Expr2MemLoc (SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
-  virtual CodeLocObjectPtr Expr2CodeLoc(SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
+  virtual ValueObjectPtr   Expr2Val         (SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
+  virtual CodeLocObjectPtr Expr2CodeLoc     (SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
+  virtual MemRegionObjectPtr  Expr2MemRegion(SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
+  virtual MemLocObjectPtr  Expr2MemLoc      (SgNode* n, PartEdgePtr pedge) { throw NotImplementedException(); }
   
   // Return true if the class implements Expr2* and false otherwise
-  virtual bool implementsExpr2Val    () { return false; }
-  virtual bool implementsExpr2MemLoc () { return false; }
-  virtual bool implementsExpr2CodeLoc() { return false; }
+  virtual bool implementsExpr2Val      () { return false; }
+  virtual bool implementsExpr2CodeLoc  () { return false; }
+  virtual bool implementsExpr2MemRegion() { return false; }
+  virtual bool implementsExpr2MemLoc   () { return false; }
+  
+  // Returns whether the class implements Expr* loosely or tightly (if it does at all)
+  // A loose implementation computes the objects in question for use by its clients. However, Expr* queries
+  //    made by this analysis for objects that it implements are forwarder to other analyses that implement them.
+  // A tight implementation computes objects for both itself and its clients and thus, Expt* queries
+  //    it makes for objects it implements should be forwarded to it, rather than to other analyses
+  typedef enum {loose, tight} implTightness;
+  virtual implTightness Expr2ValTightness()       { return loose; }
+  virtual implTightness Expr2CodeLocTightness()   { return loose; }
+  virtual implTightness Expr2MemRegionTightness() { return loose; }
+  virtual implTightness Expr2MemLocTightness()    { return loose; }
   
   /*
   // <<<<<<<<<<
@@ -109,9 +122,6 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   
   public:
    
-  // Returns true if this ComposedAnalysis implements the partition graph and false otherwise
-  virtual bool implementsPartGraph() { return false; }
-    
   // Return the anchor Parts of a given function, caching the results if possible
   std::set<PartPtr> GetStartAStates();
   std::set<PartPtr> GetEndAStates();
@@ -120,6 +130,10 @@ class ComposedAnalysis : public virtual Dataflow, public dbglog::printable
   // Specific Composers implement these two functions
   virtual std::set<PartPtr> GetStartAStates_Spec() { throw NotImplementedException(); }
   virtual std::set<PartPtr> GetEndAStates_Spec()   { throw NotImplementedException(); }
+  
+  // Returns whether this analysis implements an Abstract Transition System graph via the methods
+  // GetStartAStates_Spec() and GetEndAStates_Spec()
+  virtual bool implementsATSGraph() { return false; }
   
   // Given a PartEdge pedge implemented by this ComposedAnalysis, returns the part from its predecessor
   // from which pedge was derived. This function caches the results if possible.
