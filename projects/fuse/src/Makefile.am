@@ -311,13 +311,13 @@ check-cxx-expensive: $(CXX_FUSE_EXPENSIVE_TESTS)
 check-expensive: check-fuse-expensive check-cxx-expensive
 check-local: check-fuse check-cxx
 
-clean-local:
-	rm -rf *.dot *.png dbg/ *.passed *.failed *.out *.err
-
 clean-debug:
 	rm -rf *.dot *.png dbg/
 
 clean-fuse:
 	rm -rf fuse fuse-*.o
+
+clean-check:
+	rm -f *.passed *.failed *.out *.err
 
 clean-local: clean-fuse clean-check clean-debug
