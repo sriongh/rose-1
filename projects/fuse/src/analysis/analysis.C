@@ -133,7 +133,7 @@ bool ComposedAnalysis::propagateStateToNextNode(
   // Otherwise, we copy curNodeState[NULLPartEdge] over it
   else {
     PartEdgePtr nextNodeWildCardPartEdge = getDirection() == fw? nextNode->inEdgeFromAny() : nextNode->outEdgeToAny();
-    NodeState::copyLatticesOW(nextNodeState, nextNodeWildCardPartEdge, curNodeState, NULLPartEdge);
+    NodeState::copyLatticesOW(nextNodeState, nextNodeWildCardPartEdge, curNodeState, curNodeWildCardPartEdge);
     modified = true;
   }
 
