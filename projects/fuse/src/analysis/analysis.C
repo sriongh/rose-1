@@ -108,7 +108,8 @@ bool ComposedAnalysis::propagateStateToNextNode(
   bool modified = false;
   
   // curNodeState should have a single mapping to the NULLPartEdge
-  assert(curNodeState.begin()->first == NULLPartEdge);
+  PartEdgePtr curNodeWildCardPartEdge = getDirection()==fw? curNode->inEdgeFromAny() : curNode->outEdgeToAny();
+  assert(curNodeState.begin()->first == curNodeWildCardPartEdge);
   
   vector<Lattice*>::const_iterator itC, itN;
   if(analysisDebugLevel()>=1) {
@@ -131,7 +132,8 @@ bool ComposedAnalysis::propagateStateToNextNode(
     modified = NodeState::unionLatticeMaps(nextNodeState, curNodeState) || modified;
   // Otherwise, we copy curNodeState[NULLPartEdge] over it
   else {
-    NodeState::copyLatticesOW(nextNodeState, NULLPartEdge, curNodeState, NULLPartEdge);
+    PartEdgePtr nextNodeWildCardPartEdge = getDirection() == fw? nextNode->inEdgeFromAny() : nextNode->outEdgeToAny();
+    NodeState::copyLatticesOW(nextNodeState, nextNodeWildCardPartEdge, curNodeState, NULLPartEdge);
     modified = true;
   }
 
