@@ -120,6 +120,9 @@ class NodeState
   void setLatticeAbove(Analysis* analysis, PartEdgePtr departEdge, std::vector<Lattice*>& lattices);
   void setLatticeBelow(Analysis* analysis, PartEdgePtr departEdge, std::vector<Lattice*>& lattices);
   
+  // return the merged lattice info on all pedges in dfMap
+  Lattice* meetLatticeMapInfo(const LatticeMap& dfMap, Analysis* analysis, int latticeName, bool isAbove) const;
+  
   // Returns the given lattice above the node from the given analysis along the NULL edge
   Lattice* getLatticeAbove(Analysis* analysis, int latticeName) const;
   // Returns the given lattice below the node from the given analysis along the NULL edge
