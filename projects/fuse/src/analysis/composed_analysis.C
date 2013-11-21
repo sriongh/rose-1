@@ -21,7 +21,7 @@ using namespace std;
 
 namespace fuse
 {
-DEBUG_LEVEL(composedAnalysisDebugLevel, 2);
+DEBUG_LEVEL(composedAnalysisDebugLevel, 0);
   
 /****************************
  ***** ComposedAnalysis *****
@@ -822,7 +822,7 @@ bool printDataflowInfoPass::transfer(PartPtr part, CFGNode cn, NodeState& state,
   indent ind(attrGE("composedAnalysisDebugLevel", 1)); 
   dbg << state.str(analysis)<<endl;
   
-  return dynamic_cast<BoolAndLattice*>(dfInfo[NULLPartEdge][0])->set(true);
+  return dynamic_cast<BoolAndLattice*>(dfInfo[part->inEdgeFromAny()][0])->set(true);
 }
 
 /***************************************************
@@ -882,7 +882,7 @@ bool checkDataflowInfoPass::transfer(PartPtr part, CFGNode cn, NodeState& state,
     }
   }
   
-  return dynamic_cast<BoolAndLattice*>(dfInfo[NULLPartEdge][0])->set(true);
+  return dynamic_cast<BoolAndLattice*>(dfInfo[part->inEdgeFromAny()][0])->set(true);
 }
 
 }; // namespace fuse

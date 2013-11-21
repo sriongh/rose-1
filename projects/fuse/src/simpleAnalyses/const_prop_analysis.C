@@ -3701,7 +3701,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
     if(constantPropagationAnalysisDebugLevel()>=2) dbg << "state="<<state->str()<<endl;
     
     // Get the value map at the NULL edge, which denotes the meet over all incoming edges
-    AbstractObjectMap* cpMap = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, NULLPartEdge, 0));
+    AbstractObjectMap* cpMap = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, pedge, 0));
     assert(cpMap);
     
     if(constantPropagationAnalysisDebugLevel()>=2) {

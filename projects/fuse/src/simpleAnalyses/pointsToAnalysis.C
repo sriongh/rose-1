@@ -32,9 +32,10 @@ namespace fuse
   { 
     // copied from VariableStateTransfer.h
     assert(dfInfo.size()==1);
-    assert(dfInfo[NULLPartEdge].size()==1);
-    assert(*dfInfo[NULLPartEdge].begin());
-    Lattice *l = *dfInfo[NULLPartEdge].begin();
+    //#SA: Incoming dfInfo is associated with inEdgeFromAny
+    assert(dfInfo[part->inEdgeFromAny()].size()==1);
+    assert(*dfInfo[part->inEdgeFromAny()].begin());
+    Lattice *l = *dfInfo[part->inEdgeFromAny()].begin();
     productLattice = (dynamic_cast<AbstractObjectMap*>(l));
     assert(productLattice);
   }
@@ -256,7 +257,8 @@ namespace fuse
     {
       NodeState* state = NodeState::getNodeState(this, pedge->target());
       if(ptaDebugLevel()>=1) dbg << "state="<<state->str()<<endl;
-      AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, NULLPartEdge, 0));
+      //#SA: query dfInfo on wildcard edges (inEdgeFromAny)
+      AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, pedge, 0));
       assert(aom);
       boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
       return boost::dynamic_pointer_cast<MemLocObject>(Expr2PointsToMLPtr(sgn, pedge, aos));

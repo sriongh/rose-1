@@ -320,8 +320,9 @@ DeadPathElimPartEdge::DeadPathElimPartEdge(PartEdgePtr baseEdge, ComposedAnalysi
   } else if(latPEdge->target()) {
     assert(latPEdge->target());
     DeadPathElimPartPtr targetDPEPart = makePtr<DeadPathElimPart>(latPEdge->target(), analysis);
+    //#SA: record is aggregated on the wildcard edge
     NodeState* state = NodeState::getNodeState(analysis, latPEdge->target());
-    DeadPathElimPartEdge* dpeEdge = dynamic_cast<DeadPathElimPartEdge*>(state->getLatticeAbove(analysis, 0));
+    DeadPathElimPartEdge* dpeEdge = dynamic_cast<DeadPathElimPartEdge*>(state->getLatticeAbove(analysis, latPEdge, 0));
     level = dpeEdge->level;
   }
   //assert(dpeEdge);
@@ -733,7 +734,8 @@ void DeadPathElimTransfer::visit2OutNode(SgNode* sgn, ValueObjectPtr val, maymus
       boost::shared_ptr<SgValueExp> concreteVal = *concreteVals.begin();
     
       // Get the edge that is propagated along the incoming dataflow path
-      DeadPathElimPartEdge* dfEdge = dynamic_cast<DeadPathElimPartEdge*>(*dfInfo[NULLPartEdge].begin());
+      //#SA: Incoming dfInfo is associated with inEdgeFromAny
+      DeadPathElimPartEdge* dfEdge = dynamic_cast<DeadPathElimPartEdge*>(*dfInfo[part->inEdgeFromAny()].begin());
       // Adjust the base Edge so that it now starts at its original target part and terminates at NULL
       // (i.e. advance it forward by one node without specifying the target yet)
       dfEdge->src = dfEdge->tgt;
@@ -863,7 +865,8 @@ void DeadPathElimTransfer::visit(SgOrOp *op)
 void DeadPathElimTransfer::visit(SgNode *sgn)
 {
   // Get the edge that is propagated along the incoming dataflow path
-  DeadPathElimPartEdge* dfEdge = dynamic_cast<DeadPathElimPartEdge*>(*dfInfo[NULLPartEdge].begin());
+  //#SA: Incoming dfInfo is associated with inEdgeFromAny
+  DeadPathElimPartEdge* dfEdge = dynamic_cast<DeadPathElimPartEdge*>(*dfInfo[part->inEdgeFromAny()].begin());
   // Adjust the base Edge so that it now starts at its original target part and terminates at NULL
   // (i.e. advance it forward by one node without specifying the target yet)
   dfEdge->src = dfEdge->tgt;
@@ -998,7 +1001,8 @@ set<PartPtr> DeadPathElimAnalysis::GetStartAStates_Spec()
         dbg << "startState = "<<startState->str(this)<<endl;
       }
 
-      DeadPathElimPartEdge* startDPEPartEdge = dynamic_cast<DeadPathElimPartEdge*>(startState->getLatticeAbove(this, 0));
+      //#SA: dfInfo is aggregated on inEdgeFromAny
+      DeadPathElimPartEdge* startDPEPartEdge = dynamic_cast<DeadPathElimPartEdge*>(startState->getLatticeAbove(this, (baseSPart->get())->inEdgeFromAny(), 0));
       assert(startDPEPartEdge);
       cache_GetStartAStates_Spec.insert(startDPEPartEdge->target());
     }
@@ -1029,7 +1033,8 @@ set<PartPtr> DeadPathElimAnalysis::GetEndAStates_Spec()
         dbg << "endPart = "<<baseEPart->get()->str()<<endl;
         dbg << "endState = "<<endState->str(this)<<endl;
       }
-      DeadPathElimPartEdge* endDPEPartEdge = dynamic_cast<DeadPathElimPartEdge*>(endState->getLatticeAbove(this, 0));
+      //#SA: dfInfo is aggregated on inEdgeFromAny
+      DeadPathElimPartEdge* endDPEPartEdge = dynamic_cast<DeadPathElimPartEdge*>(endState->getLatticeAbove(this, (baseEPart->get())->inEdgeFromAny(), 0));
       assert(endDPEPartEdge);
 
       cache_GetEndAStates_Spec.insert(endDPEPartEdge->target());

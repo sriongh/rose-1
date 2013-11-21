@@ -8,7 +8,7 @@ using namespace std;
 
 namespace fuse {
 //int nodeStateDebugLevel=2;
-DEBUG_LEVEL(nodeStateDebugLevel, 2);
+DEBUG_LEVEL(nodeStateDebugLevel, 0);
 
 // Records that this analysis has initialized its state at this node
 void NodeState::initialized(Analysis* init)
@@ -24,51 +24,51 @@ bool NodeState::isInitialized(Analysis* analysis)
 
 // Set this node's lattices for this analysis (possibly above or below only, replacing previous mappings).
 // The lattices will be associated with the NULL edge
-void NodeState::setLattices(Analysis* analysis, vector<Lattice*>& lattices)
-{
-  map<PartEdgePtr, vector<Lattice*> > tmp;
+// void NodeState::setLattices(Analysis* analysis, vector<Lattice*>& lattices)
+// {
+//   map<PartEdgePtr, vector<Lattice*> > tmp;
   
-  if(dfInfoAbove.find((Analysis*)analysis) != dfInfoAbove.end())
-    dfInfoAbove[(Analysis*)analysis].clear();
-  else
-    dfInfoAbove[(Analysis*)analysis] = tmp;
+//   if(dfInfoAbove.find((Analysis*)analysis) != dfInfoAbove.end())
+//     dfInfoAbove[(Analysis*)analysis].clear();
+//   else
+//     dfInfoAbove[(Analysis*)analysis] = tmp;
 
-  if(dfInfoBelow.find((Analysis*)analysis) != dfInfoBelow.end())
-    dfInfoBelow[(Analysis*)analysis].clear();
-  else
-    dfInfoBelow[(Analysis*)analysis] = tmp;
+//   if(dfInfoBelow.find((Analysis*)analysis) != dfInfoBelow.end())
+//     dfInfoBelow[(Analysis*)analysis].clear();
+//   else
+//     dfInfoBelow[(Analysis*)analysis] = tmp;
 
-  // Set dfInfoAbove to lattices
-  dfInfoAbove[(Analysis*)analysis][NULLPartEdge] = lattices;
-  // copy dfInfoAbove to dfInfoBelow (including copies of all the lattices)
-  //dbg << "NodeState::setLattices()"<<endl;
-  for(vector<Lattice*>::iterator it = dfInfoAbove[(Analysis*)analysis][NULLPartEdge].begin(); 
-      it!=dfInfoAbove[(Analysis*)analysis][NULLPartEdge].end(); it++)
-  {
-    //indent ind;
-    //dbg << (*it)->str()<<endl;
-    Lattice* l = (*it)->copy();
-    //dbg << "NodeState::setLattices pushing dfInfoBelow: "<<l->str("")<<"\n";
-    dfInfoBelow[(Analysis*)analysis][NULLPartEdge].push_back(l);
-  }
+//   // Set dfInfoAbove to lattices
+//   dfInfoAbove[(Analysis*)analysis][NULLPartEdge] = lattices;
+//   // copy dfInfoAbove to dfInfoBelow (including copies of all the lattices)
+//   //dbg << "NodeState::setLattices()"<<endl;
+//   for(vector<Lattice*>::iterator it = dfInfoAbove[(Analysis*)analysis][NULLPartEdge].begin(); 
+//       it!=dfInfoAbove[(Analysis*)analysis][NULLPartEdge].end(); it++)
+//   {
+//     //indent ind;
+//     //dbg << (*it)->str()<<endl;
+//     Lattice* l = (*it)->copy();
+//     //dbg << "NodeState::setLattices pushing dfInfoBelow: "<<l->str("")<<"\n";
+//     dfInfoBelow[(Analysis*)analysis][NULLPartEdge].push_back(l);
+//   }
   
-  // Records that this analysis has initialized its state at this node
-  initialized((Analysis*)analysis);
-}
+//   // Records that this analysis has initialized its state at this node
+//   initialized((Analysis*)analysis);
+// }
 
 // Set this node's lattices for this analysis above the node, replacing previous mappings).
 // The lattices will be associated with the NULL edge
-void NodeState::setLatticeAbove(Analysis* analysis, vector<Lattice*>& lattices)
-{
-  // setLattice_ex(dfInfoAbove, analysis, NULLPartEdge, lattices);
-  assert(0);
-}
+// void NodeState::setLatticeAbove(Analysis* analysis, vector<Lattice*>& lattices)
+// {
+//   // setLattice_ex(dfInfoAbove, analysis, NULLPartEdge, lattices);
+//   assert(0);
+// }
 
-void NodeState::setLatticeBelow(Analysis* analysis, vector<Lattice*>& lattices)
-{
-  // setLattice_ex(dfInfoBelow, analysis, NULLPartEdge, lattices);
-  assert(0);
-}
+// void NodeState::setLatticeBelow(Analysis* analysis, vector<Lattice*>& lattices)
+// {
+//   // setLattice_ex(dfInfoBelow, analysis, NULLPartEdge, lattices);
+//   assert(0);
+// }
 
 // Set this node's lattices for this analysis, along the given departing edge
 void NodeState::setLatticeAbove(Analysis* analysis, PartEdgePtr departEdge, std::vector<Lattice*>& lattices)
@@ -172,22 +172,22 @@ Lattice* NodeState::meetLatticeMapInfo(const LatticeMap& dfMap,
 }
 
 // returns the given lattice from above the node, which owned by the given analysis
-Lattice* NodeState::getLatticeAbove(Analysis* analysis, int latticeName) const
-{
-  // return getLatticeAbove(analysis, NULLPartEdge, latticeName);
-  // return getLattice_ex(dfInfoAbove, analysis, NULLPartEdge, latticeName);
-  assert(0);
-  return NULL;
-}
+// Lattice* NodeState::getLatticeAbove(Analysis* analysis, int latticeName) const
+// {
+//   // return getLatticeAbove(analysis, NULLPartEdge, latticeName);
+//   // return getLattice_ex(dfInfoAbove, analysis, NULLPartEdge, latticeName);
+//   assert(0);
+//   return NULL;
+// }
 
 // returns the given lattice from below the node, which owned by the given analysis
-Lattice* NodeState::getLatticeBelow(Analysis* analysis, int latticeName) const
-{
-  // return getLatticeBelow(analysis, NULLPartEdge, latticeName);
-  // return getLattice_ex(dfInfoBelow, analysis, NULLPartEdge, latticeName);
-  assert(0);
-  return NULL;
-}
+// Lattice* NodeState::getLatticeBelow(Analysis* analysis, int latticeName) const
+// {
+//   // return getLatticeBelow(analysis, NULLPartEdge, latticeName);
+//   // return getLattice_ex(dfInfoBelow, analysis, NULLPartEdge, latticeName);
+//   assert(0);
+//   return NULL;
+// }
   
 // Returns the given lattice above the node from the given analysis along the given departing edge
 Lattice* NodeState::getLatticeAbove(Analysis* analysis, PartEdgePtr departEdge, int latticeName) const
@@ -256,13 +256,13 @@ Lattice* NodeState::getLatticeBelow(Analysis* analysis, PartEdgePtr departEdge, 
 
 // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
 // (read-only access)
-const vector<Lattice*>& NodeState::getLatticeAbove(Analysis* analysis) const
-{ return getLattice_ex(dfInfoAbove, analysis, NULLPartEdge); }
+// const vector<Lattice*>& NodeState::getLatticeAbove(Analysis* analysis) const
+// { return getLattice_ex(dfInfoAbove, analysis, NULLPartEdge); }
 
 // Returns the map containing all the lattices below the node from the given analysis along the NULL edge
 // (read-only access)
-const std::vector<Lattice*>& NodeState::getLatticeBelow(Analysis* analysis) const
-{ return getLattice_ex(dfInfoBelow, analysis, NULLPartEdge); }
+// const std::vector<Lattice*>& NodeState::getLatticeBelow(Analysis* analysis) const
+// { return getLattice_ex(dfInfoBelow, analysis, NULLPartEdge); }
 
 // Returns the map containing all the lattices above the node from the given analysis along the given departing edge
 // (read-only access)
@@ -286,13 +286,13 @@ std::map<PartEdgePtr, std::vector<Lattice*> >& NodeState::getLatticeBelowAllMod(
 
 // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
 // (read/write access)
-std::vector<Lattice*>& NodeState::getLatticeAboveMod(Analysis* analysis)
-{ return getLatticeMod_ex(dfInfoAbove, analysis, NULLPartEdge); }
+// std::vector<Lattice*>& NodeState::getLatticeAboveMod(Analysis* analysis)
+// { return getLatticeMod_ex(dfInfoAbove, analysis, NULLPartEdge); }
 
 // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
 // (read/write access)
-std::vector<Lattice*>& NodeState::getLatticeBelowMod(Analysis* analysis)
-{ return getLatticeMod_ex(dfInfoBelow, analysis, NULLPartEdge); }
+// std::vector<Lattice*>& NodeState::getLatticeBelowMod(Analysis* analysis)
+// { return getLatticeMod_ex(dfInfoBelow, analysis, NULLPartEdge); }
 
 // Returns the map containing all the lattices above the node from the given analysis along the given departing edge
 // (read/write access)
@@ -706,10 +706,10 @@ NodeState* NodeState::getNodeState(ComposedAnalysis* analysis, PartPtr p)
 }
 
 // Copies from's above lattices for analysis to to's above lattices for the same analysis, both along the NULL edge.
-void NodeState::copyLattices_aEQa(Analysis* analysis, NodeState& to, const NodeState& from)
-{
-  copyLattices_aEQa(analysis, to, NULLPartEdge, from, NULLPartEdge);
-}
+// void NodeState::copyLattices_aEQa(Analysis* analysis, NodeState& to, const NodeState& from)
+// {
+//   copyLattices_aEQa(analysis, to, NULLPartEdge, from, NULLPartEdge);
+// }
 // Copies along the given departing edges
 void NodeState::copyLattices_aEQa(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                                 const NodeState& from, PartEdgePtr fromDepartEdge)
@@ -720,10 +720,10 @@ void NodeState::copyLattices_aEQa(Analysis* analysis, NodeState& to,   PartEdgeP
 }
 
 // Copies from's above lattices for analysis to to's below lattices for the same analysis, both along the NULL edge.
-void NodeState::copyLattices_bEQa(Analysis* analysis, NodeState& to, const NodeState& from)
-{
-  copyLattices_bEQa(analysis, to, NULLPartEdge, from, NULLPartEdge);
-}
+// void NodeState::copyLattices_bEQa(Analysis* analysis, NodeState& to, const NodeState& from)
+// {
+//   copyLattices_bEQa(analysis, to, NULLPartEdge, from, NULLPartEdge);
+// }
 // Copies along the given departing edges
 void NodeState::copyLattices_bEQa(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                                 const NodeState& from, PartEdgePtr fromDepartEdge)
@@ -734,10 +734,10 @@ void NodeState::copyLattices_bEQa(Analysis* analysis, NodeState& to,   PartEdgeP
 }
 
 // Copies from's below lattices for analysis to to's below lattices for the same analysis, both along the NULL edge.
-void NodeState::copyLattices_bEQb(Analysis* analysis, NodeState& to, const NodeState& from)
-{
-  copyLattices_bEQb(analysis, to, NULLPartEdge, from, NULLPartEdge);
-}
+// void NodeState::copyLattices_bEQb(Analysis* analysis, NodeState& to, const NodeState& from)
+// {
+//   copyLattices_bEQb(analysis, to, NULLPartEdge, from, NULLPartEdge);
+// }
 // Copies along the given departing edges
 void NodeState::copyLattices_bEQb(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                                 const NodeState& from, PartEdgePtr fromDepartEdge)
@@ -749,10 +749,10 @@ void NodeState::copyLattices_bEQb(Analysis* analysis, NodeState& to,   PartEdgeP
 
 
 // Copies from's below lattices for analysis to to's above lattices for the same analysis, both along the NULL edge.
-void NodeState::copyLattices_aEQb(Analysis* analysis, NodeState& to, const NodeState& from)
-{
-  copyLattices_aEQb(analysis, to, NULLPartEdge, from, NULLPartEdge);
-}
+// void NodeState::copyLattices_aEQb(Analysis* analysis, NodeState& to, const NodeState& from)
+// {
+//   copyLattices_aEQb(analysis, to, NULLPartEdge, from, NULLPartEdge);
+// }
 // Copies along the given departing edges
 void NodeState::copyLattices_aEQb(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                                 const NodeState& from, PartEdgePtr fromDepartEdge)

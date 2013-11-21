@@ -109,12 +109,12 @@ class NodeState
   // adds the given lattice, organizing it under the given analysis and lattice name
   //void addLattice(Analysis* analysis, int latticeName, Lattice* l);
   
-  
+  //#SA: deprecate functions writing on NULLPartEdge
   // Set this node's lattices for this analysis (possibly above or below only, replacing previous mappings).
   // The lattices will be associated with the NULL edge
-  void setLattices    (Analysis* analysis, std::vector<Lattice*>& lattices);
-  void setLatticeAbove(Analysis* analysis, std::vector<Lattice*>& lattices);
-  void setLatticeBelow(Analysis* analysis, std::vector<Lattice*>& lattices);
+  // void setLattices    (Analysis* analysis, std::vector<Lattice*>& lattices);
+  // void setLatticeAbove(Analysis* analysis, std::vector<Lattice*>& lattices);
+  // void setLatticeBelow(Analysis* analysis, std::vector<Lattice*>& lattices);
   
   // Set this node's lattices for this analysis, along the given departing edge
   void setLatticeAbove(Analysis* analysis, PartEdgePtr departEdge, std::vector<Lattice*>& lattices);
@@ -122,11 +122,12 @@ class NodeState
   
   // return the merged lattice info on all pedges in dfMap
   Lattice* meetLatticeMapInfo(const LatticeMap& dfMap, Analysis* analysis, int latticeName, bool isAbove) const;
-  
+ 
+  //#SA: deprecate functions reading on NULLPartEdge
   // Returns the given lattice above the node from the given analysis along the NULL edge
-  Lattice* getLatticeAbove(Analysis* analysis, int latticeName) const;
+  // Lattice* getLatticeAbove(Analysis* analysis, int latticeName) const;
   // Returns the given lattice below the node from the given analysis along the NULL edge
-  Lattice* getLatticeBelow(Analysis* analysis, int latticeName) const;
+  // Lattice* getLatticeBelow(Analysis* analysis, int latticeName) const;
   
   // Returns the given lattice above the node from the given analysis along the given departing edge
   Lattice* getLatticeAbove(Analysis* analysis, PartEdgePtr departEdge, int latticeName) const;
@@ -140,12 +141,13 @@ class NodeState
   // (read-only access)
   const std::map<PartEdgePtr, std::vector<Lattice*> >& getLatticeBelowAll(Analysis* analysis) const;
   
+  //#SA: deprecate functions reading on NULLPartEdge
   // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
   // (read-only access)
-  const std::vector<Lattice*>& getLatticeAbove(Analysis* analysis) const;
+  // const std::vector<Lattice*>& getLatticeAbove(Analysis* analysis) const;
   // Returns the map containing all the lattices below the node from the given analysis along the NULL edge
   // (read-only access)
-  const std::vector<Lattice*>& getLatticeBelow(Analysis* analysis) const;
+  // const std::vector<Lattice*>& getLatticeBelow(Analysis* analysis) const;
   
   // Returns the map containing all the lattices above the node from the given analysis along the given departing edge
   // (read-only access)
@@ -161,12 +163,13 @@ class NodeState
   // (read/write access)
   std::map<PartEdgePtr, std::vector<Lattice*> >& getLatticeBelowAllMod(Analysis* analysis);
   
+  //#SA: deprecate functions reading/writing on NULLPartEdge
   // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
   // (read/write access)
-  std::vector<Lattice*>& getLatticeAboveMod(Analysis* analysis);
+  // std::vector<Lattice*>& getLatticeAboveMod(Analysis* analysis);
   // Returns the map containing all the lattices above the node from the given analysis along the NULL edge
   // (read/write access)
-  std::vector<Lattice*>& getLatticeBelowMod(Analysis* analysis);
+  // std::vector<Lattice*>& getLatticeBelowMod(Analysis* analysis);
   
   // Returns the map containing all the lattices above the node from the given analysis along the given departing edge
   // (read/write access)
@@ -268,25 +271,29 @@ class NodeState
   public:
   
   // Copies from's above lattices for analysis to to's above lattices for the same analysis, both along the NULL edge.
-  static void copyLattices_aEQa(Analysis* analysis, NodeState& to, const NodeState& from);
+  //#SA: deprecate functions copying on NULLPartEdge
+  // static void copyLattices_aEQa(Analysis* analysis, NodeState& to, const NodeState& from);
+
   // Copies along the given departing edges
   static void copyLattices_aEQa(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                               const NodeState& from, PartEdgePtr fromDepartEdge);
   
   // Copies from's above lattices for analysis to to's below lattices for the same analysis, both along the NULL edge.
-  static void copyLattices_bEQa(Analysis* analysis, NodeState& to, const NodeState& from);
+  //#SA: deprecate functions copying on NULLPartEdge
+  // static void copyLattices_bEQa(Analysis* analysis, NodeState& to, const NodeState& from);
+
   // Copies along the given departing edges
   static void copyLattices_bEQa(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                               const NodeState& from, PartEdgePtr fromDepartEdge);
   
   // Copies from's below lattices for analysis to to's below lattices for the same analysis, both along the NULL edge.
-  static void copyLattices_bEQb(Analysis* analysis, NodeState& to, const NodeState& from);
+  // static void copyLattices_bEQb(Analysis* analysis, NodeState& to, const NodeState& from);
   // Copies along the given departing edges
   static void copyLattices_bEQb(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                               const NodeState& from, PartEdgePtr fromDepartEdge);
   
   // Copies from's below lattices for analysis to to's above lattices for the same analysis, both along the NULL edge.
-  static void copyLattices_aEQb(Analysis* analysis, NodeState& to, const NodeState& from);
+  // static void copyLattices_aEQb(Analysis* analysis, NodeState& to, const NodeState& from);
   // Copies along the given departing edges
   static void copyLattices_aEQb(Analysis* analysis, NodeState& to,   PartEdgePtr toDepartEdge, 
                                               const NodeState& from, PartEdgePtr fromDepartEdge);

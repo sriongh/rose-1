@@ -330,8 +330,9 @@ LiveDeadMemTransfer::LiveDeadMemTransfer(PartPtr part, CFGNode cn, NodeState &s,
     part(part), 
     fseu(fseu)
 {
-  assert(dfInfo.find(PartEdgePtr()) != dfInfo.end());
-  liveLat = dynamic_cast<AbstractObjectSet*>(*(dfInfo[PartEdgePtr()].begin()));
+  //#SA: Incoming dfInfo is associated with outEdgeToAny
+  assert(dfInfo.find(part->outEdgeToAny()) != dfInfo.end());
+  liveLat = dynamic_cast<AbstractObjectSet*>(*(dfInfo[part->outEdgeToAny()].begin()));
 
   if(liveDeadAnalysisDebugLevel()>=1) {
     dbg << "LiveDeadMemTransfer: liveLat=";
@@ -1046,7 +1047,9 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
     }}
 
     { scope regAbv("Checking containment below", scope::low, attrGE("liveDeadAnalysisDebugLevel", 1));
-    std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma);
+    PartPtr curPart = pedge->target();
+    //#SA: query for dfInfo on outEdgeToAny corresponging to current part
+    std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma, curPart->outEdgeToAny());
     AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats.begin())); assert(liveL);
     if(liveDeadAnalysisDebugLevel()>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
     //dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;
@@ -1058,8 +1061,9 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
   } else if(pedge->source()) {
     NodeState* state = NodeState::getNodeState(ldma, pedge->source());
     //dbg << "isLiveMay: state="<<state->str(ldma)<<endl;
-    
-    std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma);
+   
+    //#SA: dfInfo is associated with outEdgeToAny 
+    std::vector<Lattice*>& lats = state->getLatticeBelowMod(ldma, pedge);
     AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats.begin()));
     assert(liveL);
     if(liveDeadAnalysisDebugLevel()>=1) dbg << "isLiveMay: liveLBelow="<<liveL->str("")<<endl;

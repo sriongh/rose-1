@@ -183,8 +183,10 @@ public:
       (dynamic_cast<LatticeType *>(*it))->initialize();*/
     assert(dfInfo.size()==1);
 //    assert(dfInfo[NULLPartEdge].size()==2);
-    assert(dfInfo[NULLPartEdge][0]);
-    Lattice *l = dfInfo[NULLPartEdge][0];
+    //#SA: Incoming dfInfo is associated with inEdgeFromAny/outEdgeToAny
+    PartEdgePtr wildCardPartEdge = ((ComposedAnalysis*)analysis)->getDirection()==ComposedAnalysis::fw? part->inEdgeFromAny() : part->outEdgeToAny();
+    assert(dfInfo[wildCardPartEdge][0]);
+    Lattice *l = dfInfo[wildCardPartEdge][0];
     prodLat = (dynamic_cast<AbstractObjectMap*>(l));
     assert(prodLat);
     

@@ -1106,9 +1106,10 @@ void CallContextSensitivityAnalysis::genInitLattice(PartPtr part, PartEdgePtr pe
 bool CallContextSensitivityAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
               std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo)
 {
-  assert(dfInfo[NULLPartEdge].size()==1);
+  //#SA: Incoming dfInfo is associated with inEdgeFromAny
+  assert(dfInfo[part->inEdgeFromAny()].size()==1);
   scope reg("CallContextSensitivityAnalysis::transfer()", scope::medium, attrGE("callContextSensitivityDebugLevel", 1));
-  CallCtxSensLattice* oldCCSLat = dynamic_cast<CallCtxSensLattice*>(dfInfo[NULLPartEdge][0]);
+  CallCtxSensLattice* oldCCSLat = dynamic_cast<CallCtxSensLattice*>(dfInfo[part->inEdgeFromAny()][0]);
   assert(oldCCSLat);
   
   list<PartEdgePtr> baseEdges = part->outEdges();
@@ -1602,7 +1603,8 @@ set<PartPtr> CallContextSensitivityAnalysis::GetEndAStates_Spec()
     
     // Find all the contexts that this end state may appear in
     NodeState* endNodeState = NodeState::getNodeState(this, *e);
-    CallCtxSensLattice* lat = dynamic_cast<CallCtxSensLattice*>(endNodeState->getLatticeAbove(this, NULLPartEdge, 0));
+    //#SA: lattice is associated with inEdgeFromAny edge
+    CallCtxSensLattice* lat = dynamic_cast<CallCtxSensLattice*>(endNodeState->getLatticeAbove(this, e->get()->inEdgeFromAny(), 0));
     assert(lat);
     
     if(callContextSensitivityDebugLevel()>=3) {
