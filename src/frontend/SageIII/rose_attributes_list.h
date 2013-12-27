@@ -74,7 +74,7 @@
 // using namespace std;
 #endif
 
-class PreprocessingInfo;
+class ROSE_DLL_API PreprocessingInfo;
 class ROSEAttributesList;
 //AS(01/04/07) Global map of filenames to PreprocessingInfo*'s as it is inefficient
 //to get this by a traversal of the AST
@@ -499,6 +499,9 @@ class ROSEAttributesList
           void deepClean(void);
           void clean(void);
 
+      // DQ (9/19/2013): generate the number associated with each position relative to the attached IR node.
+      // size_t numberByRelativePosition(PreprocessingInfo::RelativePositionType pos);
+
        // Access function for list
           std::vector<PreprocessingInfo*> & getList() { return attributeList; };
 
@@ -531,6 +534,9 @@ class ROSEAttributesList
 
        // DQ (12/15/2012): Added access function.
           std::set<int> & get_filenameIdSet();
+
+       // DQ (9/29/2013): Added to support adding processed CPP directives and comments as tokens to token list.
+          PreprocessingInfo* lastElement();
    };
 
 //
