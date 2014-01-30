@@ -15,6 +15,8 @@ INCLUDES = \
 	-I$(srcdir)/simpleAnalyses \
 	-I$(srcdir)/state
 
+fuse_DEPENDENCIES=fuseLayout
+
 fuse_SOURCES = \
 	analysis/abstract_object.C \
 	analysis/abstract_object_map.C \
