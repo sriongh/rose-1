@@ -14,6 +14,9 @@ namespace fuse {
    * MPIValueObject *
    ******************/
   class MPIValueObject : public FiniteLattice, public ValueObject {
+
+    CPValueKindPtr kind;
+
   public:
 
     // Do we need a default constructor?

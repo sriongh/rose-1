@@ -4,6 +4,24 @@
 
 namespace fuse {
 
+  /******************
+   * MPIValueObject *
+   ******************/
+
+  // MPIValueObject::MPIValueObject(PartEdgePtr pedge) :
+  //   Lattice(pedge), FiniteLattice(pedge),
+  //   ValueObject(NULL) {
+  //   kind = boost::make_shared<CPUninitializedKind>();
+  // }
+
+  // MPIValueObject::MPIValueObject(CPValueKindPtr _kind, PartEdgePtr pedge)
+  //   : Lattice(pedge), FiniteLattice(pedge),
+  //     ValueObject(NULL),
+  //     kind(_kind) {
+  // }
+
+  
+
   /**********************
    * MRATransferVisitor *
    **********************/
