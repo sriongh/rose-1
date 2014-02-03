@@ -403,7 +403,7 @@ struct plain_return_type_2<arithmetic_action<Act>, long double, wchar_t> {
 }
 
 namespace fuse {
-DEBUG_LEVEL(constantPropagationAnalysisDebugLevel, 0);
+DEBUG_LEVEL(constantPropagationAnalysisDebugLevel, 2);
 
 // ************************
 // **** CPValueObject *****
@@ -955,13 +955,15 @@ CPValueKindPtr CPConcreteKind::op(SgUnaryOp* op) {
       case V_SgTypeSignedLongLong:     return doUnaryOp(boost::lambda::ll_static_cast<long long>         (boost::lambda::_1));
       case V_SgTypeSignedShort:        return doUnaryOp(boost::lambda::ll_static_cast<short>             (boost::lambda::_1));
       case V_SgTypeWchar:              return doUnaryOp(boost::lambda::ll_static_cast<wchar_t>           (boost::lambda::_1));
-        
+      case V_SgPointerType:            return boost::make_shared<CPUnknownKind>();
+      case V_SgTypedefType:            return boost::make_shared<CPUnknownKind>();
       case V_SgArrayType: case V_SgFunctionType: case V_SgJavaWildcardType: case V_SgModifierType: 
-      case V_SgNamedType: case V_SgPointerType: case V_SgQualifiedNameType: case V_SgReferenceType: 
+      case V_SgNamedType: case V_SgQualifiedNameType: case V_SgReferenceType: 
       case V_SgTemplateType: case V_SgTypeCAFTeam: case V_SgTypeCrayPointer: case V_SgTypeDefault: 
       case V_SgTypeEllipse: case V_SgTypeGlobalVoid: case V_SgTypeImaginary: case V_SgTypeLabel: 
       case V_SgTypeVoid:
       default:
+        // dbg << "type=" << isSgCastExp(op)->get_type()->class_name() << endl;
         assert(0);
     }
   } else if(isSgConjugateOp(op)) {
