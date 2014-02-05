@@ -212,11 +212,11 @@ CFGIterator::checkpoint::checkpoint(const CFGIterator::checkpoint& that)
   this->visited  = that.visited;
 }
 
-string CFGIterator::checkpoint::str(string indent)
+string CFGIterator::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[VirtualCFG::CFGIterator::checkpoint : "<<endl;
-  for(list<CFGNode>::iterator it=remainingNodes.begin();
+  for(list<CFGNode>::const_iterator it=remainingNodes.begin();
       it!=remainingNodes.end(); )
   {
     outs << indent << "&nbsp;&nbsp;&nbsp;&nbsp;["<<it->getNode()->unparseToString()<<" | "<<it->getNode()->class_name()<<"]";
@@ -248,7 +248,7 @@ void CFGIterator::restartFromChkpt(CFGIterator::checkpoint& chkpt)
   initialized = true;
 }
 
-string CFGIterator::str(string indent)
+string CFGIterator::str(string indent) const
 {
   
   ostringstream outs;
@@ -256,7 +256,7 @@ string CFGIterator::str(string indent)
   if(initialized) {
     outs << "[CFGIterator:"<<endl;
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;remainingNodes(#"<<remainingNodes.size()<<") = "<<endl;
-    for(list<CFGNode>::iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
+    for(list<CFGNode>::const_iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
     { outs << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["<<it->getNode()->unparseToString()<<" | "<<it->getNode()->class_name()<<"]"<<endl; }
     
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;visited(#"<<visited.size()<<")  = \n";
@@ -340,7 +340,7 @@ dataflowCFGIterator::checkpoint::checkpoint(const CFGIterator::checkpoint& iChkp
 dataflowCFGIterator::checkpoint::checkpoint(const dataflowCFGIterator::checkpoint &that): 
   iChkpt(that.iChkpt), terminator(that.terminator) {}
 
-string dataflowCFGIterator::checkpoint::str(string indent)
+string dataflowCFGIterator::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[VirtualCFG::dataflowCFGIterator::checkpoint : \n"; 
@@ -365,7 +365,7 @@ void dataflowCFGIterator::restartFromChkpt(dataflowCFGIterator::checkpoint& chkp
   terminator = chkpt.terminator;
 }
 
-string dataflowCFGIterator::str(string indent)
+string dataflowCFGIterator::str(string indent) const
 {
   ostringstream outs;
   
@@ -393,7 +393,7 @@ void back_dataflowCFGIterator::operator ++ (int)
   advance(false, false);
 }
 
-string back_dataflowCFGIterator::str(string indent)
+string back_dataflowCFGIterator::str(string indent) const
 {
   ostringstream outs;
   

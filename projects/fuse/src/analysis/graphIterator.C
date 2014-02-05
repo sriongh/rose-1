@@ -329,11 +329,11 @@ graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::checkpoint(const grap
 }
 
 template <class GraphEdgePtr, class GraphNodePtr>
-string graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::str(string indent)
+string graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint : "<<endl;
-  for(typename list<GraphEdgePtr>::iterator it=remainingNodes.begin();
+  for(typename list<GraphEdgePtr>::const_iterator it=remainingNodes.begin();
       it!=remainingNodes.end(); )
   {
     outs << indent << "&nbsp;&nbsp;&nbsp;&nbsp;"<<it->str();
@@ -367,18 +367,18 @@ void graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::restartFromChkpt(graphEdgeIt
 }
 
 template <class GraphEdgePtr, class GraphNodePtr>
-string graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::str(string indent)
+string graphEdgeIterator<GraphEdgePtr, GraphNodePtr>::str(string indent) const
 {  
   ostringstream outs;
   
   if(initialized) {
     outs << "[graphEdgeIterator:"<<endl;
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;remainingNodes(#"<<remainingNodes.size()<<") = "<<endl;
-    for(typename list<GraphEdgePtr>::iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
+    for(typename list<GraphEdgePtr>::const_iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
     { outs << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"<<it->get()->str()<<endl; }
     
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;visited(#"<<visited.size()<<")  = \n";
-    for(typename set<GraphEdgePtr>::iterator it=visited.begin(); it!=visited.end(); it++) { 
+    for(typename set<GraphEdgePtr>::const_iterator it=visited.begin(); it!=visited.end(); it++) { 
       outs << "&nbsp;&nbsp;&nbsp;&nbsp;"<<it->get()->str()<<endl;
     }
     
@@ -628,7 +628,7 @@ dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::checkpoint(co
   iChkpt(that.iChkpt), terminators(that.terminators) {}
 
 template <class GraphEdgePtr, class GraphNodePtr>
-string dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::str(string indent)
+string dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::checkpoint : \n"; 
@@ -661,7 +661,7 @@ void dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::restartFromChkpt(dat
 }
 
 template <class GraphEdgePtr, class GraphNodePtr>
-string dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::str(string indent)
+string dataflowGraphEdgeIterator<GraphEdgePtr, GraphNodePtr>::str(string indent) const
 {
   ostringstream outs;
   

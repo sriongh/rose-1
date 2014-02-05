@@ -64,7 +64,7 @@ class PartPtrPartContext: public PartContext
   bool operator==(const PartContextPtr& that_arg) const;
   bool operator< (const PartContextPtr& that_arg) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // PartPtrPartContext
 
 /****************************
@@ -159,7 +159,7 @@ class FactorTransState : public Part
   bool equal(const PartPtr& o) const;
   bool less(const PartPtr& o)  const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   
   /*FactorTransStatePtr getParent() const {
     if(commonFactors.size()>1) {
@@ -254,7 +254,7 @@ class FactorTransEdge : public PartEdge
   bool less(const PartEdgePtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // FactorTransEdge
 
 /*************************************
@@ -317,7 +317,7 @@ class FactorTransSystemAnalysis : public UndirDataflow
   PartEdgePtr convertPEdge_Spec(PartEdgePtr pedge);
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   //{ std::ostringstream oss; oss << "FactorTransSystemAnalysis"<<(firstAnalysis? "(first)": "")<<", &transitionFactors="<<(&transitionFactors)<<" #transitionFactors="<<transitionFactors.size(); return oss.str(); }
   { return "FactorTransSystemAnalysis"+std::string((firstAnalysis? "-First": "")); }
 }; // CallContextSensitivityAnalysis

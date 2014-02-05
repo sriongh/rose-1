@@ -587,13 +587,13 @@ CPValueObject::isEmptyLat()
 { return isEmptyV(getPartEdge()); }
 
 string
-CPValueObject::str(string indent)
+CPValueObject::str(string indent) const
 {
   return strp(latPEdge, indent);
 }
 
 string
-CPValueObject::strp(PartEdgePtr pedge, string indent)
+CPValueObject::strp(PartEdgePtr pedge, string indent) const
 {
   return kind->str(indent);
 }
@@ -769,7 +769,7 @@ bool CPUninitializedKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPUninitializedKind::isEmptyV(PartEdgePtr pedge) { return true; }
 
-std::string CPUninitializedKind::str(std::string indent)
+std::string CPUninitializedKind::str(std::string indent) const
 { return "[CPUninitializedKind]"; }
 
 // ******************************
@@ -2314,7 +2314,7 @@ bool CPConcreteKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPConcreteKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPConcreteKind::str(std::string indent)
+std::string CPConcreteKind::str(std::string indent) const
 { return txt()<<"[CPConcreteKind: val="<<(exp? SgNode2Str(exp.get()): "NULL")<<"]"; }
 
 
@@ -2838,11 +2838,11 @@ bool CPOffsetListKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPOffsetListKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPOffsetListKind::str(std::string indent) { 
+std::string CPOffsetListKind::str(std::string indent) const { 
   ostringstream oss; 
   
   oss <<"[CPOffsetListKind: offsetL=";
-  for(list<intWrap>::iterator o=offsetL.begin(); o!=offsetL.end(); o++) {
+  for(list<intWrap>::const_iterator o=offsetL.begin(); o!=offsetL.end(); o++) {
     if(o!=offsetL.begin()) oss << ",";
     oss << o->get();
   }
@@ -2921,7 +2921,7 @@ bool CPUnknownKind::isFullV(PartEdgePtr pedge) { return true; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPUnknownKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPUnknownKind::str(std::string indent)
+std::string CPUnknownKind::str(std::string indent) const
 { return "[CPUnknownKind]"; }
 
 
@@ -3228,7 +3228,7 @@ MemLocObject* CPMemLocObject::copyMLPtr() const {
   return new CPMemLocObject(*this);
 }
 
-std::string CPMemLocObject::str(std::string indent) { // pretty print for the object
+std::string CPMemLocObject::str(std::string indent) const { // pretty print for the object
   if(isCPFull)       return "[CPMemLocObject: Full]";
   else if(isCPEmpty) return "[CPMemLocObject: Empty]";
   

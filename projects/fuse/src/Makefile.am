@@ -1,10 +1,11 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
+include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 
 bin_PROGRAMS = fuse fuseLayout
 
-fuse_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
 fuse_LDADD = -lrose
-fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LDFLAGS)
+fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
 INCLUDES = \
 	$(ROSE_INCLUDES) \
@@ -46,8 +47,8 @@ fuse_SOURCES = \
 	state/nodeState.C \
 	compositionalTestAnalysis.C
 
-fuseLayout_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS)
-fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LAYOUT_LDFLAGS)
+fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
+fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 fuseLayout_SOURCES = \
 	sight/widgets/ats_graph_layout.C
 

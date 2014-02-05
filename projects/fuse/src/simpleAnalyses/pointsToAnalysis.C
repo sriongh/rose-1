@@ -164,7 +164,7 @@ namespace fuse
     return boost::shared_ptr<DFTransferVisitor>(idftv);
   }
 
-  std::string PointsToAnalysis::str(std::string indent="")
+  std::string PointsToAnalysis::str(std::string indent="") const
   { 
     return "PointsToAnalysis"; 
   }

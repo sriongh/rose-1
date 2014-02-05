@@ -95,7 +95,7 @@ class HierEdge : public sight::printable {
   // Returns true if this edge is at the end of the graph and thus cannot advance further
   bool end() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 template <class EdgeTypePtr>
@@ -133,7 +133,7 @@ class HierEdge_Leaf : public sight::printable {
   // Returns true if this edge is at the end of the graph and thus cannot advance further
   bool end() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 void AnalysisTester_selfTest();

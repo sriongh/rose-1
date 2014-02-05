@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "widgets/graph_layout.h"
+#include "widgets/graph/graph_layout.h"
 
 namespace fuse {
 

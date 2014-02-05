@@ -146,7 +146,7 @@ bool BoolAndLattice::isFullLat()
 bool BoolAndLattice::isEmptyLat()
 { return state==-1; }
 
-string BoolAndLattice::str(string indent)
+string BoolAndLattice::str(string indent) const
 {
   ostringstream outs;
   if(state==-1)
@@ -314,7 +314,7 @@ bool IntMaxLattice::isFullLat()
 bool IntMaxLattice::isEmptyLat()
 { return state==-1; }
 
-string IntMaxLattice::str(string indent)
+string IntMaxLattice::str(string indent) const
 {
   ostringstream outsNum;
   outsNum << state;
@@ -539,7 +539,7 @@ bool ProductLattice::isEmptyLat()
 // The string that represents this object
 // If indent!="", every line of this string must be prefixed by indent
 // The last character of the returned string should not be '\n', even if it is a multi-line string.
-string ProductLattice::str(string indent)
+string ProductLattice::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[ProductLattice: level="<<(level==uninitialized ? "uninitialized" : "initialized")<<"\n";

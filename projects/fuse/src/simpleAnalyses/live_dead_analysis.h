@@ -142,7 +142,7 @@ public:
     bool implementsExpr2MemLoc() { return true; }
     
     // pretty print for the object
-    std::string str(std::string indent="")
+    std::string str(std::string indent="") const
     { return "LiveDeadMemAnalysis"; }
 };
 
@@ -180,7 +180,7 @@ class LDMemLocObject : public virtual MemLocObject
   
   // pretty print for the object
   std::string str(std::string indent="") const;
-  std::string str(std::string indent="") { return ((const LDMemLocObject*)this)->str(indent); }
+  // std::string str(std::string indent="") { return ((const LDMemLocObject*)this)->str(indent); }
   std::string strp(PartEdgePtr pedge, std::string indent="");
   
   // Allocates a copy of this object and returns a pointer to it

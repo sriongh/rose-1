@@ -89,7 +89,7 @@ class DeadPathElimPart : public Part//, public boost::enable_shared_from_this<De
   bool less(const PartPtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // class DeadPathElimPart
 
 class DeadPathElimPartEdge : public FiniteLattice, public PartEdge {  
@@ -168,7 +168,7 @@ class DeadPathElimPartEdge : public FiniteLattice, public PartEdge {
   bool less(const PartEdgePtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   
   public:
   // ----------------------------------------------
@@ -305,7 +305,7 @@ class DeadPathElimAnalysis : public FWDataflow
   //PartEdgePtr convertPEdge_Spec(PartEdgePtr pedge);
   
   // Pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "DeadPathElimAnalysis"; }
 };
 

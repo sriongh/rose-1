@@ -47,7 +47,7 @@ void Ctxt2PartsMap_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, partDotI
   
   int i=0;
   for(std::map<PartContextPtr, Ctxt2PartsMap*>::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    common::sightObj obj(new properties());
+    structure::sightObj obj(new properties());
 
     map<string, string> sgProps;
     sgProps["name"] = txt()<<subgraphName<<"_N"<<i;
@@ -109,7 +109,7 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
   
   int i=0;
   for(map<PartContextPtr, set<PartPtr> >::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    common::sightObj subGraph(new properties());
+    structure::sightObj subGraph(new properties());
 
     map<string, string> sgProps;
     sgProps["name"] = txt()<<subgraphName<<i;
@@ -174,7 +174,7 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
     // Add invisible edges between matching in-out function call states
     int inIdx=0;
     for(set<PartPtr>::iterator in=funcCallsIn.begin(); in!=funcCallsIn.end(); in++, inIdx++) {
-      common::sightObj callSG(new properties());
+      structure::sightObj callSG(new properties());
       map<string, string> callSGProps;
       callSGProps["name"] = txt()<<subgraphName<<i<<"_Call"<<inIdx;
       callSGProps["crossAnalysisBoundary"] = "0";
@@ -214,7 +214,7 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
 // Helper function to print Part anchor information
 void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent)
 {
-  common::sightObj anchorObj(new properties());
+  structure::sightObj anchorObj(new properties());
   map<string, string> anchorProps;
   anchorProps["label"] = label;
   anchorProps["anchorID"] = txt()<<a.getID();
@@ -229,7 +229,7 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
 {
   //assert(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info));
   
-  common::sightObj partObj(new properties());
+  structure::sightObj partObj(new properties());
   map<string, string> partProps;
   partProps["name"] = txt()<<"clusterPart"<<boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->partID;
   partProps["crossAnalysisBoundary"] = "0";
@@ -342,7 +342,7 @@ void printAnchorEdge_atsGraph(anchor fromAnchor, PartPtr fromPart,
 {
   // !! Need to figure out whether the anchor ever got connected to a real spot in the output
   //if(toAnchor.isLocated()) {
-    common::sightObj obj(new properties());
+    structure::sightObj obj(new properties());
 
     map<string, string> newProps;
     

@@ -235,18 +235,18 @@ bool AbstractObjectSet::isEmptyLat()
 }
 
 // debug: prints the elements of set as string
-std::string AbstractObjectSet::str(std::string indent)
+std::string AbstractObjectSet::str(std::string indent) const
 {
     return strp(latPEdge, indent);
 }
 
 // Variant of the str method that can produce information specific to the current Part.
 // Useful since AbstractObjects can change from one Part to another.
-std::string AbstractObjectSet::strp(PartEdgePtr pedge, std::string indent)
+std::string AbstractObjectSet::strp(PartEdgePtr pedge, std::string indent) const
 {
     ostringstream oss;
   
-    std::list<AbstractObjectPtr>::iterator it = items.begin();
+    std::list<AbstractObjectPtr>::const_iterator it = items.begin();
     oss << "[AbstractObjectSet ("<<items.size()<<")"<<endl;
     while(it != items.end()) {
         /*if(it != items.begin()) */oss << indent;

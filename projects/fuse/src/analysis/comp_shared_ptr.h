@@ -58,7 +58,7 @@ class CompSharedPtr : public sight::printable
   
   //PartPtr operator * () { return ptr; }
   
-  std::string str(std::string indent="") { return ptr->str(indent); }
+  std::string str(std::string indent="") const { return ptr->str(indent); }
 };
 
 // Returns a new instance of a CompSharedPtr that refers to an instance of CompSharedPtr<Type>

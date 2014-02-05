@@ -361,7 +361,7 @@ class printDataflowInfoPass : public FWDataflow
                 std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
 
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "printDataflowInfoPass"; }
 };
 
@@ -391,7 +391,7 @@ class checkDataflowInfoPass : public FWDataflow
                 std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
 
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "checkDataflowInfoPass"; }
 };
 

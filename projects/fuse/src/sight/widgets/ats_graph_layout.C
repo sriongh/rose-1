@@ -3,11 +3,14 @@
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
-#include "sight_layout.h"
+#include "sight_common.h"
+// #include "sight_layout.h"
+// #include "widgets/graph/graph_structure.h"
 
 using namespace std;
 using namespace sight;
 using namespace sight::layout;
+using namespace sight::structure;
 
 namespace fuse {
 
