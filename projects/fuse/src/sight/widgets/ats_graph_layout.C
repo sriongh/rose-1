@@ -34,17 +34,24 @@ atsGraphLayoutHandlerInstantiator::atsGraphLayoutHandlerInstantiator() {
 }
 atsGraphLayoutHandlerInstantiator atsGraphLayoutHandlerInstance;
 
+std::list<atsGraph*> atsGraph::gStack;
+
 atsGraph::atsGraph(properties::iterator props) : graph(properties::next(props)) {
   dot << "digraph atsGraph {"<<endl;
   dot << "  compound=true;"<<endl;
   dot << "  rankdir="<<(properties::getInt(props, "dirAligned")? "TD": "DT")<<";"<<endl;
   
   indent += "    ";
+
+  gStack.push_back(this);
 }
 
 atsGraph::~atsGraph() {
   dot << "}"<<endl;
   outputCanvizDotGraph(dot.str());
+
+  assert(gStack.back() == this);
+  gStack.pop_back();
 }
 
 void* atsGraph::enterATSSubGraph(properties::iterator props) {
@@ -53,30 +60,30 @@ void* atsGraph::enterATSSubGraph(properties::iterator props) {
   ostringstream& dot = dynamic_cast<atsGraph*>(gStack.back())->dot;
   string& indent = dynamic_cast<atsGraph*>(gStack.back())->indent;
   
-  dot << indent << "subgraph "<<properties::get(props, "name")<<" {"<<endl;
+  dot << indent << "subgraph "<<props.get("name")<<" {"<<endl;
   dot << indent << "  color="<<(properties::getInt(props, "crossAnalysisBoundary")?"red":"black")<<";"<<endl;
   
-  if(properties::get(props, "SgType")=="context")
+  if(props.get("SgType")=="context")
     dot << indent << "  fillcolor=lightgrey;"<<endl;
-  else if(properties::get(props, "SgType")=="context")
+  else if(props.get("SgType")=="context")
     dot << indent << "  fillcolor=lightsteelblue;"<<endl;
   
-  if(properties::get(props, "SgType")=="callEdges")
+  if(props.get("SgType")=="callEdges")
     dot << indent << "  style=invis;"<<endl;
   else
     dot << indent << "  style=filled;"<<endl;
   
-  if(properties::exists(props, "label"))
-    dot << indent << "  label = \""<<properties::get(props, "label")<<"\";"<<endl;
+  if(props.exists("label"))
+    dot << indent << "  label = \""<<props.get("label")<<"\";"<<endl;
   
-  if(properties::exists(props, "source"))
-    dot << indent << "      { rank=source; "<<properties::get(props, "source")<<" }"<<endl;
+  if(props.exists("source"))
+    dot << indent << "      { rank=source; "<<props.get("source")<<" }"<<endl;
   
-  if(properties::exists(props, "sink"))
-    dot << indent << "      { rank=sink; "<<properties::get(props, "sink")<<" }"<<endl;
+  if(props.exists("sink"))
+    dot << indent << "      { rank=sink; "<<props.get("sink")<<" }"<<endl;
   
-  if(properties::exists(props, "same"))
-    dot << indent << "      { rank=same; "<<properties::get(props, "same")<<" }"<<endl;
+  if(props.exists("same"))
+    dot << indent << "      { rank=same; "<<props.get("same")<<" }"<<endl;
 
   indent += "    ";
   
@@ -131,7 +138,7 @@ void* atsGraph::enterATSGraphAnchor(properties::iterator props) {
   std::string nodeShape = "box";
   anchor a(properties::getInt(props, "anchorID"));
   dot << indent << "a"<<a.getID()<< " "<<
-               "[label=\""<<properties::get(props, "label")<<"\", "<<//\"a"<<a.getID()<<"\", "<<
+               "[label=\""<<props.get("label")<<"\", "<<//\"a"<<a.getID()<<"\", "<<
                 "color=\"" << nodeColor << "\", "<<
                 "fillcolor=\"white\", "<<
                 "style=\"" << nodeStyle << "\", "<<

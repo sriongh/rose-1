@@ -16,7 +16,7 @@ extern atsGraphLayoutHandlerInstantiator atsGraphLayoutHandlerInstan;
  **************************************/
 
 class atsGraph : public sight::layout::graph {
-  static std::list<atsGraph*> stack;
+  static std::list<atsGraph*> gStack;
   
   std::ostringstream dot;
   std::string indent;

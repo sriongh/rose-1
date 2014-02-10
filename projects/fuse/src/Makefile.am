@@ -48,7 +48,7 @@ fuse_SOURCES = \
 	compositionalTestAnalysis.C
 
 fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
-fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
+fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINKFLAGS)
 fuseLayout_SOURCES = \
 	sight/widgets/ats_graph_layout.C
 
