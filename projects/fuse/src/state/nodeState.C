@@ -893,18 +893,20 @@ string NodeState::str(Analysis* analysis, string indent) const
     assert(dfInfoAbove.find(analysis) != dfInfoAbove.end());
     assert(dfInfoBelow.find(analysis) != dfInfoBelow.end());*/
     int i=0;
-    
-    //assert(dfInfoAbove[analysis].size() == dfInfoBelow[analysis].size());
-    // oss << indent << "Lattices Above: \n"<<indent<<str(dfInfoAbove[analysis], indent+"&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
-    // oss << indent << "Lattices Below: \n"<<indent<<str(dfInfoBelow[analysis], indent+"&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
-    assert(dfInfoAbove.find(analysis) != dfInfoAbove.end() &&
-           dfInfoBelow.find(analysis) != dfInfoBelow.end());
-    const std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfoA = dfInfoAbove.find(analysis)->second;
-    const std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfoB = dfInfoBelow.find(analysis)->second;    
-    oss << indent << "Lattices Above: \n"<<indent<<str(dfInfoA, indent+"&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
-    oss << indent << "Lattices Below: \n"<<indent<<str(dfInfoB, indent+"&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
 
-    
+    //#SA:2/17/14
+    if(dfInfoAbove.find(analysis) != dfInfoAbove.end()) {
+      const std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfoA = dfInfoAbove.find(analysis)->second;
+      oss << indent << "Lattices Above: \n"<<indent << str(dfInfoA, indent+"&nbsp;&nbsp;&nbsp;&nbsp;") <<endl;
+    }
+    else oss << indent << "Lattices Above: \n"<<indent <<"NULL"<<endl;
+
+    if(dfInfoBelow.find(analysis) != dfInfoBelow.end()) {
+      const std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfoB = dfInfoBelow.find(analysis)->second;    
+      oss << indent << "Lattices Below: \n"<<indent << str(dfInfoB, indent+"&nbsp;&nbsp;&nbsp;&nbsp;") <<endl;
+    }
+    else oss << indent << "Lattices Below: \n"<<indent <<"NULL"<<endl;
+   
     assert(facts.find(analysis) != facts.end());
     i=0;
     const vector<NodeFact*>& aFacts = facts.find(analysis)->second;
