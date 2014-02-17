@@ -628,11 +628,20 @@ Grammar::setUpSupport ()
      Directory.setFunctionPrototype      ( "HEADER_ATTRIBUTE_SUPPORT", "../Grammar/Support.code");
      Directory.setFunctionSource         ( "SOURCE_ATTRIBUTE_SUPPORT", "../Grammar/Support.code");
 
+#if 0
   // DQ (6/12/2013): Added support for Java requirements.
      JavaImportStatementList.setDataPrototype ( "SgJavaImportStatementPtrList", "java_import_list", "",
                  NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      JavaClassDeclarationList.setDataPrototype ( "SgClassDeclarationPtrList", "java_class_list", "",
                  NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+#else
+  // DQ (11/20/2013): Modified these data members to be traversed by the AST traversal mechanism.
+  // DQ (6/12/2013): Added support for Java requirements.
+     JavaImportStatementList.setDataPrototype ( "SgJavaImportStatementPtrList", "java_import_list", "",
+                 NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
+     JavaClassDeclarationList.setDataPrototype ( "SgClassDeclarationPtrList", "java_class_list", "",
+                 NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
+#endif
 
      FileList.setDataPrototype          ( "SgFilePtrList", "listOfFiles", "",
   //             NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
@@ -732,9 +741,25 @@ Grammar::setUpSupport ()
                                      NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
 #endif
 
-  // DQ (6/12/2013): Added Java support for reference to SgJavaPackageStatement.
-     SourceFile.setDataPrototype   ( "SgJavaPackageStatement*", "package", "= NULL",
+#if 0
+  // DQ (6/12/2013): Added Java support for reference to Java package, imports and type declarations.
+     SourceFile.setDataPrototype   ( "SgJavaPackageStatement *", "package", "= NULL",
                                      NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+     SourceFile.setDataPrototype   ( "SgJavaImportStatementList*", "import_list", "= NULL",
+                                     NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+     SourceFile.setDataPrototype   ( "SgJavaClassDeclarationList*", "class_list", "= NULL",
+                                      NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+#else
+  // DQ (11/19/2013): Modified these data members to be traversed by the AST traversal mechanism.
+  // DQ (6/12/2013): Added Java support for reference to Java package, imports and type declarations.
+     SourceFile.setDataPrototype   ( "SgJavaPackageStatement *", "package", "= NULL",
+                                     NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+     SourceFile.setDataPrototype   ( "SgJavaImportStatementList*", "import_list", "= NULL",
+                                     NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+     SourceFile.setDataPrototype   ( "SgJavaClassDeclarationList*", "class_list", "= NULL",
+                                      NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, DEF_DELETE, NO_COPY_DATA);
+#endif
+
 #if 0
      SourceFile.setDataPrototype   ( "SgJavaImportStatementPtrList", "import_list", "",
                                      NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE, NO_COPY_DATA);
@@ -1226,6 +1251,12 @@ Grammar::setUpSupport ()
      File.setDataPrototype ("bool", "unparse_tokens", "= false",
                  NO_CONSTRUCTOR_PARAMETER, BUILD_FLAG_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
 
+  // DQ (1/30/2014): Support testing of unparsing using tokens with synthetic marking of 
+  // statements to be transformations.  This is used the test the transition steps between
+  // unparsing from the AST vs. the token stream.
+     File.setDataPrototype ("int", "unparse_tokens_testing", "= 0",
+                 NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
 #if 1
   // DQ (2/17/2013): Added support to skip AST consistancy testing AstTests::runAllTests(SgProject*)
   // This testing is useful but interferes with performance testing using HPCToolKit.
@@ -1529,12 +1560,16 @@ Grammar::setUpSupport ()
 
      Project.setDataPrototype("int","frontendErrorCode", "= 0",
                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+     Project.setDataPrototype("int","javacErrorCode", "= 0",
+                           NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      Project.setDataPrototype("int","midendErrorCode", "= 0",
                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      Project.setDataPrototype("int","backendErrorCode", "= 0",
                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
 
      File.setDataPrototype("int","frontendErrorCode", "= 0",
+                           NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+     File.setDataPrototype("int","javacErrorCode", "= 0",
                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      File.setDataPrototype("int","unparserErrorCode", "= 0",
                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
@@ -1780,6 +1815,32 @@ Grammar::setUpSupport ()
   // DQ (9/16/2013): Changed name from "build_generated_file_in_same_directory_as_input_file" to "unparse_in_same_directory_as_input_file".
      Project.setDataPrototype("bool", "unparse_in_same_directory_as_input_file", "= false",
             NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (1/19/2014): This option "-S" is required for some build systems (e.g. valgrind).
+     Project.setDataPrototype("bool", "stop_after_compilation_do_not_assemble_file", "= false",
+            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (1/20/2014): This option "-u" or "-undefined" is required for some build systems (e.g. valgrind).
+     Project.setDataPrototype("std::string", "gnuOptionForUndefinedSymbol", "= \"\"",
+            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (1/20/2014): This option "-m32" over-rides the 64-bit mode on 64-bit environments and is required for some build systems (e.g. valgrind).
+     Project.setDataPrototype("bool", "mode_32_bit", "= false",
+            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (1/31/2014): Added optimization for a few wireshark files. This post-processing is 
+  // not required for C, but is only usefule for C++ (name qualification).  Still it is 
+  // only a performance problem on a handfull of files in wireshark application. So we
+  // need to provide an option to supress.  This is currently being investigated further.
+  // not that this option is inconsistant with OpenMP usage, but not a problem for any
+  // other C code (the C++ aspect of this could also be fixed). This is related to a 
+  // problem when the original expression trees were a part of the AST traversal, but 
+  // this issue was fixed in 2012 (or so). There is as a result, less need for this
+  // post-processing phase, except that it appears to be relied upon by the OpenMP and 
+  // C++ support (both of which can be fixed).
+     Project.setDataPrototype("bool", "suppressConstantFoldingPostProcessing", "= false",
+            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
 
      Attribute.setDataPrototype    ( "std::string"  , "name", "= \"\"",
                                      CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);

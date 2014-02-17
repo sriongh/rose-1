@@ -8,12 +8,9 @@
 // #include "propagateHiddenListData.h"
 // #include "HiddenList.h"
 
-// TOO1 (05/14/2013): Signal handling for -rose:keep_going
-#include <setjmp.h>
-#include <signal.h>
-
 // include "array_class_interface.h"
 #include "unparser.h"
+#include "keep_going.h"
 
 // DQ (10/21/2010):  This should only be included by source files that require it.
 // This fixed a reported bug which caused conflicts with autoconf macros (e.g. PACKAGE_BUGREPORT).
@@ -36,14 +33,6 @@
 
 // DQ (12/31/2005): This is OK if not declared in a header file
 using namespace std;
-
-// TOO1 (05/14/2013): Signal handling for -rose:keep_going
-static sigjmp_buf rose__sgproject_unparse_mark;
-static void HandleUnparserSignal(int sig)
-{
-  std::cout << "[WARN] Caught unparser signal='" << sig << "'" << std::endl;
-  siglongjmp(rose__sgproject_unparse_mark, -1);
-}
 
 // extern ROSEAttributesList *getPreprocessorDirectives( char *fileName); // [DT] 3/16/2000
 
@@ -331,7 +320,8 @@ Unparser::unparseFile ( SgSourceFile* file, SgUnparse_Info& info, SgScopeStateme
      printf ("In Unparser::unparseFile(): file->get_outputLanguage()           = %s \n",file->get_outputLanguage() == SgFile::e_C_output_language ? "C" : 
                                   file->get_outputLanguage() == SgFile::e_Fortran_output_language ? "Fortran" : 
                                   file->get_outputLanguage() == SgFile::e_Java_output_language ? "Java" : "unknown");
-
+#endif
+#if 0
      file->display("file: Unparser::unparseFile");
 #endif
 
@@ -514,7 +504,7 @@ Unparser::unparseFile ( SgSourceFile* file, SgUnparse_Info& info, SgScopeStateme
                       // info.set_outputCompilerGeneratedStatements();
 
                          Unparse_Java unparser(this, file->getFileName());
-                         unparser.unparseStatement(globalScope, info);
+                         unparser.unparseJavaFile(file, info);
                        }
                       else
                        {
@@ -650,8 +640,14 @@ Unparser::unparseFileUsingTokenStream ( SgSourceFile* file )
 
   // Note that these are the SgToken IR nodes and we have generated a token stream via the type: LexTokenStreamType.
   // ROSE_ASSERT(file->get_token_list().empty() == true);
-     ROSE_ASSERT(file->get_token_list().empty() == false);
 
+
+  // ROSE_ASSERT(file->get_token_list().empty() == false);
+     if (file->get_token_list().empty() == true)
+        {
+          printf ("Warning: unparseFileUsingTokenStream(): In no tokens found \n");
+          return;
+        }
 #if 0
      ROSEAttributesList* currentListOfAttributes = attributeMapForAllFiles[currentFileNameId];
      ROSE_ASSERT(currentListOfAttributes != NULL);
@@ -1470,9 +1466,20 @@ globalUnparseToString ( const SgNode* astNode, SgUnparse_Info* inputUnparseInfoP
 #if ROSE_GCC_OMP
 #pragma omp critical (unparser)
 #endif
-     {
-       returnString = globalUnparseToString_OpenMPSafe(astNode,inputUnparseInfoPointer);
-     }
+        {
+          if (inputUnparseInfoPointer != NULL)
+             {
+#if 0
+               printf ("In globalUnparseToString(): inputUnparseInfoPointer->SkipClassDefinition() = %s \n",(inputUnparseInfoPointer->SkipClassDefinition() == true) ? "true" : "false");
+               printf ("In globalUnparseToString(): inputUnparseInfoPointer->SkipEnumDefinition()  = %s \n",(inputUnparseInfoPointer->SkipEnumDefinition()  == true) ? "true" : "false");
+#endif
+            // DQ (1/13/2014): These should have been setup to be the same.
+               ROSE_ASSERT(inputUnparseInfoPointer->SkipClassDefinition() == inputUnparseInfoPointer->SkipEnumDefinition());
+             }
+
+          returnString = globalUnparseToString_OpenMPSafe(astNode,inputUnparseInfoPointer);
+        }
+
      return returnString;
    }
 
@@ -1708,6 +1715,13 @@ globalUnparseToString_OpenMPSafe ( const SgNode* astNode, SgUnparse_Info* inputU
      printf ("In globalUnparseToString(): astNode = %p = %s \n",astNode,astNode->class_name().c_str());
 #endif
 
+#if 0
+     printf ("In globalUnparseToString_OpenMPSafe(): inheritedAttributeInfo.SkipClassDefinition() = %s \n",(inheritedAttributeInfo.SkipClassDefinition() == true) ? "true" : "false");
+     printf ("In globalUnparseToString_OpenMPSafe(): inheritedAttributeInfo.SkipEnumDefinition()  = %s \n",(inheritedAttributeInfo.SkipEnumDefinition()  == true) ? "true" : "false");
+#endif
+  // DQ (1/13/2014): These should have been setup to be the same.
+     ROSE_ASSERT(inheritedAttributeInfo.SkipClassDefinition() == inheritedAttributeInfo.SkipEnumDefinition());
+
   // Both SgProject and SgFile are handled via recursive calls
      if ( (isSgProject(astNode) != NULL) || (isSgSourceFile(astNode) != NULL) )
         {
@@ -1797,6 +1811,13 @@ globalUnparseToString_OpenMPSafe ( const SgNode* astNode, SgUnparse_Info* inputU
           if (isSgType(astNode) != NULL)
              {
                const SgType* type = isSgType(astNode);
+
+#if 0
+               printf ("In globalUnparseToString_OpenMPSafe(): inheritedAttributeInfo.SkipClassDefinition() = %s \n",(inheritedAttributeInfo.SkipClassDefinition() == true) ? "true" : "false");
+               printf ("In globalUnparseToString_OpenMPSafe(): inheritedAttributeInfo.SkipEnumDefinition()  = %s \n",(inheritedAttributeInfo.SkipEnumDefinition()  == true) ? "true" : "false");
+#endif
+            // DQ (1/13/2014): These should have been setup to be the same.
+               ROSE_ASSERT(inheritedAttributeInfo.SkipClassDefinition() == inheritedAttributeInfo.SkipEnumDefinition());
 
             // DQ (9/6/2010): Added support to detect use of C (default) or Fortran code.
             // DQ (2/2/2007): Note that we should modify the unparser to take the IR nodes as const pointers, but this is a bigger job than I want to do now!
@@ -2096,6 +2117,8 @@ unparseFile ( SgFile* file, UnparseFormatHelp *unparseHelp, UnparseDelegate* unp
                outputFilename += ".s";
         }
         // DQ (4/2/2011): Added Java support which requires that the filename for Java match the input file.
+// TODO: Remove this !!!
+/*
         else if (file->get_Java_only() == true)
         {
                 // We try to get the package information back to output the translated source file
@@ -2135,6 +2158,33 @@ unparseFile ( SgFile* file, UnparseFormatHelp *unparseHelp, UnparseDelegate* unp
                    int status = system (mkdirCommand.c_str());
                    ROSE_ASSERT(status == 0);
                    outputFilename = outFolder + file->get_sourceFileNameWithoutPath();
+        }
+*/
+        else if (file -> get_Java_only() == true) {
+            // We try to get the package information back to output the translated source file
+            // in the correct folder structure.
+            SgSourceFile *sourcefile = isSgSourceFile(file);
+            ROSE_ASSERT(sourcefile && "Try to unparse an SgFile not being an SgSourceFile using the java unparser");
+            SgJavaPackageStatement *package_statement = sourcefile -> get_package();
+            string package_name = (package_statement ? package_statement -> get_name().getString() : "");
+            //NOTE: Default package equals the empty string ""
+            //ROSE_ASSERT((packageDecl != NULL) && "Couldn't find the package definition of the java source file");
+            string outFolder = "";
+            SgProject *project = sourcefile -> get_project();
+            string ds = project -> get_Java_source_destdir();
+            if (ds != "") {
+                outFolder = ds;
+                outFolder += "/";
+            }
+            outFolder += "rose-output/";
+            boost::replace_all(package_name, ".", "/");
+            outFolder += package_name;
+            outFolder += (package_name.size() > 0 ? "/" : "");
+            // Create package folder structure
+            string mkdirCommand = string("mkdir -p ") + outFolder;
+            int status = system (mkdirCommand.c_str());
+            ROSE_ASSERT(status == 0);
+            outputFilename = outFolder + file -> get_sourceFileNameWithoutPath();
         }
         // Liao 12/29/2010, generate cuda source files
         else if (file->get_Cuda_only() == true)
@@ -2483,35 +2533,66 @@ void unparseDirectory ( SgDirectory* directory, UnparseFormatHelp* unparseFormat
 
 // DQ (1/19/2010): Added support for refactored handling directories of files.
 void unparseFileList ( SgFileList* fileList, UnparseFormatHelp *unparseFormatHelp, UnparseDelegate* unparseDelegate)
-   {
-     ROSE_ASSERT(fileList != NULL);
-  // for (int i=0; i < fileList->numberOfFiles(); ++i)
-     for (size_t i=0; i < fileList->get_listOfFiles().size(); ++i)
-        {
-          SgFile* file = fileList->get_listOfFiles()[i];
+{
+  ROSE_ASSERT(fileList != NULL);
 
-          if ( SgProject::get_verbose() > 1 )
-               printf ("Unparsing each file... file = %p = %s \n",file,file->class_name().c_str());
+  int status_of_function = 0;
 
-       // TOO1 (05/14/2013): Signal handling for -rose:keep_going
-          if (file->get_project()->get_keep_going())
-             {
-               struct sigaction act;
-               act.sa_handler = HandleUnparserSignal;
-               sigemptyset(&act.sa_mask);
-               act.sa_flags = 0;
-               sigaction(SIGSEGV, &act, 0);
-             }
+  for (size_t i=0; i < fileList->get_listOfFiles().size(); ++i)
+  {
+      SgFile* file = fileList->get_listOfFiles()[i];
+      {
+          ROSE_ASSERT(file != NULL);
 
-          if(sigsetjmp(rose__sgproject_unparse_mark, 0) == -1)
-             {
-               std::cout << "[WARN] Ignoring unparser failure " << " as directed by -rose:keep_going" << std::endl;
-               file->set_unparserErrorCode(-1);
-             }
-            else
-             {
-               unparseFile(file, unparseFormatHelp, unparseDelegate);
-             }
-        }
-   }
+          if (SgProject::get_verbose() > 1)
+          {
+               printf("Unparsing file = %p = %s \n",
+                      file,
+                      file->class_name().c_str());
+          }
 
+      #ifndef _MSC_VER
+          if (KEEP_GOING_CAUGHT_BACKEND_UNPARSER_SIGNAL)
+          {
+              std::cout
+                  << "[WARN] "
+                  << "Configured to keep going after catching a "
+                  << "signal in Unparser::unparseFile()"
+                  << std::endl;
+
+              if (file != NULL)
+              {
+                  file->set_unparserErrorCode(100);
+                  status_of_function =
+                      max(100, status_of_function);
+              }
+              else
+              {
+                  std::cout
+                      << "[FATAL] "
+                      << "Unable to keep going due to an unrecoverable internal error"
+                      << std::endl;
+                  exit(1);
+              }
+          }
+      #else
+      if (false) {}
+      #endif
+          else if (!isSgSourceFile(file) || isSgSourceFile(file) -> get_frontendErrorCode() == 0)
+          {
+              unparseFile(file, unparseFormatHelp, unparseDelegate);
+          }
+          else
+          {
+              if (SgProject::get_verbose() > 1)
+              {
+                  std::cout
+                      << "[WARN] "
+                      << "Skipping unparsing of file "
+                      << file->getFileName()
+                      << std::endl;
+              }
+          }
+      }//file
+  }//for each
+}

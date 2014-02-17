@@ -81,6 +81,9 @@ include_HEADERS =\
 	simpleAnalyses/VariableStateTransfer.h \
 	state/nodeState.h
 
+# Liao, 1/16/2014, comment out missing files to pass make dist
+#	dbglog/index.html  # used by the dbglog system
+#	src/factor_trans_systemTest.C 
 EXTRA_DIST = \
 	src/factor_trans_systemTest.C 
 
