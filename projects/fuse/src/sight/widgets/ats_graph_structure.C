@@ -47,23 +47,24 @@ void Ctxt2PartsMap_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, partDotI
   
   int i=0;
   for(std::map<PartContextPtr, Ctxt2PartsMap*>::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    structure::sightObj obj(new properties());
+    properties* props = new properties();
 
-    map<string, string> sgProps;
-    sgProps["name"] = txt()<<subgraphName<<"_N"<<i;
-    sgProps["crossAnalysisBoundary"] = (crossAnalysisBoundary? "1": "0");
-    sgProps["SgType"] = "context";
+    map<string, string> sgPMap;
+    sgPMap["name"] = txt()<<subgraphName<<"_N"<<i;
+    sgPMap["crossAnalysisBoundary"] = (crossAnalysisBoundary? "1": "0");
+    sgPMap["SgType"] = "context";
     
     string label = c->first.get()->str();
     boost::replace_all(label, "\n", "\\n");
-    sgProps["label"] = label;
+    sgPMap["label"] = label;
 
-    obj.props->add("atsSubGraph", sgProps);
-    dbg.enter(&obj);
+    props->add("atsSubGraph", sgPMap);
+    //dbg.enter(&obj);
+    structure::sightObj obj(props);
 
     c->second->map2dot(o, partInfo, txt()<<subgraphName<<"_N"<<i, indent+"    ");
     
-    dbg.exit(&obj);
+    //dbg.exit(&obj);
   }
 }
 
@@ -109,16 +110,16 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
   
   int i=0;
   for(map<PartContextPtr, set<PartPtr> >::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    structure::sightObj subGraph(new properties());
+    properties* sgProps = new properties();
 
-    map<string, string> sgProps;
-    sgProps["name"] = txt()<<subgraphName<<i;
-    sgProps["crossAnalysisBoundary"] = "0";
-    sgProps["SgType"] = "context";
+    map<string, string> sgPMap;
+    sgPMap["name"] = txt()<<subgraphName<<i;
+    sgPMap["crossAnalysisBoundary"] = "0";
+    sgPMap["SgType"] = "context";
 
     string label = c->first.get()->str();
     boost::replace_all(label, "\n", "\\n");
-    sgProps["label"] = label;
+    sgPMap["label"] = label;
     
     // Set the entry nodes to the minimum position
     bool sourceDiscovered=false;
@@ -133,7 +134,7 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
         source << ps.anchor<<" ";
       }
     }
-    if(sourceDiscovered) sgProps["source"] = source.str();
+    if(sourceDiscovered) sgPMap["source"] = source.str();
     
     // Set the exit nodes to the maximum position
     bool sinkDiscovered=false;
@@ -148,10 +149,11 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
         sink << ps.anchor<<" ";
       }
     }
-    if(sinkDiscovered) sgProps["sink"] = sink.str();
+    if(sinkDiscovered) sgPMap["sink"] = sink.str();
     
-    subGraph.props->add("atsSubGraph", sgProps);
-    dbg.enter(&subGraph);
+    sgProps->add("atsSubGraph", sgPMap);
+    structure::sightObj subGraph(sgProps);
+    //dbg.enter(&subGraph);
     
     // Sets of all the outgoing and incoming function call states
     set<PartPtr> funcCallsOut, funcCallsIn;
@@ -174,14 +176,14 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
     // Add invisible edges between matching in-out function call states
     int inIdx=0;
     for(set<PartPtr>::iterator in=funcCallsIn.begin(); in!=funcCallsIn.end(); in++, inIdx++) {
-      structure::sightObj callSG(new properties());
-      map<string, string> callSGProps;
-      callSGProps["name"] = txt()<<subgraphName<<i<<"_Call"<<inIdx;
-      callSGProps["crossAnalysisBoundary"] = "0";
-      callSGProps["SgType"] = "callEdges";
+      properties* callSGProps = new properties();
+      map<string, string> callPMap;
+      callPMap["name"] = txt()<<subgraphName<<i<<"_Call"<<inIdx;
+      callPMap["crossAnalysisBoundary"] = "0";
+      callPMap["SgType"] = "callEdges";
       
       partStr psIn = getPartStr(partInfo, *in, true);
-      callSGProps["sink"] = psIn.anchor;
+      callPMap["sink"] = psIn.anchor;
       
       ostringstream source;
       int numMatchedCalls=0;
@@ -192,10 +194,11 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
           numMatchedCalls++;
         }
       }
-      callSGProps["source"] = source.str();
+      callPMap["source"] = source.str();
       
-      callSG.props->add("atsSubGraph", callSGProps);
-      dbg.enter(&callSG);
+      callSGProps->add("atsSubGraph", callPMap);
+      structure::sightObj callSG(callSGProps);
+      //dbg.enter(&callSG);
       
       printPart_atsGraph(o, partInfo[*in], *in, false, indent+"      ");
       
@@ -205,22 +208,25 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
         }
       }
       
-      dbg.exit(&callSG);
+      //dbg.exit(&callSG);
+      // Call sub-graph exited
     }
-    dbg.exit(&subGraph);
+    //dbg.exit(&subGraph);
+    // Sub-graph exited
   }
 }
 
 // Helper function to print Part anchor information
 void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent)
 {
-  structure::sightObj anchorObj(new properties());
-  map<string, string> anchorProps;
-  anchorProps["label"] = label;
-  anchorProps["anchorID"] = txt()<<a.getID();
+  properties* anchorProps = new properties();
+  map<string, string> anchorPMap;
+  anchorPMap["label"] = label;
+  anchorPMap["anchorID"] = txt()<<a.getID();
 
-  anchorObj.props->add("atsGraphAnchor", anchorProps);
-  dbg.tag(&anchorObj);
+  anchorProps->add("atsGraphAnchor", anchorPMap);
+  structure::sightObj anchorObj(anchorProps);
+  //dbg.tag(&anchorObj);
 }
 
 // Helper function to print Part information
@@ -228,12 +234,11 @@ void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent
 void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool doAnchorRankSame, string indent)
 {
   //assert(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info));
-  
-  structure::sightObj partObj(new properties());
-  map<string, string> partProps;
-  partProps["name"] = txt()<<"clusterPart"<<boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->partID;
-  partProps["crossAnalysisBoundary"] = "0";
-  partProps["SgType"] = "part";
+  properties* partProps = new properties();
+  map<string, string> partPMap;
+  partPMap["name"] = txt()<<"clusterPart"<<boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->partID;
+  partPMap["crossAnalysisBoundary"] = "0";
+  partPMap["SgType"] = "part";
   
   set<CFGNode> nodes = part->CFGNodes();
   ostringstream label;
@@ -269,7 +274,7 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
   // Add the last line in labelStr to labelMulLineStr
   labelMultLineStr += labelStr.substr(i, labelStr.length()-i);
   
-  partProps["label"] = labelMultLineStr;
+  partPMap["label"] = labelMultLineStr;
   
   list<anchor>& anchors = boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->anchors;
   if(doAnchorRankSame) {
@@ -277,11 +282,12 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
     ostringstream same;
     for(list<anchor>::iterator a=anchors.begin(); a!=anchors.end(); a++)
       same << "a" << a->getID() << " ";
-    partProps["same"] = same.str();
+    partPMap["same"] = same.str();
   }
   
-  partObj.props->add("atsSubGraph", partProps);
-  dbg.enter(&partObj);
+  partProps->add("atsSubGraph", partPMap);
+  structure::sightObj partObj(partProps);
+  //dbg.enter(&partObj);
   
   // Print all the anchors inside this Part
   int j=0;
@@ -295,7 +301,8 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
       o << indent << "    a"<<a->getID() << " -> a"<<nextA->getID() << " [style=invis]" << endl;*/
   }
   
-  dbg.exit(&partObj);
+  //dbg.exit(&partObj);
+  // partObj exited
 }
 
 // Printer for edges between Part clusters
@@ -342,19 +349,20 @@ void printAnchorEdge_atsGraph(anchor fromAnchor, PartPtr fromPart,
 {
   // !! Need to figure out whether the anchor ever got connected to a real spot in the output
   //if(toAnchor.isLocated()) {
-    structure::sightObj obj(new properties());
+    properties* props = new properties();
 
-    map<string, string> newProps;
+    map<string, string> pMap;
     
     // Record whether this edge crosses function boundaries
     set<CFGNode> matchNodes;
-    newProps["crossFunc"] = (toPart->mayIncomingFuncCall(matchNodes) || fromPart->mayOutgoingFuncCall(matchNodes)? "1": "0");
-    newProps["from"] = txt()<<fromAnchor.getID();
-    newProps["to"]   = txt()<<toAnchor.getID();
-    obj.props->add("atsGraphEdge", newProps);
+    pMap["crossFunc"] = (toPart->mayIncomingFuncCall(matchNodes) || fromPart->mayOutgoingFuncCall(matchNodes)? "1": "0");
+    pMap["from"] = txt()<<fromAnchor.getID();
+    pMap["to"]   = txt()<<toAnchor.getID();
+    props->add("atsGraphEdge", pMap);
 
     //dbg.tag("dirEdge", properties, false);
-    dbg.tag(&obj);
+    //dbg.tag(&obj);
+    structure::sightObj obj(props);
   //}
 }
 
@@ -379,7 +387,7 @@ class Ctxt2PartsMap_Leaf_Generator_atsGraph : public Ctxt2PartsMap_Leaf_Generato
 // dirAligned - true if the edges between anchors are pointing in the same direction as the ATS flow of control
 //    and false if they point in the opposite direcction
 atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, properties* props) :
-  graph(setProperties(startPart, partAnchors, dirAligned, NULL, props)), partAnchors(partAnchors), dirAligned(dirAligned)
+  graph(false, setProperties(startPart, partAnchors, dirAligned, NULL, props)), partAnchors(partAnchors), dirAligned(dirAligned)
 {
   if(!props->active) return;
 
@@ -387,11 +395,11 @@ atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor
 }
 
 atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, properties* props) :
-  graph(setProperties(startParts, partAnchors, dirAligned, NULL, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+  graph(false, setProperties(startParts, partAnchors, dirAligned, NULL, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
 { }
 
 atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp, properties* props) :
-  graph(onoffOp, setProperties(startPart, partAnchors, dirAligned, &onoffOp, props)), partAnchors(partAnchors), dirAligned(dirAligned)
+  graph(onoffOp, false, setProperties(startPart, partAnchors, dirAligned, &onoffOp, props)), partAnchors(partAnchors), dirAligned(dirAligned)
 {
   if(!props->active) return;
 
@@ -399,7 +407,7 @@ atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor
 }
 
 atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp, properties* props) :
-  graph(onoffOp, setProperties(startParts, partAnchors, dirAligned, &onoffOp, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+  graph(onoffOp, false, setProperties(startParts, partAnchors, dirAligned, &onoffOp, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
 { }
 
 properties* atsGraph::setProperties(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > >& partAnchors, bool dirAligned, const attrOp* onoffOp, properties* props) {
