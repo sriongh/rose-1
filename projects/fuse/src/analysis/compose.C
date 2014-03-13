@@ -14,7 +14,7 @@ using namespace sight;
 using namespace boost;
 namespace fuse
 {
-DEBUG_LEVEL(composerDebugLevel, 1);
+DEBUG_LEVEL(composerDebugLevel, 0);
 
 //--------------------
 //----- Composer -----

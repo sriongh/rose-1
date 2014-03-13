@@ -35,7 +35,7 @@ using namespace std;
 
 namespace fuse {
 
-DEBUG_LEVEL(analysisDebugLevel, 1);
+DEBUG_LEVEL(analysisDebugLevel, 0);
 
 // Initializes Fuse
 void FuseInit(int argc, char **argv) {
