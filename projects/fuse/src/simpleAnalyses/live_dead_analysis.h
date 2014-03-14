@@ -20,7 +20,7 @@
  */
 
 namespace fuse {
-extern int liveDeadAnalysisDebugLevel;
+//extern int liveDeadAnalysisDebugLevel;
 
 // Virtual class that allows users of the LiveDeadVarsAnalysis to mark certain variables as 
 // being used inside a function call if the function's body is not available.
@@ -142,7 +142,7 @@ public:
     bool implementsExpr2MemLoc() { return true; }
     
     // pretty print for the object
-    std::string str(std::string indent="")
+    std::string str(std::string indent="") const
     { return "LiveDeadMemAnalysis"; }
 };
 
@@ -174,13 +174,13 @@ class LDMemLocObject : public virtual MemLocObject
   bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-  bool isFull(PartEdgePtr pedge);
+  bool isFullML(PartEdgePtr pedge);
   // Returns whether this AbstractObject denotes the empty set.
-  bool isEmpty(PartEdgePtr pedge);
+  bool isEmptyML(PartEdgePtr pedge);
   
   // pretty print for the object
   std::string str(std::string indent="") const;
-  std::string str(std::string indent="") { return ((const LDMemLocObject*)this)->str(indent); }
+  // std::string str(std::string indent="") { return ((const LDMemLocObject*)this)->str(indent); }
   std::string strp(PartEdgePtr pedge, std::string indent="");
   
   // Allocates a copy of this object and returns a pointer to it
