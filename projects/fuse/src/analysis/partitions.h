@@ -4,12 +4,12 @@
 //#include <boost/lambda/lambda.hpp>
 //#include <boost/lambda/bind.hpp>
 #include "cfgUtils.h"
-#include "widgets.h"
+#include "sight.h"
 #include "comp_shared_ptr.h"
 
 namespace fuse {
 
-extern int partitionsDebugLevel;
+//extern int partitionsDebugLevel;
 
 // ----------------
 // ----- Part -----
@@ -93,7 +93,7 @@ class MLMapping
 // from MemLocObjects that are the keys of ml2ml to their corresponding values in ml2ml. The value MemLocObjects in 
 // ml2ml should be interpreted with respect to PartEdge newPEdge. It corresponds to the code region(s) to which we 
 // are remapping.
-class MLRemapper: public dbglog::printable
+class MLRemapper: public sight::printable
 {
   // The edge for which the remapping is being performed
   PartEdgePtr pedge;
@@ -103,11 +103,11 @@ class MLRemapper: public dbglog::printable
   // Since both the source and destination Part may maintain multiple CFGNodes, we may have a different remapping
   // for different CFGNode pairs at the source/destination Part. We thus maintain a set of such mappings for the
   // different scenarios, which are listed below.
-  std::set<std::set<MLMapping > > fwML2ML, 
-                                  bwML2ML;
+  // There is one set for each client analysis
+  std::map<ComposedAnalysis*, std::set<std::set<MLMapping > > > fwML2ML, bwML2ML;
   
-  // Indicates whether pedge, fwML2ML and bwML2ML have been initialized
-  bool initialized;
+  // Indicates the client analyses for which the pedge, fwML2ML and bwML2ML have been initialized
+  std::set<ComposedAnalysis*> initialized;
   
   // Edges out of a non-void return statements:
   //    return their values <-> the function's return object
@@ -126,23 +126,22 @@ class MLRemapper: public dbglog::printable
   //    because the pedge argument is a shared_ptr created from the host PartEdge's this. shared_ptrs
   //    cannot be created from this in the object's constructor, thus forcing us to delay initialization
   //    until the host PartEdge is fully initialized.
-  // It is legal to call this function multiple times but in each call the fields pedge and analysis
-  //    must be identical.
-  void init(PartEdgePtr pedge, ComposedAnalysis* analysis);
+  // It is legal to call this function multiple times but in each call the field pedge.
+  void init(PartEdgePtr pedge, ComposedAnalysis* client);
   
   // Given a lattice returns a freshly-allocated Lattice object that points to Lattice remapped in the forward direction.
   // Since the function is called for the scope change across some Part, it needs to account for the fact that
   //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
   //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
   //    the Lattice) is the one to which control is passing.
-  Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) const;
+  Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) const;
   
   // Given a lattice returns a freshly-allocated Lattice object that points to Lattice remapped in the backward direction
   // Since the function is called for the scope change across some Part, it needs to account for the fact that
   //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
   //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
   //    the Lattice) is the one to which control is passing.
-  Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge) const;
+  Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client) const;
   
   private:
   // Returns whether if the two given ml2ml maps are equal.
@@ -154,7 +153,7 @@ class MLRemapper: public dbglog::printable
   
   private:
   // String representation of object
-  std::string map2Str(std::set<std::set<MLMapping> >& ml2ml, std::string indent="");
+  std::string map2Str(std::map<ComposedAnalysis*, std::set<std::set<MLMapping> > >& ml2ml, std::string indent="");
   
   public:
   std::string str(std::string indent="");
@@ -202,7 +201,7 @@ class PartContext;
 typedef CompSharedPtr<PartContext> PartContextPtr;
 extern PartContextPtr NULLPartContextPtr;
 
-class PartContext: public dbglog::printable//, public boost::enable_shared_from_this<PartContext>
+class PartContext: public sight::printable//, public boost::enable_shared_from_this<PartContext>
 {
   // Comparison operations must be derived on contexts to make it possible to differentiate
   // them and create data structures from them. Note that we will only need to compare 
@@ -249,7 +248,7 @@ typedef CompSharedPtr<Context> ContextPtr;
 typedef CompSharedPtr<const Context> ConstContextPtr;
 extern ContextPtr NULLContextPtr;
 
-class Context//: public dbglog::printable
+class Context//: public sight::printable
 {
   public:
   /*ConstPartPtr part;
@@ -289,7 +288,7 @@ class Context//: public dbglog::printable
   //std::string str_rec(PartPtr part, std::string indent="");
 };
 
-class Part : public dbglog::printable, public boost::enable_shared_from_this<Part>
+class Part : public sight::printable, public boost::enable_shared_from_this<Part>
 {
   protected:
   ComposedAnalysis* analysis;
@@ -461,7 +460,7 @@ class Part : public dbglog::printable, public boost::enable_shared_from_this<Par
 };
 extern PartPtr NULLPart;
 
-class PartEdge : public dbglog::printable, public boost::enable_shared_from_this<PartEdge> {
+class PartEdge : public sight::printable, public boost::enable_shared_from_this<PartEdge> {
   protected:
   ComposedAnalysis* analysis;
   PartEdgePtr parent;
@@ -538,8 +537,8 @@ class PartEdge : public dbglog::printable, public boost::enable_shared_from_this
 //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
 //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
 //    the Lattice) is the one to which control is passing.
-  virtual Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge);
-  virtual Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge);
+  virtual Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
+  virtual Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
   
   // Returns the remapping functor
   const MLRemapper& getRemap() const
@@ -736,15 +735,17 @@ class IntersectionPartEdge : public PartEdge
                     std::map<ComposedAnalysis*, PartEdgePtr>::const_iterator end,
                     int numElts) const;
   
-  // Remaps the given Lattice as needed to take into account any function call boundaries.
+  // Remaps the given Lattice as needed to take into account any function call boundaries on behalf of the given 
+  //    client analysis (Expr2* is called with this analysis as the client rather than the analysis that created
+  //    the ATS graph). 
   // Remapping is performed both in the forwards and backwards directions. 
   // Returns the resulting Lattice object, which is freshly allocated.
   // Since the function is called for the scope change across some Part, it needs to account for the fact that
   //    some MemLocs are in scope on one side of Part, while others are in scope on the other side. 
   //    fromPEdge is the edge from which control is passing and the current PartEdge (same as the PartEdge of 
   //    the Lattice) is the one to which control is passing.
-  Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge);
-  Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge);
+  Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
+  Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
   
   std::string str(std::string indent="");
 };

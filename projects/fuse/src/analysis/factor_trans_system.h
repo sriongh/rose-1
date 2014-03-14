@@ -29,7 +29,7 @@ namespace fuse {
  *    multiplications they perform before they roll backwards by dividing the current value by a fixed number of factors.
  */
 
-extern int factorTransSystemDebugLevel;
+//extern int factorTransSystemDebugLevel;
   
 class FactorTransState;
 typedef CompSharedPtr<FactorTransState> FactorTransStatePtr;
@@ -310,7 +310,7 @@ class FactorTransSystemAnalysis : public UndirDataflow
   std::set<PartPtr> GetEndAStates_Spec();
   
   // Returns true if this ComposedAnalysis implements the partition graph and false otherwise
-  bool implementsPartGraph() { return true; }
+  bool implementsATSGraph() { return true; }
   
   // Given a PartEdge pedge implemented by this ComposedAnalysis, returns the part from its predecessor
   // from which pedge was derived. This function caches the results if possible.

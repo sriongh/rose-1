@@ -14,7 +14,7 @@
 
 namespace fuse
 {
-  extern int ptaDebugLevel;
+  //extern int ptaDebugLevel;
 
   class PointsToAnalysis;
   // Transfer functions for the PointsTo analysis
@@ -27,11 +27,13 @@ namespace fuse
     AbstractObjectMap* productLattice;
     // used by the analysis to determine if the states modified or not
     bool modified;
-    int debugLevel;
+    const debugLevel& dLevel;
+    std::string dLevelStr;
   public:
     PointsToAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state,
                              std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
-                             Composer* composer, PointsToAnalysis* analysis, const int& _debugLevel);
+                             Composer* composer, PointsToAnalysis* analysis, 
+                             const debugLevel& dLevel, std::string dLevelStr);
 
     // set the pointer of AbstractObjectMap at this PartEdge
     void setProductLattice();
@@ -77,7 +79,8 @@ namespace fuse
     
     // functions called by composer
     MemLocObjectPtr Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge);
-
+    bool implementsExpr2MemLoc   () { return false; }
+    implTightness Expr2MemLocTightness()    { return loose; }
     std::string str(std::string indent); 
 
     friend class PointsToAnalysisTransfer;

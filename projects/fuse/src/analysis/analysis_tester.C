@@ -3,11 +3,13 @@
 #include "factor_trans_system.h"
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 namespace fuse {
 
-int analysisTesterDebugLevel=1;
+//int analysisTesterDebugLevel=1;
+DEBUG_LEVEL(analysisTesterDebugLevel, 0);
   
 /********************
  ***** HierEdge *****
@@ -76,8 +78,8 @@ void HierEdge<EdgeTypePtr>::insert(const std::list<EdgeTypePtr>& hPEdge) {
 // insert all these Hierarchical PartsEdges into this map.
 template <class EdgeTypePtr>  
 void HierEdge<EdgeTypePtr>::insert(EdgeTypePtr parent, const HierEdge_Leaf<EdgeTypePtr> & hpel) {
-  scope reg("HierEdge<EdgeTypePtr>::insert(edge, leaf)", scope::medium, analysisTesterDebugLevel, 2);
-  if(analysisTesterDebugLevel>=2) {
+  scope reg("HierEdge<EdgeTypePtr>::insert(edge, leaf)", scope::medium, attrGE("analysisTesterDebugLevel", 2));
+  if(analysisTesterDebugLevel()>=2) {
     dbg << "hpel="<<const_cast<HierEdge_Leaf<EdgeTypePtr> &>(hpel).str()<<endl;
     dbg << "found="<<(m.find(parent) != m.end())<<endl;
   }
@@ -146,7 +148,7 @@ template <class EdgeTypePtr>
 void HierEdge<EdgeTypePtr>::mapf_rec(HierEdgeMapFunctor<EdgeTypePtr>& f, list<EdgeTypePtr>& hpeL) const {
   // Apply this functor to all the edges in this HierEdge's leaf node
   for(typename set<EdgeTypePtr>::iterator i=l->s.begin(); i!=l->s.end(); i++) {
-    scope reg("mapf_rec:L "+i->get()->str(), scope::medium, analysisTesterDebugLevel, 1);
+    scope reg("mapf_rec:L "+i->get()->str(), scope::medium, attrGE("analysisTesterDebugLevel", 1));
     hpeL.push_back(*i);
     f(hpeL);
     hpeL.pop_back();
@@ -157,7 +159,7 @@ void HierEdge<EdgeTypePtr>::mapf_rec(HierEdgeMapFunctor<EdgeTypePtr>& f, list<Ed
     // Skip empty sub-trees
     if(i->second->size()==0) continue;
     
-    scope reg("mapf_rec:M "+i->first.get()->str(), scope::medium, analysisTesterDebugLevel, 1);
+    scope reg("mapf_rec:M "+i->first.get()->str(), scope::medium, attrGE("analysisTesterDebugLevel", 1));
     hpeL.push_back(i->first);
     i->second->mapf_rec(f, hpeL);
     hpeL.pop_back();
@@ -171,18 +173,18 @@ void HierEdge<EdgeTypePtr>::mapf_rec(HierEdgeMapFunctor<EdgeTypePtr>& f, list<Ed
 // of this parent's children Hierarchical PartEdges.
 template <class EdgeTypePtr>  
 map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > > HierEdge<EdgeTypePtr>::outEdges() {
-  scope reg("HierEdge&lt;EdgeTypePtr&gt;::outEdges()", scope::medium, analysisTesterDebugLevel, 2);
-  if(analysisTesterDebugLevel>=2) dbg << "this="<<str("    ")<<endl;
+  scope reg("HierEdge&lt;EdgeTypePtr&gt;::outEdges()", scope::medium, attrGE("analysisTesterDebugLevel", 2));
+  if(analysisTesterDebugLevel()>=2) dbg << "this="<<str("    ")<<endl;
   // Maps a given grand-parent PartEdge to the PartEdge->HierEdge mapping of all of its descendants.
   // The grand-parent corresponds the parent HierEdge of this object, and the maps correspond
   // to ancestry level of this object.
   map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > > all;
   
-  { scope reg("Leaf", scope::medium, analysisTesterDebugLevel, 2);
+  { scope reg("Leaf", scope::medium, attrGE("analysisTesterDebugLevel", 2));
   map<EdgeTypePtr, HierEdge_LeafPtr> lOut = l->outEdges();
-  if(analysisTesterDebugLevel>=2) dbg << "outEdges #lOut="<<lOut.size()<<endl;
+  if(analysisTesterDebugLevel()>=2) dbg << "outEdges #lOut="<<lOut.size()<<endl;
   for(typename map<EdgeTypePtr, HierEdge_LeafPtr>::iterator i=lOut.begin(); i!=lOut.end(); i++) {
-    if(analysisTesterDebugLevel>=2) {
+    if(analysisTesterDebugLevel()>=2) {
       dbg << "    i-&gt;first"<<i->first.get()->str("        ")<<endl;
       dbg << "    i-&gt;second"<<i->second.get()->str("        ")<<endl;
     }
@@ -193,15 +195,15 @@ map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > > HierEdge<EdgeTypePtr>::
   }
   }
   
-  { scope reg("MAP", scope::medium, analysisTesterDebugLevel, 2);
+  { scope reg("MAP", scope::medium, attrGE("analysisTesterDebugLevel", 2));
   for(typename map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > >::iterator i=m.begin(); i!=m.end(); i++) {
     map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > > lOut = i->second->outEdges();
-    if(analysisTesterDebugLevel>=2) {
+    if(analysisTesterDebugLevel()>=2) {
       dbg << "i="<<(i->first? i->first.get()->str(): "NULL")<<endl;
       dbg << "outEdges #lOut="<<lOut.size()<<endl;
     }
     for(typename map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > >::iterator j=lOut.begin(); j!=lOut.end(); j++) {
-      if(analysisTesterDebugLevel>=2) {
+      if(analysisTesterDebugLevel()>=2) {
         dbg << "    j-&gt;first="<<(j->first.get()? j->first.get()->str(): "NULL")<<endl;
         if(j->first) dbg << "    j-&gt;first-&gt;getParent()="<<(j->first->getParent()? j->first->getParent()->str(): "NULL")<<endl;
         dbg << "    j-&gt;second="<<j->second.get()->str()<<endl;
@@ -219,7 +221,7 @@ map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > > HierEdge<EdgeTypePtr>::
     }
   }
   }
-  if(analysisTesterDebugLevel>=3) {
+  if(analysisTesterDebugLevel()>=3) {
     dbg << "all="<<endl;
     for(typename map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > >::iterator i=all.begin(); i!=all.end(); i++)
       dbg << "    " << (i->first? i->first.get()->str():"NULL") << " ==&gt; " << i->second.get()->str("        ")<<endl;
@@ -300,15 +302,15 @@ void HierEdge_Leaf<EdgeTypePtr>::insertVisited(EdgeTypePtr pEdge) {
 // of this parent's children PartEdges.
 template <class EdgeTypePtr>
 map<EdgeTypePtr, CompSharedPtr<HierEdge_Leaf<EdgeTypePtr> > > HierEdge_Leaf<EdgeTypePtr>::outEdges() {
-  scope reg("HierEdge_Leaf&gt;EdgeTypePtr&gt;::outEdges()", scope::medium, analysisTesterDebugLevel, 2);
+  scope reg("HierEdge_Leaf&gt;EdgeTypePtr&gt;::outEdges()", scope::medium, attrGE("analysisTesterDebugLevel", 2));
   
   map<EdgeTypePtr, HierEdge_LeafPtr> newHPEmap;
   for(typename set<EdgeTypePtr>::iterator i=s.begin(); i!=s.end(); i++) {
-    if(analysisTesterDebugLevel>=2) dbg << "i="<<i->get()->str()<<endl;
+    if(analysisTesterDebugLevel()>=2) dbg << "i="<<i->get()->str()<<endl;
     
     list<EdgeTypePtr> out = (*i)->target()->outEdges();
     for(typename list<EdgeTypePtr>::iterator o=out.begin(); o!=out.end(); o++) {
-      if(analysisTesterDebugLevel>=2) {
+      if(analysisTesterDebugLevel()>=2) {
         dbg << "o="<<o->get()->str()<<endl;
         dbg << "(*o)-&gt;getParent()="<<((*o)->getParent()? (*o)->getParent()->str(): "NULL")<<endl;
       }
@@ -329,7 +331,7 @@ map<EdgeTypePtr, CompSharedPtr<HierEdge_Leaf<EdgeTypePtr> > > HierEdge_Leaf<Edge
         newHPEmap[parent] = makePtr<HierEdge_Leaf<EdgeTypePtr> >(singleVisit);
       
       // Copy over the visited information
-      if(analysisTesterDebugLevel>=2) dbg << "Visited(V): "<<v->get()->str()<<endl;
+      if(analysisTesterDebugLevel()>=2) dbg << "Visited(V): "<<v->get()->str()<<endl;
       newHPEmap[parent]->insertVisited(*v);
     }
     
@@ -340,7 +342,7 @@ map<EdgeTypePtr, CompSharedPtr<HierEdge_Leaf<EdgeTypePtr> > > HierEdge_Leaf<Edge
         newHPEmap[parent] = makePtr<HierEdge_Leaf<EdgeTypePtr> >(singleVisit);
       
       // Copy over the visited information
-      if(analysisTesterDebugLevel>=2) dbg << "Visited(S): "<<v->get()->str()<<endl;
+      if(analysisTesterDebugLevel()>=2) dbg << "Visited(S): "<<v->get()->str()<<endl;
       newHPEmap[parent]->insertVisited(*v);
     }
   }
@@ -363,7 +365,7 @@ std::string HierEdge_Leaf<EdgeTypePtr>::str(std::string indent) {
   for(typename set<EdgeTypePtr>::iterator i=s.begin(); i!=s.end(); i++) {
     oss << endl << indent << i->get()->str(indent+"  ");
   }
-  if(analysisTesterDebugLevel>=3) {
+  if(analysisTesterDebugLevel()>=3) {
     oss << endl << indent << "visited=";
     for(typename set<EdgeTypePtr>::iterator i=visited.begin(); i!=visited.end(); i++) {
       oss << endl << indent << i->get()->str(indent+"  ");
@@ -406,7 +408,7 @@ class IntProgressEdge
   }
   
   bool operator==(const IntProgressEdgePtr& that) const {
-    /*scope reg("IntProgressEdge::==", scope::medium, 1, 1);
+    /*scope reg("IntProgressEdge::==", scope::medium);
     dbg << "this="<<const_cast<IntProgressEdge*>(this)->str()<<endl;
     dbg << "that="<<that.get()->str()<<endl;
     dbg << ((separateFactors == that->separateFactors &&
@@ -420,7 +422,7 @@ class IntProgressEdge
   }
   
   bool operator<(const IntProgressEdgePtr& that) const {
-    /*scope reg("IntProgressEdge::<", scope::medium, 1, 1);
+    /*scope reg("IntProgressEdge::<", scope::medium);
     dbg << "this="<<const_cast<IntProgressEdge*>(this)->str()<<endl;
     dbg << "that="<<that.get()->str()<<endl;
     dbg << "separateFactors < that->separateFactors: "<<(separateFactors < that->separateFactors)<<endl;
@@ -443,11 +445,11 @@ class IntProgressEdge
   
   list<IntProgressEdgePtr> outEdges() const {
     list<IntProgressEdgePtr> edges;
-    scope reg("IntProgressEdge::outEdges", scope::medium, analysisTesterDebugLevel, 2);
-    if(analysisTesterDebugLevel>=2) dbg << "#separateFactors="<<separateFactors.size()<<endl;
+    scope reg("IntProgressEdge::outEdges", scope::medium, attrGE("analysisTesterDebugLevel", 2));
+    if(analysisTesterDebugLevel()>=2) dbg << "#separateFactors="<<separateFactors.size()<<endl;
     for(set<int>::iterator i=separateFactors.begin(); i!=separateFactors.end(); i++) {
       edges.push_back(makePtr<IntProgressEdge>(separateFactors, commonFactors, curVal * *i));
-      if(analysisTesterDebugLevel>=2) dbg << "curVal="<<curVal<<" * *i="<<(*i)<<" = "<<(curVal * *i)<<endl;
+      if(analysisTesterDebugLevel()>=2) dbg << "curVal="<<curVal<<" * *i="<<(*i)<<" = "<<(curVal * *i)<<endl;
     }
     return edges;
   }
@@ -564,7 +566,7 @@ void AnalysisTester_selfTest() {
   }
   
   for(HierEdge<PartEdgePtr> he(startEdges, true); !he.end(); he.advanceOut()) {
-    scope reg("Current Iterator State", scope::medium, 1, 1);
+    scope reg("Current Iterator State", scope::medium);
     dbg << "out="<<he.str("    ")<<endl;
     cout << "." << endl;
   }
@@ -581,10 +583,11 @@ ComposedAnalysisSelfTester::ComposedAnalysisSelfTester(
    analysisToTestLP(analysisToTest), analysisToTestHP(analysisToTest->copy()), 
    precisionAnalyses(precisionAnalyses), stxAnalysis(stxAnalysis)
 {
-  assert(analysisToTestLP->implementsExpr2Val()     == analysisToTestHP->implementsExpr2Val());
-  assert(analysisToTestLP->implementsExpr2MemLoc()  == analysisToTestHP->implementsExpr2MemLoc());
-  assert(analysisToTestLP->implementsExpr2CodeLoc() == analysisToTestHP->implementsExpr2CodeLoc());
-  assert(analysisToTestLP->implementsPartGraph()    == analysisToTestHP->implementsPartGraph());
+  assert(analysisToTestLP->implementsExpr2Val()       == analysisToTestHP->implementsExpr2Val());
+  assert(analysisToTestLP->implementsExpr2CodeLoc()   == analysisToTestHP->implementsExpr2CodeLoc());
+  assert(analysisToTestLP->implementsExpr2MemLoc()    == analysisToTestHP->implementsExpr2MemLoc());
+  assert(analysisToTestLP->implementsExpr2MemRegion() == analysisToTestHP->implementsExpr2MemRegion());
+  assert(analysisToTestLP->implementsATSGraph()       == analysisToTestHP->implementsATSGraph());
 }
  
 // Creates a Composer that creates an Abstract Transition System using the analyses in precisionAnalyses
@@ -604,7 +607,7 @@ ChainComposer* ComposedAnalysisSelfTester::createTestComposer(
 class printHE : public HierEdgeMapFunctor<PartEdgePtr> {
   public:
   void operator()(const std::list<PartEdgePtr>& hpe) {
-    scope reg("printHE: edge", scope::medium, 1, 1);
+    scope reg("printHE: edge", scope::medium);
     for(std::list<PartEdgePtr>::const_iterator i=hpe.begin(); i!=hpe.end(); i++)
       dbg << "    " << i->get()->str("    ")<<endl;
   }
@@ -623,7 +626,7 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
      analysisToTestLP(analysisToTestLP), analysisToTestHP(analysisToTestHP) {}
   
   void operator()(const std::list<PartEdgePtr>& hpe) {
-    scope reg("compareHE: edge", scope::medium, 1, 1);
+    scope reg("compareHE: edge", scope::medium);
     
     int idx=0;
     for(std::list<PartEdgePtr>::const_iterator i=hpe.begin(); i!=hpe.end(); i++, idx++) {
@@ -652,7 +655,7 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
         
         //assert(hpVal->subSet(lpVal, hpPEdge, highPrecision));
         if(!highPrecision->subSet(hpVal, lpVal, hpPEdge, NULL)) {
-          scope reg("ERROR!", scope::medium, 1, 1);
+          scope reg("ERROR!", scope::medium);
           dbg << "lpPEdge="<<lpPEdge->str()<<endl;
           dbg << "hpPEdge="<<hpPEdge->str()<<endl;
           dbg << "lpVal="<<lpVal->str()<<endl;
@@ -684,7 +687,7 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
 
             // If we found that the hp-set is not a subset of the lp-set, print out the error with the evidence
             if(missedConcreteVals.size()>0) {
-              scope reg("ERROR!", scope::medium, 1, 1);
+              scope reg("ERROR!", scope::medium);
               dbg << "lpPEdge="<<lpPEdge->str()<<endl;
               dbg << "hpPEdge="<<hpPEdge->str()<<endl;
               dbg << "lpVal="<<lpVal->str()<<endl;
@@ -704,8 +707,8 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
       if(analysisToTestLP->implementsExpr2MemLoc()) {
         MemLocObjectPtr lpML = lowPrecision->Expr2MemLoc(expr, lpPEdge);
         MemLocObjectPtr hpML = highPrecision->Expr2MemLoc(expr, hpPEdge);
-        if(hpML->subSet(lpML, hpPEdge, highPrecision)) {
-          scope reg("ERROR!", scope::medium, 1, 1);
+        if(hpML->subSet(lpML, hpPEdge, highPrecision, NULL)) {
+          scope reg("ERROR!", scope::medium);
           dbg << "lpPEdge="<<lpPEdge->str()<<endl;
           dbg << "hpPEdge="<<hpPEdge->str()<<endl;
           dbg << "lpML="<<lpML->str()<<endl;
@@ -730,27 +733,28 @@ bool ComposedAnalysisSelfTester::testAnalysis()
 {
   
   ChainComposer* highPrecision = createTestComposer(analysisToTestHP, precisionAnalyses);
-  { scope reghp("Test High Precision", scope::medium, analysisTesterDebugLevel, 1);
+  { scope reghp("Test High Precision", scope::medium, attrGE("analysisTesterDebugLevel", 1));
   highPrecision->runAnalysis();
   }
   set<ComposedAnalysisPtr> noAnalyses;
   ChainComposer* lowPrecision = createTestComposer(analysisToTestLP, noAnalyses);
-  { scope reghp("Test Low Precision", scope::medium, analysisTesterDebugLevel, 1);
+  { scope reghp("Test Low Precision", scope::medium, attrGE("analysisTesterDebugLevel", 1));
   lowPrecision->runAnalysis();
   }
   
-  assert(analysisToTestLP->implementsExpr2Val()     == analysisToTestHP->implementsExpr2Val());
-  assert(analysisToTestLP->implementsExpr2MemLoc()  == analysisToTestHP->implementsExpr2MemLoc());
-  assert(analysisToTestLP->implementsExpr2CodeLoc() == analysisToTestHP->implementsExpr2CodeLoc());
-  assert(analysisToTestLP->implementsPartGraph()    == analysisToTestHP->implementsPartGraph());
+  assert(analysisToTestLP->implementsExpr2Val()       == analysisToTestHP->implementsExpr2Val());
+  assert(analysisToTestLP->implementsExpr2CodeLoc()   == analysisToTestHP->implementsExpr2CodeLoc());
+  assert(analysisToTestLP->implementsExpr2MemRegion() == analysisToTestHP->implementsExpr2MemLoc());
+  assert(analysisToTestLP->implementsExpr2MemLoc()    == analysisToTestHP->implementsExpr2MemRegion());
+  assert(analysisToTestLP->implementsATSGraph()       == analysisToTestHP->implementsATSGraph());
   
-  scope reg("testAnalysis", scope::medium, 1, 1);
+  scope reg("testAnalysis", scope::medium);
   set<PartPtr> hpEntry = highPrecision->GetStartAStates_Spec();
-  { scope("hpEntry", scope::low, analysisTesterDebugLevel, 1);
+  { scope("hpEntry", scope::low, attrGE("analysisTesterDebugLevel", 1));
     for(set<PartPtr>::iterator e=hpEntry.begin(); e!=hpEntry.end(); e++)
       dbg << e->get()->str()<<endl; }
   set<PartPtr> lpEntry = lowPrecision->GetStartAStates_Spec();
-  { scope("lpEntry", scope::low, analysisTesterDebugLevel, 1);
+  { scope("lpEntry", scope::low, attrGE("analysisTesterDebugLevel", 1));
     for(set<PartPtr>::iterator e=lpEntry.begin(); e!=lpEntry.end(); e++)
       dbg << e->get()->str()<<endl; }
   
@@ -760,7 +764,7 @@ bool ComposedAnalysisSelfTester::testAnalysis()
   for(set<PartPtr>::iterator hpE=hpEntry.begin(); hpE!=hpEntry.end(); hpE++) {
     PartEdgePtr cur = hpE->get()->inEdgeFromAny();
     list<PartEdgePtr> entry;
-    //{ scope reg("entry", scope::medium, analysisTesterDebugLevel, 1);
+    //{ scope reg("entry", scope::medium, attrGE("analysisTesterDebugLevel", 1));
     while(cur) {
       entry.push_front(cur);
       //dbg << ":"<<cur->str() << endl;
@@ -774,7 +778,7 @@ bool ComposedAnalysisSelfTester::testAnalysis()
   
   for(HierEdge<PartEdgePtr> he(hpEntryEdges, true); !he.end(); he.advanceOut()) {
     //dbg << "out="<<he.str("    ")<<endl;
-    scope reg("Current Iterator State", scope::medium, 1, 1);
+    scope reg("Current Iterator State", scope::medium);
     compareHE f(lowPrecision, highPrecision, analysisToTestLP, analysisToTestHP);
     he.mapf(f);
   }

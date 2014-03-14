@@ -12,7 +12,7 @@ namespace fuse
 
 // This is an analysis that adds the sensitivity to calling contexts to the Abstract Transition System it runs on,
   
-extern int callContextSensitivityDebugLevel;
+//extern int callContextSensitivityDebugLevel;
 
 /* ###########################
    ##### CallCtxSensPart #####
@@ -24,6 +24,8 @@ class CallCtxSensPart;
 typedef CompSharedPtr<CallCtxSensPart> CallCtxSensPartPtr;
 class CallCtxSensPartEdge;
 typedef CompSharedPtr<CallCtxSensPartEdge> CallCtxSensPartEdgePtr;
+class CallCtxSensMR;
+typedef boost::shared_ptr<CallCtxSensMR> CallCtxSensMRPtr;
 class CallCtxSensML;
 typedef boost::shared_ptr<CallCtxSensML> CallCtxSensMLPtr;
 
@@ -96,6 +98,7 @@ class CallCtxSensPart : public Part
   friend class CallCtxSensPartEdge;
   friend class CallCtxSensLattice;
   friend class CallContextSensitivityAnalysis;
+  friend class CallCtxSensMR;
   friend class CallCtxSensML;
   
   // The Part's calling context, which is a stack of function calls
@@ -183,6 +186,7 @@ class CallCtxSensPartEdge : public PartEdge {
   
   friend class CallCtxSensPart; 
   friend class CallContextSensitivityAnalysis;
+  friend class CallCtxSensMR;
   friend class CallCtxSensML;
   public:
   // Constructor to be used when constructing the edges (e.g. from genInitLattice()).  
@@ -226,10 +230,71 @@ class CallCtxSensPartEdge : public PartEdge {
 }; // CallCtxSensPartEdge
 
 /* #########################
+   ##### CallCtxSensMR #####
+   ######################### */
+
+// Memory region object that wraps server-provided MemRegionObjects but adds to them the context
+// from which they were derived.
+class CallCtxSensMR : public MemRegionObject
+{
+  protected:
+    // The server MemRegionObject that this object wraps
+    MemRegionObjectPtr baseMR;
+    
+    // The context of this object
+    CallPartContext context;
+
+    // The analysis that produced this MemLoc
+    CallContextSensitivityAnalysis* ccsa;
+
+  public:
+    CallCtxSensMR(SgNode* sgn, MemRegionObjectPtr baseMR, const CallPartContext& context, CallContextSensitivityAnalysis* ccsa);
+    CallCtxSensMR(const CallCtxSensMR& that);
+    
+    // pretty print
+    //std::string str(std::string indent="") const;
+    std::string str(std::string indent="");// { return ((const CallCtxSensMR*)this)->str(indent); }
+
+    // copy this object and return a pointer to it
+    MemRegionObjectPtr copyMR() const;
+
+    bool mayEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool mustEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    
+    // Returns whether the two abstract objects denote the same set of concrete objects
+    bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+    
+    // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+    // by the given abstract object.
+    bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+    
+    bool isLiveMR(PartEdgePtr pedge);
+    
+    // Computes the meet of this and that and saves the result in this
+    // returns true if this causes this to change and false otherwise
+    bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    
+    // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+    bool isFullMR(PartEdgePtr pedge);
+    // Returns whether this AbstractObject denotes the empty set.
+    bool isEmptyMR(PartEdgePtr pedge);
+    
+    // Returns a ValueObject that denotes the size of this memory region
+    ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
+    
+    // Set this object to represent the set of all possible MemLocs
+    // Return true if this causes the object to change and false otherwise.
+    bool setToFull();
+    // Set this Lattice object to represent the empty set of MemLocs.
+    // Return true if this causes the object to change and false otherwise.
+    bool setToEmpty();
+}; // CallCtxSensMR
+
+/* #########################
    ##### CallCtxSensML #####
    ######################### */
 
-// Memory object that wraps server-provided MemLocObjects but adds to them the context
+// Memory location object that wraps server-provided MemLocObjects but adds to them the context
 // from which they were derived.
 class CallCtxSensML : public MemLocObject
 {
@@ -258,11 +323,11 @@ class CallCtxSensML : public MemLocObject
     bool mustEqualML(MemLocObjectPtr that, PartEdgePtr pedge);
     
     // Returns whether the two abstract objects denote the same set of concrete objects
-    bool equalSet(AbstractObjectPtr o, PartEdgePtr pedge);
+    bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
     
     // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
     // by the given abstract object.
-    bool subSet(AbstractObjectPtr o, PartEdgePtr pedge);
+    bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
     
     bool isLiveML(PartEdgePtr pedge);
     
@@ -271,9 +336,9 @@ class CallCtxSensML : public MemLocObject
     bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
     
     // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-    bool isFull(PartEdgePtr pedge);
+    bool isFullML(PartEdgePtr pedge);
     // Returns whether this AbstractObject denotes the empty set.
-    bool isEmpty(PartEdgePtr pedge);
+    bool isEmptyML(PartEdgePtr pedge);
     
     // Set this object to represent the set of all possible MemLocs
     // Return true if this causes the object to change and false otherwise.
@@ -399,9 +464,9 @@ class CallCtxSensLattice: public FiniteLattice
   bool setMLValueToFull(MemLocObjectPtr ml);
   
   // Returns whether this lattice denotes the set of all possible execution prefixes.
-  bool isFull();
+  bool isFullLat();
   // Returns whether this lattice denotes the empty set.
-  bool isEmpty();
+  bool isEmptyLat();
   
   std::string str(std::string indent="");
 }; // CallCtxSensLattice
@@ -466,6 +531,9 @@ class CallContextSensitivityAnalysis : public FWDataflow
   // Portion sof the transfer function that creates edges along the exit edges of functions
   std::set<CallCtxSensPartPtr> createFuncExitEdge(PartEdgePtr baseEdge, CallCtxSensPartPtr src);
   
+  MemRegionObjectPtr Expr2MemRegion(SgNode* n, PartEdgePtr pedge);
+  bool implementsExpr2MemRegion () { return true; }
+  
   MemLocObjectPtr Expr2MemLoc(SgNode* n, PartEdgePtr pedge);
   bool implementsExpr2MemLoc () { return true; }
   
@@ -473,8 +541,9 @@ class CallContextSensitivityAnalysis : public FWDataflow
   std::set<PartPtr> GetStartAStates_Spec();
   std::set<PartPtr> GetEndAStates_Spec();
   
-  // Returns true if this ComposedAnalysis implements the partition graph and false otherwise
-  bool implementsPartGraph() { return true; }
+  // Returns whether this analysis implements an Abstract Transition System graph via the methods
+  // GetStartAStates_Spec() and GetEndAStates_Spec()
+  bool implementsATSGraph() { return true; }
   
   // Given a PartEdge pedge implemented by this ComposedAnalysis, returns the part from its predecessor
   // from which pedge was derived. This function caches the results if possible.
