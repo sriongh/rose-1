@@ -9,7 +9,7 @@
 #include <map>
 
 namespace fuse {
-class Lattice : public dbglog::printable
+class Lattice : public sight::printable
 {
   public:
   PartEdgePtr latPEdge;
@@ -22,7 +22,7 @@ class Lattice : public dbglog::printable
   virtual bool setPartEdge(PartEdgePtr latPEdge);
   
   // Returns the PartEdge that this Lattice's information corresponds to
-  virtual PartEdgePtr getPartEdge();
+  virtual PartEdgePtr getPartEdge() const;
   
   // initializes this Lattice to its default state, if it is not already initialized
   virtual void initialize()=0;
@@ -128,9 +128,9 @@ class Lattice : public dbglog::printable
   virtual bool setMLValueToFull(MemLocObjectPtr ml)=0;
   
   // Returns whether this lattice denotes the set of all possible execution prefixes.
-  virtual bool isFull()=0;
+  virtual bool isFullLat()=0;
   // Returns whether this lattice denotes the empty set.
-  virtual bool isEmpty()=0;
+  virtual bool isEmptyLat()=0;
   
   // Functions used to inform this lattice that a given variable is now in use (e.g. a variable has entered 
   //    scope or an expression is being analyzed) or is no longer in use (e.g. a variable has exited scope or

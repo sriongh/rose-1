@@ -20,7 +20,7 @@
 
 namespace fuse 
 {
-  extern int AbstractObjectSetDebugLevel;
+//  extern int AbstractObjectSetDebugLevel;
   
 // Set container for AbstractMemoryObject pointers
 // use: for storing sets of AbstractMemoryObject pointers
@@ -132,9 +132,9 @@ public:
   bool setMLValueToFull(MemLocObjectPtr ml);
   
   // Returns whether this lattice denotes the set of all possible execution prefixes.
-  bool isFull();
+  bool isFullLat();
   // Returns whether this lattice denotes the empty set.
-  bool isEmpty();
+  bool isEmptyLat();
 
   std::string str(std::string indent="");
   // Variant of the str method that can produce information specific to the current PartEdge.

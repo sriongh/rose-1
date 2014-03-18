@@ -8,22 +8,16 @@
 #include "iteratedDominanceFrontier.h"
 #include "controlDependence.h"
 
-/**     
- * This is an implementation of the abstract memory object --> lattice map 
- *           
- * author: jisheng zhao (jz10@rice.edu)   
- */
-
 #define foreach BOOST_FOREACH
 #define reverse_foreach BOOST_REVERSE_FOREACH
 
 using namespace std;
 using namespace boost;
 using namespace ssa_private;
-using namespace dbglog;
+using namespace sight;
 
 namespace fuse {
-int AbstractObjectMapDebugLevel=2;
+DEBUG_LEVEL(AbstractObjectMapDebugLevel, 0);
 
 // Set this Lattice object to represent the set of all possible execution prefixes.
 // Return true if this causes the object to change and false otherwise.
@@ -63,18 +57,27 @@ bool AbstractObjectMap::setMLValueToFull(MemLocObjectPtr ml)
 }
 
 // Returns whether this lattice denotes the set of all possible execution prefixes.
-bool AbstractObjectMap::isFull()
+bool AbstractObjectMap::isFullLat()
 {
   return mapIsFull;
 }
 
 // Returns whether this lattice denotes the empty set.
-bool AbstractObjectMap::isEmpty()
+bool AbstractObjectMap::isEmptyLat()
 {
+  scope s("AbstractObjectMap::isEmpty()", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
+  if(AbstractObjectMapDebugLevel()>=2) dbg << "this="<<str()<<endl;
+  
   // Check if all items are empty
   for(std::list<MapElement>::iterator i=items.begin(); i!=items.end();) {
+    if(AbstractObjectMapDebugLevel()>=2) {
+      indent ind;
+      dbg << "i->first="<<i->first->str()<<endl;
+      dbg << "i->second="<<i->second->str()<<endl;
+    }
     // If at least one is not empty, return false
-    if(!(i->first)->isEmpty(getPartEdge()) && !(i->second)->isEmpty()) return false;
+    if(!(i->first)->isEmpty(getPartEdge(), comp, analysis) && 
+       !(i->second)->isEmptyLat()) return false;
     
     // If this item mapping is empty, remove it from the items list
     items.erase(i++);
@@ -111,15 +114,15 @@ std::string AbstractObjectMap::strp(PartEdgePtr pedge, std::string indent)
 // Return true if this causes the map to change and false otherwise.
 // It is assumed that the given Lattice is now owned by the AbstractObjectMap and can be modified and deleted by it.
 bool AbstractObjectMap::insert(AbstractObjectPtr o, LatticePtr lattice) {
-  scope reg("AbstractObjectMap::insert()", scope::medium, AbstractObjectMapDebugLevel, 1);
-  if(AbstractObjectMapDebugLevel>=1) {
+  scope reg("AbstractObjectMap::insert()", scope::medium, attrGE("AbstractObjectMapDebugLevel", 1));
+  if(AbstractObjectMapDebugLevel()>=1) {
     dbg << "&nbsp;&nbsp;&nbsp;&nbsp;o="<<o->strp(latPEdge, "")<<" lattice="<<lattice->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<" mapIsFull="<<mapIsFull<<endl;
     dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"<<str("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
   }
   
   // Do not insert mappings for dead keys
   if(!o->isLive(latPEdge, comp, analysis)) { 
-    if(AbstractObjectMapDebugLevel>=1) dbg << "<b>AbstractObjectMap::insert() WARNING: attempt to insert dead mapping "<<o->strp(latPEdge)<<" =&gt; "<<lattice->str()<<"<\b>"<<endl;
+    if(AbstractObjectMapDebugLevel()>=1) dbg << "<b>AbstractObjectMap::insert() WARNING: attempt to insert dead mapping "<<o->strp(latPEdge)<<" =&gt; "<<lattice->str()<<"<\b>"<<endl;
     return false;
   }
   
@@ -139,7 +142,7 @@ bool AbstractObjectMap::insert(AbstractObjectPtr o, LatticePtr lattice) {
   int i=0;
   for(it = items.begin(); it != items.end(); i++) {
     AbstractObjectPtr keyElement = it->first;
-    if(AbstractObjectMapDebugLevel>=2) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
+    if(AbstractObjectMapDebugLevel()>=2) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
     // If we're done inserting, don't do it again
     if(insertDone) {
       // If o is mustEqual to this element and it is not the first match, remove this element
@@ -162,8 +165,8 @@ bool AbstractObjectMap::insert(AbstractObjectPtr o, LatticePtr lattice) {
   
     // If the o-frontier contains an object that must-equal to 
     if(o->mustEqual(keyElement, latPEdge, comp, analysis)) {
-      if(AbstractObjectMapDebugLevel==1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
-      if(AbstractObjectMapDebugLevel>=1) {
+      if(AbstractObjectMapDebugLevel()==1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
+      if(AbstractObjectMapDebugLevel()>=1) {
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Must Equal"<<endl;
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lattice="<<lattice->str("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
         dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;it="<<it->second->str("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
@@ -172,8 +175,8 @@ bool AbstractObjectMap::insert(AbstractObjectPtr o, LatticePtr lattice) {
       // If the old and new mappings of o are different,  we remove the old mapping and add a new one 
       if(!it->second->equiv(lattice.get()))
       {
-        if(AbstractObjectMapDebugLevel==1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
-        if(AbstractObjectMapDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Removing i="<<i<<", inserting "<<o->strp(latPEdge, "        ")<<"=&gt;"<<lattice->str("        ")<<endl;
+        if(AbstractObjectMapDebugLevel()==1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement="<<keyElement->str("            ")<<" mustEqual(o, keyElement, latPEdge)="<<o->mustEqual(keyElement, latPEdge, comp, analysis)<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
+        if(AbstractObjectMapDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Removing i="<<i<<", inserting "<<o->strp(latPEdge, "        ")<<"=&gt;"<<lattice->str("        ")<<endl;
         items.erase(it++);
         items.push_front(MapElement(o, lattice));
         retVal = true;
@@ -216,12 +219,12 @@ bool AbstractObjectMap::insert(AbstractObjectPtr o, LatticePtr lattice) {
   
   // Having inserted the new item we need to clean up the map to ensure that it stays bounded in size
   // Step 1: call isEmpty to check for any keys mapped to empty sets
-  isEmpty();
+  isEmptyLat();
   // Step 2: if the map is larger than some fixed bound, merge some key->value mappings together
   // !!! TODO !!!
   
-  if(AbstractObjectMapDebugLevel>=1) {
-    indent ind(1, 1);
+  if(AbstractObjectMapDebugLevel()>=1) {
+    indent ind();
     dbg << "retVal="<<retVal<<" insertDone="<<insertDone<<" mustEqualSeen="<<mustEqualSeen<<endl;
     dbg << str()<<endl;
   }
@@ -248,8 +251,8 @@ bool AbstractObjectMap::remove(AbstractObjectPtr abstractObjectPtr) {
 
 // Get all x-frontier for a given abstract memory object                                                            
 LatticePtr AbstractObjectMap::get(AbstractObjectPtr abstractObjectPtr) {
-  scope reg("AbstractObjectMap::get()", scope::medium, AbstractObjectMapDebugLevel, 1);
-  if(AbstractObjectMapDebugLevel>=1) {
+  scope reg("AbstractObjectMap::get()", scope::medium, attrGE("AbstractObjectMapDebugLevel", 1));
+  if(AbstractObjectMapDebugLevel()>=1) {
     dbg << "&nbsp;&nbsp;&nbsp;&nbsp;o="<<abstractObjectPtr->strp(latPEdge, "&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
     dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"<<str("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
   }
@@ -266,17 +269,25 @@ LatticePtr AbstractObjectMap::get(AbstractObjectPtr abstractObjectPtr) {
        it != items.end(); it++) {
     AbstractObjectPtr keyElement = it->first;
     bool eq = abstractObjectPtr->mayEqual(keyElement, latPEdge, comp, analysis);
-    if(AbstractObjectMapDebugLevel>=2 || (AbstractObjectMapDebugLevel>=1 && eq)) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement(equal="<<eq<<")="<<keyElement->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
+    if(AbstractObjectMapDebugLevel()>=2 || (AbstractObjectMapDebugLevel()>=1 && eq)) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;keyElement(equal="<<eq<<")="<<keyElement->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
     if(eq) {
       // If this is the first matching Lattice, copy this Lattice to ret
       if(!ret) ret = boost::shared_ptr<Lattice>(it->second->copy());
       // Otherwise, merge this latice into ret
       else     ret->meetUpdate(it->second.get());
-      if(AbstractObjectMapDebugLevel>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;ret="<<ret->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
+      
+      // If the current key must-equals the given object, its assignment must have overwritten any prior assignment
+      // to this object, meaning that prior assignments can be ignored
+      if(abstractObjectPtr->mustEqual(keyElement, latPEdge, comp, analysis)) {
+        if(AbstractObjectMapDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;Stopping search since mustEqual, ret="<<ret->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
+        break;
+      }
+      
+      if(AbstractObjectMapDebugLevel()>=1) dbg << "&nbsp;&nbsp;&nbsp;&nbsp;ret="<<ret->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
     }
   }
   
-  if(AbstractObjectMapDebugLevel>=1) {
+  if(AbstractObjectMapDebugLevel()>=1) {
     dbg << "ret="<<(ret ? ret->str("&nbsp;&nbsp;&nbsp;&nbsp;"): "NULL")<<endl;
   }
   if(ret) return ret;
@@ -322,9 +333,12 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
 {
   if(mapIsFull) { return copy(); }
   
-  scope reg("AbstractObjectMap::remapML", scope::medium, AbstractObjectMapDebugLevel, 1);
+  // Do nothing on empty maps or those where the keys are not MemLocObjects
+  if(items.size()==0 || !(items.begin()->first->isMemLocObject())) { return copy(); }
   
-  if(AbstractObjectMapDebugLevel>=1) {
+  scope reg("AbstractObjectMap::remapML", scope::medium, attrGE("AbstractObjectMapDebugLevel", 1));
+  
+  if(AbstractObjectMapDebugLevel()>=1) {
     // If either the key or the value of this mapping is dead within its respective part, we skip it.
     // Print notices of this skipping once
     for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++) {
@@ -337,8 +351,8 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
     }
   }
   
-  if(AbstractObjectMapDebugLevel>=1) {
-    scope reg("ml2ml", scope::medium);
+  if(AbstractObjectMapDebugLevel()>=1) {
+    scope reg("ml2ml", scope::medium, attrGE("AbstractObjectMapDebugLevel", 1));
     for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++) {
       if(!m->from) continue;
       dbg << m->from.get()->str() << " =&gt; " << (m->to? m->to.get()->strp(latPEdge): "NULL") << endl;
@@ -356,26 +370,26 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
   for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++)
     ml2mlAdded.push_back(false);
   
-  if(AbstractObjectMapDebugLevel>=2) dbg << "newM="<<newM->str()<<endl;
+  if(AbstractObjectMapDebugLevel()>=2) dbg << "newM="<<newM->str()<<endl;
   
   // Iterate over all the mappings <key, val> n ml2ml and for each mapping consider each item in newM. If the key 
   // mustEquals to some item newM, that item is replaced by val. If the key mayEquals some item in newM, val is 
   // placed at the front of the list. If the key does not appear in newM at all, val is placed at the front of the list.
   for(std::list<MapElement>::iterator i=newM->items.begin(); i!=newM->items.end(); ) {
-    indent ind0(AbstractObjectMapDebugLevel, 1);
-    if(AbstractObjectMapDebugLevel>=1) dbg << "i="<<i->first->str()<<endl;
+    indent ind0(attrGE("AbstractObjectMapDebugLevel", 1));
+    if(AbstractObjectMapDebugLevel()>=1) dbg << "i="<<i->first->str()<<endl;
   
     int mIdx=0;
     std::set<MLMapping>::const_iterator m=ml2ml.begin();
     for(; m!=ml2ml.end(); m++, mIdx++) {
       if(!m->from) continue;
       
-      indent ind1(AbstractObjectMapDebugLevel, 1);
-      if(AbstractObjectMapDebugLevel>=1) dbg << mIdx << ": m-&gt;key="<<m->from->strp(fromPEdge)<<endl;
+      indent ind1(attrGE("AbstractObjectMapDebugLevel", 1));
+      if(AbstractObjectMapDebugLevel()>=1) dbg << mIdx << ": m-&gt;key="<<m->from->strp(fromPEdge)<<endl;
       
-      indent ind2(AbstractObjectMapDebugLevel, 1);
+      indent ind2(attrGE("AbstractObjectMapDebugLevel", 1));
       // If the current item in newM may- or must-equals a key in ml2ml, record this and update newM
-      if(AbstractObjectMapDebugLevel>=2) {
+      if(AbstractObjectMapDebugLevel()>=1) {
         dbg << "i-&gt;first mustEqual m-&gt;from = "<<i->first->mustEqual(m->from, fromPEdge, comp, analysis)<<endl;
         dbg << "i-&gt;first mayEqual m-&gt;from = "<<i->first->mayEqual(m->from, fromPEdge, comp, analysis)<<endl;
       }
@@ -386,16 +400,16 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
           *i = make_pair(boost::static_pointer_cast<AbstractObject>(m->to), i->second);
 
           // Advance onward in newM and remove any items that are must-equal to the value of the current ml2ml mapping
-          //scope reg("Deleting items that are must-equal to value", scope::medium, 1, 1);
+          //scope reg("Deleting items that are must-equal to value", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
           std::list<MapElement>::iterator iNext = i; iNext++;
           for(std::list<MapElement>::iterator j=iNext; j!=newM->items.end(); ) {
-            if(AbstractObjectMapDebugLevel>=2) {
+            if(AbstractObjectMapDebugLevel()>=2) {
               dbg << "j="<<j->first<<" => "<<j->second<<endl;
               dbg << mIdx << ": m-&gt;value="<<m->to->strp(fromPEdge)<<endl;
               dbg << "j-&gt;first mustEqual m-&gt;to = "<<j->first->mustEqual(m->to, fromPEdge, comp, analysis)<<endl;
             }
             if(j->first->mustEqual(m->to, fromPEdge, comp, analysis)) {
-              if(AbstractObjectMapDebugLevel>=2) dbg << "Erasing j="<<j->first->str()<<" => "<<j->second->str()<<endl;
+              if(AbstractObjectMapDebugLevel()>=2) dbg << "Erasing j="<<j->first->str()<<" => "<<j->second->str()<<endl;
               j = newM->items.erase(j);
               //break;
             } else
@@ -411,7 +425,7 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
         ml2mlAdded[mIdx]=true;
       } else if(i->first->mayEqual(m->from, fromPEdge, comp, analysis)) {
         // Insert the value in the current ml2ml mapping immediately before the current item
-        if(AbstractObjectMapDebugLevel>=1) dbg << "Inserting before i: "<<m->to->str()<<" => "<<i->second->str()<<endl;
+        if(AbstractObjectMapDebugLevel()>=1) dbg << "Inserting before i: "<<m->to->str()<<" => "<<i->second->str()<<endl;
         newM->items.insert(i, make_pair(boost::static_pointer_cast<AbstractObject>(m->to), i->second));
         ml2mlAdded[mIdx]=true;
       }
@@ -465,7 +479,7 @@ bool AbstractObjectMap::replaceML(Lattice* newL)
 // The part of this object is to be used for AbstractObject comparisons.
 bool AbstractObjectMap::meetUpdate(Lattice* thatL)
 {
-  scope reg("AbstractObjectMap::meetUpdate()", scope::medium, AbstractObjectMapDebugLevel, 2);
+  scope reg("AbstractObjectMap::meetUpdate()", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
 
   // Both incorporateVars() and meetUpdate currently call merge. This is clearly not
   // right but we'll postpone fixing it until we have the right algorithm for merges
@@ -473,7 +487,7 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
   try {
     AbstractObjectMap * that = dynamic_cast <AbstractObjectMap*> (thatL);
     
-    if(AbstractObjectMapDebugLevel>=2) {
+    if(AbstractObjectMapDebugLevel()>=2) {
       dbg << "latPEdge="<<latPEdge->str()<<endl;
       { scope thisreg("this", scope::medium);
       dbg << str()<<endl; }
@@ -529,7 +543,7 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
     for(list<MapElement>::iterator itThat=that->items.begin(); itThat!=that->items.end(); itThat++)
       thatMustEq.push_back(false);
 
-    if(AbstractObjectMapDebugLevel>=2)  {
+    if(AbstractObjectMapDebugLevel()>=2)  {
       scope thisreg("that->items", scope::medium);
       for(list<MapElement>::iterator itThat=that->items.begin(); itThat!=that->items.end(); itThat++)
       dbg << "that: "<<itThat->first->str()<<" ==&gt; "<<itThat->second->str()<<endl;
@@ -539,16 +553,16 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
     // and for these pairs merge the lattices from that->items to this->items.
     for(list<MapElement>::iterator itThis=items.begin(); 
        itThis!=items.end(); itThis++) {
-      scope thisreg("itThis", scope::medium, AbstractObjectMapDebugLevel, 2);
-      if(AbstractObjectMapDebugLevel>=2) dbg << "this: "<<itThis->first->str()<<" ==&gt; "<<itThis->second->str()<<endl;
+      scope thisreg("itThis", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
+      if(AbstractObjectMapDebugLevel()>=2) dbg << "this: "<<itThis->first->str()<<" ==&gt; "<<itThis->second->str()<<endl;
       
       int i=0;
       list<bool>::iterator thatMEIt=thatMustEq.begin();
       for(list<MapElement>::iterator itThat=that->items.begin(); 
          itThat!=that->items.end(); itThat++, i++, thatMEIt++) {
       
-        scope thisreg("itThat", scope::medium, AbstractObjectMapDebugLevel, 2);
-        if(AbstractObjectMapDebugLevel>=2) dbg << "that: "<<itThat->first->str()<<" ==&gt; "<<itThat->second->str()<<endl;
+        scope thisreg("itThat", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
+        if(AbstractObjectMapDebugLevel()>=2) dbg << "that: "<<itThat->first->str()<<" ==&gt; "<<itThat->second->str()<<endl;
         
         // If we've found a pair of keys in this and that that are mustEqual or denote the same set
         //if(mustEqual(itThis->first, itThat->first, latPEdge, comp, analysis)) {
@@ -557,7 +571,7 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
           thisMustEq2thatMustEq.push_back(make_pair(itThis, make_pair(itThat, i)));
           *thatMEIt = true;
           
-          scope meetreg(txt()<<"Meeting", scope::medium, AbstractObjectMapDebugLevel, 2);
+          scope meetreg(txt()<<"Meeting", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
           
           // Update the lattice at *itThis to incorporate information at *itThat
           {
@@ -566,23 +580,24 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
             // As such, instead of updating lattices in-place (this would update the same lattice
             // in other maps) we first copy them and update into the copy.
             itThis->second = LatticePtr(itThis->second->copy());
-            scope meetreg(txt()<<"Meeting "<<itThis->first->str(), scope::medium, AbstractObjectMapDebugLevel, 2);
-            if(AbstractObjectMapDebugLevel>=2) { scope befreg("before", scope::low); dbg << itThis->second->str()<<endl; }
+            scope meetreg(txt()<<"Meeting "<<itThis->first->str(), scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
+            if(AbstractObjectMapDebugLevel()>=2) { scope befreg("before", scope::low); dbg << itThis->second->str()<<endl; }
             modified = itThis->second->meetUpdate(itThat->second.get()) || modified;
-            if(AbstractObjectMapDebugLevel>=2) { scope aftreg("after", scope::low); dbg << itThis->second->str()<<endl; }
+            if(AbstractObjectMapDebugLevel()>=2) { scope aftreg("after", scope::low); dbg << itThis->second->str()<<endl; }
+            if(AbstractObjectMapDebugLevel()>=2) dbg << "modified="<<modified<<endl;
           }
         }
       }
     }
-    if(AbstractObjectMapDebugLevel>=2) {
-      scope eqreg("thisMustEq2thatMustEq", scope::medium, AbstractObjectMapDebugLevel, 2);
+    if(AbstractObjectMapDebugLevel()>=2) {
+      scope eqreg("thisMustEq2thatMustEq", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
       for(list<pair<list<MapElement>::iterator, pair<list<MapElement>::iterator, int> > >::iterator it=thisMustEq2thatMustEq.begin();
           it!=thisMustEq2thatMustEq.end(); it++) {
         dbg << (it->first)->first->str() << " =&gt; " << (it->second).first->second->str() << endl;
       }
     }
     
-    { scope insreg("inserting that->this", scope::medium, AbstractObjectMapDebugLevel, 2);
+    { scope insreg("inserting that->this", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
     
     // Copy over the mappings of all the elements in that->items that were not mustEqual
     // to any elements in this->items. Although any order will work for these elements,
@@ -592,10 +607,12 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
     list<bool>::iterator thatMEIt=thatMustEq.begin();
     for(list<pair<list<MapElement>::iterator, pair<list<MapElement>::iterator, int> > >::iterator meIt=thisMustEq2thatMustEq.begin();
        meIt!=thisMustEq2thatMustEq.end(); meIt++) {
-      scope mapreg(txt()<<"mustEqual mapping "<<meIt->second.second<<": "<<(meIt->first)->first->str(), scope::medium, AbstractObjectMapDebugLevel, 2);
-      dbg << "this: "<<meIt->first->first->str() << " =&gt; " << meIt->first->second->str() <<endl;
-      dbg << "that: "<<(meIt->second).first->first->str() << " =&gt; " << (meIt->second).first->second->str() << endl;
-      dbg << "thatIdx="<<thatIdx<<endl;
+      scope mapreg(txt()<<"mustEqual mapping "<<meIt->second.second<<": "<<(meIt->first)->first->str(), scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
+      if(AbstractObjectMapDebugLevel()>=2) {
+        dbg << "this: "<<meIt->first->first->str() << " =&gt; " << meIt->first->second->str() <<endl;
+        dbg << "that: "<<(meIt->second).first->first->str() << " =&gt; " << (meIt->second).first->second->str() << endl;
+        dbg << "thatIdx="<<thatIdx<<endl;
+      }
       
       // Copy over all the mappings from that->items from thatIt to meIt's partner in that->items
       // if they have not already been copied because elements that are mustEqual to each other were ordered
@@ -605,24 +622,25 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
           // Copy over the current element from that->items if it doesn't have a mustEqual 
           // partner in this->items (i.e. its already been handled)
           if(!(*thatMEIt)) {
-            if(AbstractObjectMapDebugLevel>=2) dbg << "Inserting at meIt->first="<<(meIt->first)->first->str()<<" mapping "<<thatIt->first->str()<<" ==&gt; "<<thatIt->second->str()<<endl;
+            if(AbstractObjectMapDebugLevel()>=2) dbg << "Inserting at meIt->first="<<(meIt->first)->first->str()<<" mapping "<<thatIt->first->str()<<" ==&gt; "<<thatIt->second->str()<<endl;
             // NOTE: we do not currently update the part field in the lattice thatIt->second
             //       to refer to this->latPEdge. Perhaps we should make a copy of it and update it.
             items.insert(meIt->first, *thatIt);
             modified = true;
           } else 
-            if(AbstractObjectMapDebugLevel>=2) dbg << "mustEqual partner exists in this"<<endl;
+            if(AbstractObjectMapDebugLevel()>=2) dbg << "mustEqual partner exists in this"<<endl;
         }
         // Advance thatIt and thatIdx once more to account for the partner in that->items 
         // of the current entry in this->items
         thatIt++;
         thatIdx++;
       }
+      //if(AbstractObjectMapDebugLevel()>=2) dbg << "modified="<<modified<<endl;
     }
     
     // Add all the elements from that->items that remain
     for(; thatIt!=that->items.end(); thatIt++) {
-      if(AbstractObjectMapDebugLevel>=2) dbg << "Pushing end "<<thatIt->first->str()<<" ==&gt; "<<thatIt->second->str()<<endl;
+      if(AbstractObjectMapDebugLevel()>=2) dbg << "Pushing end "<<thatIt->first->str()<<" ==&gt; "<<thatIt->second->str()<<endl;
       // NOTE: we do not currently update the part field in the lattice thatIt->second
       //       to refer to this->latPEdge. Perhaps we should make a copy of it and update it.
       items.push_back(*thatIt);
@@ -650,6 +668,7 @@ bool AbstractObjectMap::meetUpdate(Lattice* thatL)
   } catch (bad_cast & bc) { 
     assert(false);
   }
+  if(AbstractObjectMapDebugLevel()>=2) dbg << "Final modified="<<modified<<endl;
   return modified;
 }
 
@@ -701,11 +720,12 @@ bool AbstractObjectMap::compressMustEq()
 // Return true if this causes the object to change and false otherwise.
 bool AbstractObjectMap::compressDead()
 {
-  scope reg("compressDead", scope::low, AbstractObjectMapDebugLevel, 1);
+  scope reg("compressDead", scope::low, attrGE("AbstractObjectMapDebugLevel", 2));
   if(mapIsFull) { return false; }
         
   bool modified = false;
   for(list<MapElement>::iterator i = items.begin(); i != items.end(); ) {
+    if(AbstractObjectMapDebugLevel()>=2)
     dbg << "i: "<<i->first.get()->str()<<" ==&gt"<<endl<<
               "          "<<i->second.get()->str()<<endl;
     
@@ -714,7 +734,8 @@ bool AbstractObjectMap::compressDead()
       list<MapElement>::iterator nextI = i;
       nextI++;
       
-      dbg << "Erasing "<<i->first.get()->str()<<endl;
+      if(AbstractObjectMapDebugLevel()>=2)
+        dbg << "Erasing "<<i->first.get()->str()<<endl;
       items.erase(i);
       modified = true;
       

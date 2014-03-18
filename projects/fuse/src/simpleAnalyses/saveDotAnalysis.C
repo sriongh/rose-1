@@ -1,23 +1,38 @@
 #include "sage3basic.h"
 #include "saveDotAnalysis.h"
 #include "partitions.h"
+#include "compose.h"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
+
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 namespace fuse {
 /***********************
  *** SaveDotAnalysis ***
  ***********************/
 
-int saveDotAnalysisDebugLevel=1;
+DEBUG_LEVEL(saveDotAnalysisDebugLevel, 0);
 
 // Helper function to print Part information
 void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr part, string indent);
 // Edge printer
 void printEdge(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, bool isInEdge, string indent);
   
+std::string escapeDOT(std::string s)
+{
+  string out;
+  for(unsigned int i=0; i<s.length(); i++) {
+         if(s[i] == '"')  out += "\\\"";
+    else if(s[i] == '\n') out += "\\n";
+    else if(s[i] == '%')  out += "\\%";
+    else                  out += s[i];
+  }
+  return out;
+}
+
 // ---------------------------------------------
 // Generates a DOT graph that represents the given partition graph
 
@@ -28,7 +43,7 @@ void ats2dot(std::string fName, std::string graphName, set<PartPtr>& startParts,
   out.close();
   
   ostringstream cmd;
-  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png";
+  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png&";
   system(cmd.str().c_str());
 }
 
@@ -39,7 +54,7 @@ void ats2dot_bw(std::string fName, std::string graphName, set<PartPtr>& startPar
   out.close();
   
   ostringstream cmd;
-  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png";
+  cmd << "dot -Tpng "<<fName<<".dot -o "<<fName<<".png&";
   system(cmd.str().c_str());
 }
 
@@ -81,15 +96,16 @@ std::string DummyContext::str(std::string indent) { return ""; }
  ***** Ctxt2PartsMap *****
  *************************/
 
-Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
-      lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
+Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, 
+                             Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
+  mgen(mgen), lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
 {
   l = lgen->newLeaf();
 }
 
-Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, const list<list<PartContextPtr> >& key, 
-        PartPtr part, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
-  lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
+Ctxt2PartsMap::Ctxt2PartsMap(bool crossAnalysisBoundary, const list<list<PartContextPtr> >& key, PartPtr part, 
+                             Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
+  mgen(mgen), lgen(lgen), crossAnalysisBoundary(crossAnalysisBoundary)
 {
   l = lgen->newLeaf();
   crossAnalysisBoundary = false;
@@ -149,7 +165,8 @@ void Ctxt2PartsMap::insert(const list<list<PartContextPtr> >& key, PartPtr part)
   else {
     SubKey sk = getNextSubKey(key);
     crossAnalysisBoundary = sk.crossAnalysisBoundary;
-    if(m.find(sk.front) == m.end()) m[sk.front] = new Ctxt2PartsMap(false, lgen);
+    if(m.find(sk.front) == m.end()) m[sk.front] = mgen->newMap(false, mgen, lgen);
+            //new Ctxt2PartsMap(false, lgen);
     m[sk.front]->insert(sk.back, part);
   }
 }
@@ -186,10 +203,7 @@ void Ctxt2PartsMap::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& partI
     o << indent << "  style=filled;"<<endl;
     o << indent << "  rankdir=LR;"<<endl;
     string label = c->first.get()->str();
-    //cout << indent << "  i="<<i<<", label="<<label<<endl;
-    //std::replace(label.begin(), label.end(), string("\n"), string("\\n"));
-    boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
+    o << indent << "  label = \""<<escapeDOT(label)<<"\";"<<endl;
     c->second->map2dot(o, partInfo, subsubgraphName.str(), indent+"    ");
     o << indent << "}"<<endl;
   }
@@ -271,9 +285,7 @@ void Ctxt2PartsMap_Leaf::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& 
     o << indent << "  rankdir=TD;"<<endl;
     //o << "    ordering=out;"<<endl;
     string label = c->first.get()->str();
-    //std::replace(label.begin(), label.end(), string("\n"), string("\\n"));
-    boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
+    o << indent << "  label = \""<<escapeDOT(label)<<"\";"<<endl;
     // Sets of all the outgoing and incoming function call states
     set<PartPtr> funcCallsOut, funcCallsIn;
     
@@ -360,6 +372,12 @@ std::string Ctxt2PartsMap_Leaf::str(std::string indent) {
   return c2pMap;
 }*/
 
+class Ctxt2PartsMap_Generator_Base : public Ctxt2PartsMap_Generator {
+  public:
+  Ctxt2PartsMap* newMap(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) const
+  { return new Ctxt2PartsMap(crossAnalysisBoundary, mgen, lgen); }
+};
+
 class Ctxt2PartsMap_Leaf_Generator_Base : public Ctxt2PartsMap_Leaf_Generator {
   public:
   Ctxt2PartsMap_Leaf* newLeaf() const { return new Ctxt2PartsMap_Leaf(); }
@@ -367,7 +385,7 @@ class Ctxt2PartsMap_Leaf_Generator_Base : public Ctxt2PartsMap_Leaf_Generator {
 
 std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   // Maps parts to their unique IDs
@@ -379,17 +397,18 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
   //cout << "------------------------------------------------"<<endl;
   
   // Maps contexts to the set of parts in each context
-  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
+  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Generator_Base>(),
+                                  boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
   for(fw_partEdgeIterator state(startParts); state!=fw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
     }
     
     list<list<PartContextPtr> > key = part->getContext()->getDetailedPartContexts();
-    if(saveDotAnalysisDebugLevel>=1) dbg << "#key="<<key.size()<<endl;
+    if(saveDotAnalysisDebugLevel()>=1) dbg << "#key="<<key.size()<<endl;
     if(key.size()==0) {
       DummyContext d;
       key.push_back(d.getSubPartContexts());
@@ -410,7 +429,6 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
     
     if(state.getPartEdge()->source() && state.getPartEdge()->target())
       printEdge(edgesStr, partInfo, state.getPartEdge(), false, "  ");
-    
     /*list<PartEdgePtr> outEdges = part->outEdges();
     indent ind;
     for(list<PartEdgePtr>::iterator e=outEdges.begin(); e!=outEdges.end(); e++) {
@@ -464,7 +482,7 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
 
 std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& startParts, set<PartPtr>& endParts)
 {
-  scope reg("ats2dot_bw", scope::high, saveDotAnalysisDebugLevel, 1);
+  scope reg("ats2dot_bw", scope::high, attrGE("saveDotAnalysisDebugLevel", 1));
   o << "digraph " << graphName << " {"<<endl;
   
   //dbg << "#endParts="<<endParts.size()<<endl;
@@ -477,12 +495,13 @@ std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& 
   //cout << "------------------------------------------------"<<endl;
   
   // Maps contexts to the set of parts in each context
-  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
+  Ctxt2PartsMap ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Generator_Base>(),
+                                  boost::make_shared<Ctxt2PartsMap_Leaf_Generator_Base>());
   
   for(bw_partEdgeIterator state(endParts); state!=bw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
-    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, saveDotAnalysisDebugLevel, 1);
-    if(saveDotAnalysisDebugLevel>=1) {
+    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "state="<<state.str()<<endl;
       dbg << "*state="<<part->str()<<" context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
@@ -561,7 +580,7 @@ void printPart(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartPtr 
   // Add the last line in labelStr to labelMulLineStr
   labelMultLineStr += labelStr.substr(i, labelStr.length()-i);
   
-  o << labelMultLineStr <<"\", color=\"" << nodeColor << "\", fillcolor=\"white\", style=\"" << nodeStyle << "\", shape=\"" << nodeShape << "\"];\n";
+  o << escapeDOT(labelMultLineStr) <<"\", color=\"" << nodeColor << "\", fillcolor=\"white\", style=\"" << nodeStyle << "\", shape=\"" << nodeShape << "\"];\n";
 }
 
 // Edge printer
@@ -583,14 +602,14 @@ void printEdge(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdge
         booleanFalse = booleanFalse && !ValueObject::SgValue2Bool(v->second);
       }
     }
-
+    
     assert(!(booleanTrue && booleanFalse));
     if(booleanTrue)  color = "blue3";
     if(booleanFalse) color = "crimson";
   }
   
   o << indent << getPartUID(partInfo, e->source()) << " -> " << getPartUID(partInfo, e->target()) << 
-       " [label=\"" << escapeString(values.str()) << "\","<<
+       " [label=\"" << escapeDOT(values.str()) << "\","<<
        " style=\"" << (isInEdge ? "dotted" : "solid") << "\", " << 
        " color=\"" << color << "\"];\n";
 }

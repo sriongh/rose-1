@@ -13,7 +13,7 @@ namespace fuse
 // This is an analysis that implements the partition graph, ensuring that all dead paths are eliminated and not
 // shown to client analyses.
 
-extern int deadPathElimAnalysisDebugLevel;
+//extern int deadPathElimAnalysisDebugLevel;
 
 class DeadPathElimTransfer;
 class DeadPathElimAnalysis;
@@ -24,6 +24,7 @@ typedef CompSharedPtr<DeadPathElimPartEdge> DeadPathElimPartEdgePtr;
 
 // This object's current level in the lattice: (bottom, dead, live)
 enum DPELevel {bottom=0, dead=1, live=2};
+std::string DPELevel2Str(enum DPELevel level);
 
 class DeadPathElimPart : public Part//, public boost::enable_shared_from_this<DeadPathElimPart>
 {
@@ -31,6 +32,21 @@ class DeadPathElimPart : public Part//, public boost::enable_shared_from_this<De
   
   friend class DeadPathElimPartEdge;
   friend class DeadPathElimTransfer;
+  
+  bool cacheInitialized_outEdges;
+  std::list<PartEdgePtr> cache_outEdges;
+  bool cacheInitialized_inEdges;
+  std::list<PartEdgePtr> cache_inEdges;
+  bool cacheInitialized_CFGNodes;
+  std::set<CFGNode> cache_CFGNodes;
+  bool cacheInitialized_matchingCallParts;
+  std::set<PartPtr> cache_matchingCallParts;
+  bool cacheInitialized_inEdgeFromAny;
+  DeadPathElimPartEdgePtr cache_inEdgeFromAny;
+  bool cacheInitialized_outEdgeToAny;
+  DeadPathElimPartEdgePtr cache_outEdgeToAny;
+  std::map<DeadPathElimPart*, bool> cache_equal;
+  std::map<DeadPathElimPart*, bool> cache_less;
   
   public:
   DeadPathElimPart(PartPtr base, ComposedAnalysis* analysis);
@@ -80,6 +96,10 @@ class DeadPathElimPartEdge : public FiniteLattice, public PartEdge {
   // The part that this object is wrapping with live/dead status
   DeadPathElimPartPtr src;
   DeadPathElimPartPtr tgt;
+  
+  std::map<SgNode*, std::map<SgNode*, std::list<PartEdgePtr> > > cache_getOperandPartEdge;
+  std::map<CFGNode, boost::shared_ptr<SgValueExp> > cache_getPredicateValue;
+  bool cacheInitialized_getPredicateValue;
   
   // For edges from parts that contain CFGNodes that correspond to conditionals (if, switch, while test, etc.)
   // records a mapping from these CFGNodes to the value outcome that leads control along this edge.
@@ -201,9 +221,9 @@ class DeadPathElimPartEdge : public FiniteLattice, public PartEdge {
   bool setMLValueToFull(MemLocObjectPtr ml);
   
   // Returns whether this lattice denotes the set of all possible execution prefixes.
-  bool isFull();
+  bool isFullLat();
   // Returns whether this lattice denotes the empty set.
-  bool isEmpty();
+  bool isEmptyLat();
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
   bool isFull(PartEdgePtr pedge);
@@ -249,7 +269,10 @@ class DeadPathElimTransfer : public DFTransferVisitor
 
 class DeadPathElimAnalysis : public FWDataflow
 {
-  protected:
+  std::set<PartPtr> cache_GetStartAStates_Spec;
+  bool cacheInitialized_GetStartAStates_Spec;
+  std::set<PartPtr> cache_GetEndAStates_Spec;
+  bool cacheInitialized_GetEndAStates_Spec;
    
   public:
   DeadPathElimAnalysis();
@@ -270,12 +293,12 @@ class DeadPathElimAnalysis : public FWDataflow
                                                           std::vector<Lattice*> >& dfInfo);
   
   public:
-    
-  // Returns true if this ComposedAnalysis implements the partition graph and false otherwise
-  bool implementsPartGraph() { return true; }
-  
   std::set<PartPtr> GetStartAStates_Spec();
   std::set<PartPtr> GetEndAStates_Spec();
+  
+  // Returns whether this analysis implements an Abstract Transition System graph via the methods
+  // GetStartAStates_Spec() and GetEndAStates_Spec()
+  bool implementsATSGraph() { return true; }
   
   // Given a PartEdge pedge implemented by this ComposedAnalysis, returns the part from its predecessor
   // from which pedge was derived. This function caches the results if possible.

@@ -1,37 +1,41 @@
 #include "sage3basic.h"
-#include "widgets.h"
-#include "ats_graph.h"
+#include "compose.h"
 #include "saveDotAnalysis.h"
 #include "partitions.h"
 #include <fstream>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
+#include "ats_graph_structure.h"
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+using namespace sight::structure;
 
 namespace fuse {
 
-int ats2DotDebugLevel=0;
-/***************************************
- *** ATS Graph Visualizer for dbglog ***
- ***************************************/
+//int ats2DotDebugLevel=0;
+DEBUG_LEVEL(ats2DotDebugLevel, 0);
+
+/**************************************
+ *** ATS Graph Visualizer for Sight ***
+ **************************************/
 
 void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent);
 // Helper function to print Part information
 // doAnchorRankSame - if true, the anchors of this Part are placed on the same horizontal rank in the generated dot graph
 void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool doAnchorRankSame, string indent);
-void printPartEdge_atsGraph(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, 
+void printPartEdge_atsGraph(map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, 
                             bool isInEdge, string indent);
 
 /*************************
  ***** Ctxt2PartsMap *****
  *************************/
 
-Ctxt2PartsMap_atsGraph::Ctxt2PartsMap_atsGraph(bool crossAnalysisBoundary, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
-  Ctxt2PartsMap(crossAnalysisBoundary, lgen) {}
-Ctxt2PartsMap_atsGraph::Ctxt2PartsMap_atsGraph(bool crossAnalysisBoundary, const std::list<std::list<PartContextPtr> >& key, PartPtr part, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
-  Ctxt2PartsMap(crossAnalysisBoundary, key, part, lgen) {}
+Ctxt2PartsMap_atsGraph::Ctxt2PartsMap_atsGraph(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) : 
+  Ctxt2PartsMap(crossAnalysisBoundary, mgen, lgen) {}
+Ctxt2PartsMap_atsGraph::Ctxt2PartsMap_atsGraph(bool crossAnalysisBoundary, const std::list<std::list<PartContextPtr> >& key, PartPtr part, 
+        Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) :
+  Ctxt2PartsMap(crossAnalysisBoundary, key, part, mgen, lgen) {}
 
 // Prints out the hierarchical sub-graphs of Parts denoted by this map to the given output stream
 // partInfo: maps Parts to the information required to display them in the dot graph
@@ -43,17 +47,23 @@ void Ctxt2PartsMap_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, partDotI
   
   int i=0;
   for(std::map<PartContextPtr, Ctxt2PartsMap*>::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    ostringstream subsubgraphName; subsubgraphName << subgraphName<<"_N"<<i;
-    o << indent << "subgraph "<<subsubgraphName.str()<<"{"<<endl;
-    o << indent << "  color="<<(crossAnalysisBoundary?"red":"black")<<";"<<endl;
-    o << indent << "  fillcolor=lightgrey;"<<endl;
-    o << indent << "  style=filled;"<<endl;
-    //o << indent << "  rankdir=LR;"<<endl;
+    common::sightObj obj(new properties());
+
+    map<string, string> sgProps;
+    sgProps["name"] = txt()<<subgraphName<<"_N"<<i;
+    sgProps["crossAnalysisBoundary"] = (crossAnalysisBoundary? "1": "0");
+    sgProps["SgType"] = "context";
+    
     string label = c->first.get()->str();
     boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
-    c->second->map2dot(o, partInfo, subsubgraphName.str(), indent+"    ");
-    o << indent << "}"<<endl;
+    sgProps["label"] = label;
+
+    obj.props->add("atsSubGraph", sgProps);
+    dbg.enter(&obj);
+
+    c->second->map2dot(o, partInfo, txt()<<subgraphName<<"_N"<<i, indent+"    ");
+    
+    dbg.exit(&obj);
   }
 }
 
@@ -93,27 +103,62 @@ partStr getPartStr(std::map<PartPtr, partDotInfoPtr>& partInfo, PartPtr p, bool 
 // partInfo: maps Parts to the information required to display them in the dot graph
 // subgraphName: name of the subgraph that contains the current level in the map
 void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, partDotInfoPtr>& partInfo, std::string subgraphName, std::string indent) const {
-  scope reg(txt()<<"Ctxt2PartsMap_Leaf_atsGraph::map2dot() subgraphName="<<subgraphName<<" #m="<<m.size(), scope::medium, ats2DotDebugLevel, 2);
+  scope reg(txt()<<"Ctxt2PartsMap_Leaf_atsGraph::map2dot() subgraphName="<<subgraphName<<" #m="<<m.size(), scope::medium, attrGE("ats2DotDebugLevel", 2));
   
   if(m.size()==0) return;
   
   int i=0;
   for(map<PartContextPtr, set<PartPtr> >::const_iterator c=m.begin(); c!=m.end(); c++, i++) {
-    ostringstream subsubgraphName; subsubgraphName << subgraphName<<i;
-    o << indent << "subgraph "<<subsubgraphName.str()<<"{"<<endl;
-    o << indent << "  color=black;"<<endl;
-    o << indent << "  fillcolor=lightgrey;"<<endl;
-    o << indent << "  style=filled;"<<endl;
-    //o << indent << "  rankdir=TD;"<<endl;
+    common::sightObj subGraph(new properties());
+
+    map<string, string> sgProps;
+    sgProps["name"] = txt()<<subgraphName<<i;
+    sgProps["crossAnalysisBoundary"] = "0";
+    sgProps["SgType"] = "context";
+
     string label = c->first.get()->str();
     boost::replace_all(label, "\n", "\\n");
-    o << indent << "  label = \""<<label<<"\";"<<endl;
+    sgProps["label"] = label;
+    
+    // Set the entry nodes to the minimum position
+    bool sourceDiscovered=false;
+    ostringstream source;
+    for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
+      if(partInfo.find(*p) == partInfo.end()) continue;
+      
+      if((*p)->maySgNodeAny<SgFunctionParameterList>()) {
+        partStr ps = getPartStr(partInfo, *p, true);
+          
+        if(!sourceDiscovered) sourceDiscovered = true;
+        source << ps.anchor<<" ";
+      }
+    }
+    if(sourceDiscovered) sgProps["source"] = source.str();
+    
+    // Set the exit nodes to the maximum position
+    bool sinkDiscovered=false;
+    ostringstream sink;
+    for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
+      if(partInfo.find(*p) == partInfo.end()) continue;
+      
+      if((*p)->maySgNodeAny<SgFunctionDefinition>()) {
+        partStr ps = getPartStr(partInfo, *p, true);
+        
+        if(!sinkDiscovered) sinkDiscovered = true;
+        sink << ps.anchor<<" ";
+      }
+    }
+    if(sinkDiscovered) sgProps["sink"] = sink.str();
+    
+    subGraph.props->add("atsSubGraph", sgProps);
+    dbg.enter(&subGraph);
+    
     // Sets of all the outgoing and incoming function call states
     set<PartPtr> funcCallsOut, funcCallsIn;
     
     // Iterate over all the states in this context, printing them and recording the function calls
     for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
-      if(ats2DotDebugLevel>=2) dbg << "part="<<p->get()->str();
+      if(ats2DotDebugLevel()>=2) dbg << "part="<<p->get()->str();
       
       if(partInfo.find(*p) == partInfo.end()) continue;
       
@@ -129,88 +174,53 @@ void Ctxt2PartsMap_Leaf_atsGraph::map2dot(std::ostream& o, std::map<PartPtr, par
     // Add invisible edges between matching in-out function call states
     int inIdx=0;
     for(set<PartPtr>::iterator in=funcCallsIn.begin(); in!=funcCallsIn.end(); in++, inIdx++) {
+      common::sightObj callSG(new properties());
+      map<string, string> callSGProps;
+      callSGProps["name"] = txt()<<subgraphName<<i<<"_Call"<<inIdx;
+      callSGProps["crossAnalysisBoundary"] = "0";
+      callSGProps["SgType"] = "callEdges";
+      
       partStr psIn = getPartStr(partInfo, *in, true);
+      callSGProps["sink"] = psIn.anchor;
       
-      o << indent << "    subgraph "<<subsubgraphName.str()<<"_Call"<<inIdx<<"{"<<endl;
-      o << indent << "      style=invis;"<<endl;
-      //o << indent << inPartAnchor.str()<<endl;
-      printPart_atsGraph(o, partInfo[*in], *in, false, indent+"      ");
-      
-      ostringstream sink;
+      ostringstream source;
       int numMatchedCalls=0;
       for(set<PartPtr>::iterator out=funcCallsOut.begin(); out!=funcCallsOut.end(); out++) {
         if(in->get()->mayMatchFuncCall(*out)) {
           partStr psOut = getPartStr(partInfo, *out, true);
-          
-          printPart_atsGraph(o, partInfo[*out], *out, false, indent+"      ");
-          
-          /*o << indent << "      " << psOut.anchor << " -> " << psIn.anchor << 
-              "\t[lhead="<<psOut.part<<", "<<
-                 "ltain="<<psIn.part<<", "<<
-                 "style=\"solid\", color=\"green\"];" << endl;
-                  //"style=invis];" << endl;*/
-          //o << indent << outPartAnchor.str() <<endl;
-          sink << psOut.anchor << (numMatchedCalls==0? "": " ");
+          source << psOut.anchor << (numMatchedCalls==0? "": " ");
           numMatchedCalls++;
         }
       }
-      o << indent << "      { rank=sink; "<<psIn.anchor<<" }"<<endl;
-      o << indent << "      { rank=source; "<<sink.str()<<" }"<<endl;
-      o << indent << "    }" <<endl;
-    }
+      callSGProps["source"] = source.str();
       
-    // Set the entry nodes to the minimum position
-    bool sourceDiscovered=false;
-    for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
-      if(partInfo.find(*p) == partInfo.end()) continue;
+      callSG.props->add("atsSubGraph", callSGProps);
+      dbg.enter(&callSG);
       
-      if((*p)->maySgNodeAny<SgFunctionParameterList>()) {
-        partStr ps = getPartStr(partInfo, *p, true);
-          
-        if(!sourceDiscovered) {
-          o << indent << "  { rank=source; ";
-          sourceDiscovered = true;
+      printPart_atsGraph(o, partInfo[*in], *in, false, indent+"      ");
+      
+      for(set<PartPtr>::iterator out=funcCallsOut.begin(); out!=funcCallsOut.end(); out++) {
+        if(in->get()->mayMatchFuncCall(*out)) {         
+          printPart_atsGraph(o, partInfo[*out], *out, false, indent+"      ");
         }
-        o << ps.anchor<<"; ";
       }
-    }
-    if(sourceDiscovered) o << "};"<<endl;
-    
-    // Set the exit nodes to the maximum position
-    bool sinkDiscovered=false;
-    for(set<PartPtr>::iterator p=c->second.begin(); p!=c->second.end(); p++) {
-      if(partInfo.find(*p) == partInfo.end()) continue;
       
-      if((*p)->maySgNodeAny<SgFunctionDefinition>()) {
-        partStr ps = getPartStr(partInfo, *p, true);
-        
-        if(!sinkDiscovered) {
-          o << indent << "  { rank=sink; ";
-          sinkDiscovered = true;
-        }
-        o << ps.anchor<<"; ";
-      }
+      dbg.exit(&callSG);
     }
-    if(sinkDiscovered) o << "};"<<endl;
-    
-    o << indent << "}"<< endl;
+    dbg.exit(&subGraph);
   }
 }
 
 // Helper function to print Part anchor information
 void printAnchor_atsGraph(std::ostream &o, anchor a, string label, string indent)
 {
-  std::string nodeColor = "black";
-  std::string nodeStyle = "solid";
-  std::string nodeShape = "box";
-  
-  o << indent << "a"<<a.getID() << " "<<
-               "[label=\""<<label<<"\", "<<//\"a"<<a.getID()<<"\", "<<
-                "color=\"" << nodeColor << "\", "<<
-                "fillcolor=\"white\", "<<
-                "style=\"" << nodeStyle << "\", "<<
-                "shape=\"" << nodeShape << "\", "<<
-                "href=\"javascript:"<<a.getLinkJS()<<"\"];\n";
+  common::sightObj anchorObj(new properties());
+  map<string, string> anchorProps;
+  anchorProps["label"] = label;
+  anchorProps["anchorID"] = txt()<<a.getID();
+
+  anchorObj.props->add("atsGraphAnchor", anchorProps);
+  dbg.tag(&anchorObj);
 }
 
 // Helper function to print Part information
@@ -219,12 +229,12 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
 {
   //assert(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info));
   
-  o << indent << "subgraph clusterPart"<<boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->partID<<"{"<<endl;
-  o << indent << "  color=black;"<<endl;
-  o << indent << "  fillcolor=lightsteelblue;"<<endl;
-  o << indent << "  style=filled;"<<endl;
-  //o << indent << "  rankdir=LR;"<<endl;
-  o << indent << "  label=\"";
+  common::sightObj partObj(new properties());
+  map<string, string> partProps;
+  partProps["name"] = txt()<<"clusterPart"<<boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->partID;
+  partProps["crossAnalysisBoundary"] = "0";
+  partProps["SgType"] = "part";
+  
   set<CFGNode> nodes = part->CFGNodes();
   ostringstream label;
   for(set<CFGNode>::iterator n=nodes.begin(); n!=nodes.end(); n++) {
@@ -259,10 +269,21 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
   // Add the last line in labelStr to labelMulLineStr
   labelMultLineStr += labelStr.substr(i, labelStr.length()-i);
   
-  o << labelMultLineStr <<"\";"<<endl;
+  partProps["label"] = labelMultLineStr;
+  
+  list<anchor>& anchors = boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->anchors;
+  if(doAnchorRankSame) {
+    // Ensure that all anchors in this part are on the same horizontal level
+    ostringstream same;
+    for(list<anchor>::iterator a=anchors.begin(); a!=anchors.end(); a++)
+      same << "a" << a->getID() << " ";
+    partProps["same"] = same.str();
+  }
+  
+  partObj.props->add("atsSubGraph", partProps);
+  dbg.enter(&partObj);
   
   // Print all the anchors inside this Part
-  list<anchor>& anchors = boost::dynamic_pointer_cast<partDotInfo_atsGraph>(info)->anchors;
   int j=0;
   for(list<anchor>::iterator a=anchors.begin(); a!=anchors.end(); a++, j++) {
     printAnchor_atsGraph(o, *a, txt()<<"*"<<j<<"*", indent+"    ");
@@ -274,19 +295,11 @@ void printPart_atsGraph(std::ostream &o, partDotInfoPtr info, PartPtr part, bool
       o << indent << "    a"<<a->getID() << " -> a"<<nextA->getID() << " [style=invis]" << endl;*/
   }
   
-  if(doAnchorRankSame) {
-    // Ensure that all anchors in this part are on the same horizontal level
-    o << indent << "    {rank=same ";
-    for(list<anchor>::iterator a=anchors.begin(); a!=anchors.end(); a++)
-      o << "a" << a->getID() << " ";
-    o << "}"<<endl;
-  }
-  
-  o << indent << "}" <<endl;
+  dbg.exit(&partObj);
 }
 
 // Printer for edges between Part clusters
-void printPartEdge_atsGraph(std::ostream &o, map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, 
+void printPartEdge_atsGraph(map<PartPtr, partDotInfoPtr>& partInfo, PartEdgePtr e, 
                             bool isInEdge, string indent)
 {
   /*map<CFGNode, boost::shared_ptr<SgValueExp> > pv = e->getPredicateValue();
@@ -323,27 +336,33 @@ void printPartEdge_atsGraph(std::ostream &o, map<PartPtr, partDotInfoPtr>& partI
 }
 
 // Printer for edges between individual anchor nodes 
-void printAnchorEdge_atsGraph(std::ostream &o, anchor fromAnchor, PartPtr fromPart, 
-                                               anchor toAnchor,   PartPtr toPart, string indent)
+void printAnchorEdge_atsGraph(anchor fromAnchor, PartPtr fromPart, 
+                              anchor toAnchor,   PartPtr toPart, string indent)
+
 {
-  if(toAnchor.isLocated()) {
-    string style = "solid";
-    string color = "black";
-    int weight=100;
+  // !! Need to figure out whether the anchor ever got connected to a real spot in the output
+  //if(toAnchor.isLocated()) {
+    common::sightObj obj(new properties());
+
+    map<string, string> newProps;
     
-    // If this edge crosses function boundaries, reduce its weight
+    // Record whether this edge crosses function boundaries
     set<CFGNode> matchNodes;
-    if(toPart->mayIncomingFuncCall(matchNodes) || fromPart->mayOutgoingFuncCall(matchNodes))
-      weight = 1;
-    
-    /*dbg << "a"<<e.getFrom().getID() << " -> a" << e.getTo().getID() << 
-         " [style=\"" << style << "\", " << 
-          " color=\"" << color << "\"];\n";*/
-    o << indent << "a"<<fromAnchor.getID() << " -> a" << toAnchor.getID() << 
-         " [style=\"" << style << "\", " << 
-          " color=\"" << color << "\", weight="<<weight<<"];\n";
-  }
+    newProps["crossFunc"] = (toPart->mayIncomingFuncCall(matchNodes) || fromPart->mayOutgoingFuncCall(matchNodes)? "1": "0");
+    newProps["from"] = txt()<<fromAnchor.getID();
+    newProps["to"]   = txt()<<toAnchor.getID();
+    obj.props->add("atsGraphEdge", newProps);
+
+    //dbg.tag("dirEdge", properties, false);
+    dbg.tag(&obj);
+  //}
 }
+
+class Ctxt2PartsMap_Generator_atsGraph : public Ctxt2PartsMap_Generator {
+  public:
+  Ctxt2PartsMap* newMap(bool crossAnalysisBoundary, Ctxt2PartsMap_GeneratorPtr mgen, Ctxt2PartsMap_Leaf_GeneratorPtr lgen) const
+  { return new Ctxt2PartsMap_atsGraph(crossAnalysisBoundary, mgen, lgen); }
+};
 
 class Ctxt2PartsMap_Leaf_Generator_atsGraph : public Ctxt2PartsMap_Leaf_Generator {
   public:
@@ -359,36 +378,69 @@ class Ctxt2PartsMap_Leaf_Generator_atsGraph : public Ctxt2PartsMap_Leaf_Generato
 // partAnchors - maps each Part in the ATS to the anchors that point to blocks associated with it
 // dirAligned - true if the edges between anchors are pointing in the same direction as the ATS flow of control
 //    and false if they point in the opposite direcction
-atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel, int targetDebugLevel) :
-  graph(curDebugLevel, targetDebugLevel), partAnchors(partAnchors), dirAligned(dirAligned)
+atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, properties* props) :
+  graph(setProperties(startPart, partAnchors, dirAligned, NULL, props)), partAnchors(partAnchors), dirAligned(dirAligned)
 {
-  if(!active) return;
+  if(!props->active) return;
 
   startParts.insert(startPart);
 }
 
-atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, int curDebugLevel, int targetDebugLevel) :
-  graph(curDebugLevel, targetDebugLevel), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, properties* props) :
+  graph(setProperties(startParts, partAnchors, dirAligned, NULL, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+{ }
+
+atsGraph::atsGraph(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp, properties* props) :
+  graph(onoffOp, setProperties(startPart, partAnchors, dirAligned, &onoffOp, props)), partAnchors(partAnchors), dirAligned(dirAligned)
 {
-  if(!active) return;
+  if(!props->active) return;
+
+  startParts.insert(startPart);
+}
+
+atsGraph::atsGraph(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > > partAnchors, bool dirAligned, const attrOp& onoffOp, properties* props) :
+  graph(onoffOp, setProperties(startParts, partAnchors, dirAligned, &onoffOp, props)), startParts(startParts), partAnchors(partAnchors), dirAligned(dirAligned)
+{ }
+
+properties* atsGraph::setProperties(PartPtr startPart, boost::shared_ptr<map<PartPtr, list<anchor> > >& partAnchors, bool dirAligned, const attrOp* onoffOp, properties* props) {
+  set<PartPtr> startParts;
+  startParts.insert(startPart);
+  return setProperties(startParts, partAnchors, dirAligned, onoffOp, props);
+}
+
+properties* atsGraph::setProperties(std::set<PartPtr>& startParts, boost::shared_ptr<map<PartPtr, list<anchor> > >& partAnchors, bool dirAligned, const attrOp* onoffOp, properties* props) {
+  if(props==NULL) props = new properties();
+
+  // If the current attribute query evaluates to true (we're emitting debug output) AND
+  // either onoffOp is not provided or its evaluates to true
+  if(attributes.query() && (onoffOp? onoffOp->apply(): true)) {
+    props->active = true;
+    map<string, string> newProps;
+    newProps["dirAligned"] = (dirAligned? "1": "0");
+    props->add("atsGraph", newProps);
+  }
+  else
+    props->active = false;
+  return props;
 
 }
 
 atsGraph::~atsGraph() {
-  if(!active) return;
+  if(!props->active) return;
   
   int partID=0;
   for(map<PartPtr, list<anchor> >::iterator pa=partAnchors->begin(); pa!=partAnchors->end(); pa++, partID++) {
     partInfo[pa->first] = boost::make_shared<partDotInfo_atsGraph>(partID, pa->second);
     
     PartPtr p = pa->first;
-    if(ats2DotDebugLevel>=2) dbg << "Adding "<<p->str()<<endl;
+    if(ats2DotDebugLevel()>=2) dbg << "Adding "<<p->str()<<endl;
   }
   
   for(map<PartPtr, list<anchor> >::iterator pa=partAnchors->begin(); pa!=partAnchors->end(); pa++) {
     // Each anchor must be associated with exactly one Part
     for(list<anchor>::iterator a=pa->second.begin(); a!=pa->second.end(); a++) {
       assert(anchor2Parts.find(*a) == anchor2Parts.end());
+      //cout << "anchor "<<a->getID()<<" => "<<pa->first.get()->str()<<endl;
       anchor2Parts[*a] = pa->first;
     }
   }
@@ -400,30 +452,21 @@ atsGraph::~atsGraph() {
     if(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(pi->second)->anchors.size()==0) {
       boost::dynamic_pointer_cast<partDotInfo_atsGraph>(pi->second)->anchors.push_back(anchor());
       PartPtr p = pi->first;
-      if(ats2DotDebugLevel>=2) dbg << "Blank mapping to "<<p->str()<<endl;
+      if(ats2DotDebugLevel()>=2) dbg << "Blank mapping to "<<p->str()<<endl;
     }
   }
   
-  if(!graphOutput) {
-    outputCanvizDotGraph(genDotGraph());
-  }
+  genDotGraph();
 }
 
 // Generates and returns the dot graph code for this graph
-string atsGraph::genDotGraph()
+void atsGraph::genDotGraph()
 {
-  scope s("dot", scope::medium, ats2DotDebugLevel, 1);
-  
-  ostringstream o;
-  
-  o << "digraph atsGraph {"<<endl;
-  o << "  compound=true;"<<endl;
-  o << "  rankdir="<<(dirAligned? "TD": "DT")<<";"<<endl;
-  // Stores all the text generated to specify edges
-  ostringstream partEdgesStr;
+  scope s("dot", scope::medium, attrGE("ats2DotDebugLevel", 1));
   
   // Maps contexts to the set of parts in each context
-  Ctxt2PartsMap_atsGraph ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Leaf_Generator_atsGraph>());
+  Ctxt2PartsMap_atsGraph ctxt2parts(false, boost::make_shared<Ctxt2PartsMap_Generator_atsGraph>(),
+                                           boost::make_shared<Ctxt2PartsMap_Leaf_Generator_atsGraph>());
   for(fw_partEdgeIterator state(startParts); state!=fw_partEdgeIterator::end(); state++) {
     PartPtr part = state.getPart();
     
@@ -436,15 +479,13 @@ string atsGraph::genDotGraph()
     
     // Generate edges between part clusters
     if(state.getPartEdge()->source() && state.getPartEdge()->target()) {
-      printPartEdge_atsGraph(partEdgesStr, partInfo, state.getPartEdge(), false, "  ");
+      printPartEdge_atsGraph(partInfo, state.getPartEdge(), false, "  ");
       //list<anchors>& sAnchors = boost::dynamic_pointer_cast<partDotInfo_atsGraph>(partInfo[state.getPartEdge()->source()])->anchors;
       //list<anchors>& tAnchors = boost::dynamic_pointer_cast<partDotInfo_atsGraph>(partInfo[state.getPartEdge()->target()])->anchors;
     }
   }
   
-  ctxt2parts.map2dot(o, partInfo);
-
-  o << partEdgesStr.str();
+  ctxt2parts.map2dot(cout, partInfo);
   
   // Generate edges between anchor nodes
   
@@ -462,15 +503,26 @@ string atsGraph::genDotGraph()
     fromto[edge.getFrom()].insert(edge.getTo());
   }
   
+  /*cout << "#edges="<<edges.size()<<", #uniqueEdges="<<uniqueEdges.size()<<endl;* /
+  cout << "anchor2Parts="<<endl;
+  for(map<anchor, PartPtr>::iterator i=anchor2Parts.begin(); i!=anchor2Parts.end(); i++)
+    cout << i->first.str() << " => " << i->second.get()->str()<<endl;
+  for(set<graphEdge>::iterator e=uniqueEdges.begin(); e!=uniqueEdges.end(); e++)
+    cout << e->getFrom().getID() << " => " << e->getTo().getID()<<endl;*/
+  
   {
-  scope se("Edges", scope::medium, ats2DotDebugLevel, 1);
+  scope se("Edges", scope::medium, attrGE("ats2DotDebugLevel", 1));
   for(set<graphEdge>::iterator e=uniqueEdges.begin(); e!=uniqueEdges.end(); e++) {
   //for(map<anchor, set<anchor> >::iterator from=uniqueEdges.begin(); from!=uniqueEdges.end(); from++) {
   //for(set<anchor>::iterator to=from->second.begin(); to!=from->second.end(); to++) {
     graphEdge edge = *e;
-    if(ats2DotDebugLevel>=1) dbg << "edge "<<edge.getFrom().str()<<" => "<<edge.getTo().str()<<endl;
-    printAnchorEdge_atsGraph(o, edge.getFrom(), anchor2Parts[edge.getFrom()], 
-                                edge.getTo(),   anchor2Parts[edge.getTo()], "  ");
+    if(ats2DotDebugLevel()>=1) dbg << "edge "<<edge.getFrom().str()<<" => "<<edge.getTo().str()<<endl;
+    /*cout << "edge "<<edge.getFrom().str()<<"("<<(anchor2Parts.find(edge.getFrom())!=anchor2Parts.end())<<") => "<<
+                     edge.getTo().str()<<"("<<(anchor2Parts.find(edge.getTo())!=anchor2Parts.end())<<")"<<endl;*/
+    if(anchor2Parts.find(edge.getFrom()) != anchor2Parts.end() && 
+       anchor2Parts.find(edge.getTo())   != anchor2Parts.end())
+          printAnchorEdge_atsGraph(edge.getFrom(), anchor2Parts[edge.getFrom()], 
+                                   edge.getTo(),   anchor2Parts[edge.getTo()], "  ");
     
     // All the anchors associated with the from anchor's Part
 /*    assert(boost::dynamic_pointer_cast<partDotInfo_atsGraph>(partInfo[anchor2Parts[edge.getFrom()]]));
@@ -483,9 +535,14 @@ string atsGraph::genDotGraph()
     }*/
   }
   }
-  
-  o << "}"<<endl;
-  return o.str();
 }
+
+// Add a directed edge from the location of the from anchor to the location of the to anchor
+void atsGraph::addDirEdge(anchor from, anchor to)
+{ edges.push_back(graphEdge(from, to, true)); }
+
+// Add an undirected edge between the location of the a anchor and the location of the b anchor
+void atsGraph::addUndirEdge(anchor a, anchor b)
+{ edges.push_back(graphEdge(a, b, false)); }
 
 }; // namespace fuse
