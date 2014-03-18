@@ -136,10 +136,10 @@ public:
   // Returns whether this lattice denotes the empty set.
   bool isEmptyLat();
 
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   // Variant of the str method that can produce information specific to the current PartEdge.
   // Useful since AbstractObjects can change from one PartEdge to another.
-  std::string strp(PartEdgePtr pedge, std::string indent="");
+  std::string strp(PartEdgePtr pedge, std::string indent="") const;
 
   // initializes this Lattice to its default state, if it is not already initialized
   void initialize();

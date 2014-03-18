@@ -264,7 +264,7 @@ public:
   AbstractObjectPtr copyAO() const
   { return copyCL(); }
   
-  virtual std::string str(std::string indent=""); // pretty print for the object
+  virtual std::string str(std::string indent="") const; // pretty print for the object
 };
 
 // The combination of multiple CodeLocObjects. Maintains multiple CodeLocObjects and responds to
@@ -314,7 +314,7 @@ class CombinedCodeLocObject: public CodeLocObject
   // Allocates a copy of this object and returns a pointer to it
   CodeLocObjectPtr copyCL() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CombinedCodeLocObject<false> IntersectCodeLocObject;
 typedef boost::shared_ptr<IntersectCodeLocObject> IntersectCodeLocObjectPtr;
@@ -487,7 +487,7 @@ class UnknownValueObject : public ValueObject
   // Allocates a copy of this object and returns a pointer to it
   ValueObjectPtr copyV() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 // The combination of multiple ValueObjects. Maintains multiple ValueObjects and responds to
@@ -546,7 +546,7 @@ class CombinedValueObject : public ValueObject
   // Allocates a copy of this object and returns a pointer to it
   ValueObjectPtr copyV() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CombinedValueObject<false> IntersectValueObject;
 typedef boost::shared_ptr<IntersectValueObject> IntersectValueObjectPtr;
@@ -712,8 +712,7 @@ class FuncResultMemRegionObject : public MemRegionObject
   // Returns a ValueObject that denotes the size of this memory region
   ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
   
-  std::string str(std::string indent="") const { return "FuncResultMemRegionObject"; }
-  std::string str(std::string indent="")       { return "FuncResultMemRegionObject"; }
+  std::string str(std::string indent="") const { return "FuncResultMemRegionObject"; }  
   std::string strp(PartEdgePtr pedge, std::string indent="") { return "FuncResultMemRegionObject"; }
   
   // Allocates a copy of this object and returns a pointer to it
@@ -779,7 +778,7 @@ class CombinedMemRegionObject : public virtual MemRegionObject
   // Returns a ValueObject that denotes the size of this memory region
   ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CombinedMemRegionObject<false> IntersectMemRegionObject;
 typedef boost::shared_ptr<IntersectMemRegionObject> IntersectMemRegionObjectPtr;
@@ -926,7 +925,7 @@ public:
   static bool isMemExpr(SgExpression* expr)
   { return isSgVarRefExp(expr) || isSgPntrArrRefExp(expr) || isSgPointerDerefExp(expr); }
   
-  virtual std::string str(std::string indent=""); // pretty print for the object
+  virtual std::string str(std::string indent="") const; // pretty print for the object
 }; // MemLocObject
 
 // Special MemLocObject used internally by the framework to associate with the return value of a function.
@@ -938,7 +937,6 @@ class FuncResultMemLocObject : public MemLocObject
   FuncResultMemLocObject(const FuncResultMemLocObject& that);
   
   std::string str(std::string indent="") const { return "FuncResultMemLocObject"; }
-  std::string str(std::string indent="")       { return "FuncResultMemLocObject"; }
   std::string strp(PartEdgePtr pedge, std::string indent="") { return "FuncResultMemLocObject"; }
   
   // Allocates a copy of this object and returns a shared pointer to it
@@ -998,7 +996,7 @@ class CombinedMemLocObject : public virtual MemLocObject
   // Returns whether this AbstractObject denotes the empty set.
   bool isEmptyML(PartEdgePtr pedge);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CombinedMemLocObject<false> IntersectMemLocObject;
 typedef boost::shared_ptr<IntersectMemLocObject> IntersectMemLocObjectPtr;
@@ -1026,7 +1024,7 @@ class IndexVector
   // the index vector's length
   size_t getSize(PartEdgePtr pedge);
   //virtual std::string str(const std::string& indent);
-  virtual std::string str(std::string indent=""); // pretty print for the object
+  virtual std::string str(std::string indent="") const; // pretty print for the object
 
   // Allocates a copy of this object and returns a pointer to it
   virtual IndexVectorPtr copyIV() const=0;

@@ -3,20 +3,16 @@
 #include "abstract_object_map.h"
 #include "nodeState.h"
 #include "analysis.h"
-#include "uniqueNameTraversal.h"
-#include "defsAndUsesTraversal.h"
-#include "iteratedDominanceFrontier.h"
-#include "controlDependence.h"
 
 #define foreach BOOST_FOREACH
 #define reverse_foreach BOOST_REVERSE_FOREACH
 
 using namespace std;
 using namespace boost;
-using namespace ssa_private;
 using namespace sight;
 
 namespace fuse {
+
 DEBUG_LEVEL(AbstractObjectMapDebugLevel, 0);
 
 // Set this Lattice object to represent the set of all possible execution prefixes.
@@ -87,19 +83,19 @@ bool AbstractObjectMap::isEmptyLat()
   return true;
 }
 
-std::string AbstractObjectMap::str(std::string indent) {
+std::string AbstractObjectMap::str(std::string indent) const {
   return strp(latPEdge, indent);
 }
 
 // Variant of the str method that can produce information specific to the current Part.
 // Useful since AbstractObjects can change from one Part to another.
-std::string AbstractObjectMap::strp(PartEdgePtr pedge, std::string indent)
+std::string AbstractObjectMap::strp(PartEdgePtr pedge, std::string indent) const
 {
   ostringstream oss;
   oss << "[AbstractObjectMap: "; //("<<pedge->str()<<"): ";
   
   //printf("[AbstractObjectMap: "); fflush(stdout);
-  for(list<MapElement>::iterator it = items.begin();
+  for(list<MapElement>::const_iterator it = items.begin();
        it != items.end(); it++) {
     //printf("\n%s%p =&gt; %p\n", indent.c_str(), it->first.get(), it->second.get()); fflush(stdout);
     oss << endl;

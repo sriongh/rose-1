@@ -84,7 +84,7 @@ class SyntacticAnalysis : virtual public UndirDataflow
   bool implementsATSGraph() { return true; }
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "SyntacticAnalysis"; }
 }; // SyntacticAnalysis
 
@@ -122,7 +122,7 @@ class StxFuncContext: public PartContext
   bool operator==(const PartContextPtr& that) const;
   bool operator< (const PartContextPtr& that) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CompSharedPtr<StxFuncContext> StxFuncContextPtr;
 
@@ -181,7 +181,7 @@ class StxPart : public Part
   bool equal(const PartPtr& o) const;
   bool less (const PartPtr& o) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 extern StxPartPtr NULLStxPart;
 
@@ -225,7 +225,7 @@ class StxPartEdge : public PartEdge
   bool equal(const PartEdgePtr& o) const;
   bool less (const PartEdgePtr& o) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 extern StxPartEdgePtr NULLStxPartEdge;
 
@@ -273,7 +273,7 @@ class StxValueObject : public ValueObject
   // the normal ROSE mechanisms to decode it
   std::set<boost::shared_ptr<SgValueExp> > getConcreteValue();
   
-  std::string str(std::string indent); // pretty print for the object
+  std::string str(std::string indent) const; // pretty print for the object
     
   // Allocates a copy of this object and returns a pointer to it
   ValueObjectPtr copyV() const;
@@ -406,7 +406,7 @@ class StxMemRegionObject : public MemRegionObject
   // Allocates a copy of this object and returns a pointer to it
   MemRegionObjectPtr copyMR() const;
   
-  std::string str(std::string indent=""); // pretty print for the object
+  std::string str(std::string indent="") const; // pretty print for the object
 };
 typedef boost::shared_ptr<StxMemRegionObject> StxMemRegionObjectPtr;
         
@@ -438,7 +438,7 @@ class StxExprMemRegionType : public StxMemRegionType
   // Returns true if this object is live at the given part and false otherwise
   bool isLiveMR(PartEdgePtr pedge);
   
-  std::string str(std::string indent); // pretty print for the object
+  std::string str(std::string indent) const; // pretty print for the object
 };
 
 // The memory regions of named global or stack variables
@@ -471,7 +471,7 @@ class StxNamedMemRegionType : public StxMemRegionType
   // Returns true if this object is live at the given part and false otherwise
   bool isLiveMR(PartEdgePtr pedge);
   
-  std::string str(std::string indent); // pretty print for the object
+  std::string str(std::string indent) const; // pretty print for the object
 };
 
 // The single memory region that contains all regions in stack+globals+heap
@@ -501,7 +501,7 @@ class StxStorageMemRegionType : public StxMemRegionType
   // Returns true if this object is live at the given part and false otherwise
   bool isLiveMR(PartEdgePtr pedge) { return true; }
   
-  std::string str(std::string indent); // pretty print for the object
+  std::string str(std::string indent) const; // pretty print for the object
 };
 
 // The single memory region that contains all regions in stack+globals+heap as well as all expression regions
@@ -528,7 +528,7 @@ class StxAllMemRegionType : public StxMemRegionType
   // Returns true if this object is live at the given part and false otherwise
   bool isLiveMR(PartEdgePtr pedge) { return true; }
   
-  std::string str(std::string indent); // pretty print for the object
+  std::string str(std::string indent) const; // pretty print for the object
 };
 
 }; //namespace fuse

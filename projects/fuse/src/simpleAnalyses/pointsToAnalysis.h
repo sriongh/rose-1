@@ -81,7 +81,7 @@ namespace fuse
     MemLocObjectPtr Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge);
     bool implementsExpr2MemLoc   () { return false; }
     implTightness Expr2MemLocTightness()    { return loose; }
-    std::string str(std::string indent); 
+    std::string str(std::string indent) const; 
 
     friend class PointsToAnalysisTransfer;
 
@@ -131,7 +131,7 @@ namespace fuse
     PointsToML(MemLocObjectPtr _mem) : MemLocObject(NULL), UnionMemLocObject(_mem) { }
     PointsToML(std::list<MemLocObjectPtr> _lml) : MemLocObject(NULL), UnionMemLocObject(_lml) { }       
         
-    std::string str(std::string indent)
+    std::string str(std::string indent) const
     {
       std::ostringstream oss;
       oss << "[PointsToML: " << UnionMemLocObject::str(indent) << "]";

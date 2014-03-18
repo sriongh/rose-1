@@ -296,7 +296,7 @@ CodeLocObjectPtr CodeLocObject::copyCL() const
 CodeLocObject* CodeLocObject::copyCLPtr() const
 { return new CodeLocObject(*this); }
 
-std::string CodeLocObject::str(std::string indent) { // pretty print for the object
+std::string CodeLocObject::str(std::string indent) const { // pretty print for the object
   ostringstream oss; 
   oss << "[CodeLocObject: part="<<(part? part->str(indent+"    "): "ANY")<<", "<<endl;
   oss << indent << "                cfgNode="<<(cfgNode.getNode()? CFGNode2Str(cfgNode): "ANY")<<"]";
@@ -474,12 +474,12 @@ CodeLocObjectPtr CombinedCodeLocObject<defaultMayEq>::copyCL() const
 { return boost::make_shared<CombinedCodeLocObject>(codeLocs); }
 
 template <bool defaultMayEq>
-std::string CombinedCodeLocObject<defaultMayEq>::str(std::string indent)
+std::string CombinedCodeLocObject<defaultMayEq>::str(std::string indent) const
 {
   ostringstream oss;
   if(codeLocs.size()>1) oss << "["<<(defaultMayEq? "UnionCL" : "IntersectCL")<<": ";
   if(codeLocs.size()>1) oss << endl;
-  for(list<CodeLocObjectPtr>::iterator cl=codeLocs.begin(); cl!=codeLocs.end(); ) {
+  for(list<CodeLocObjectPtr>::const_iterator cl=codeLocs.begin(); cl!=codeLocs.end(); ) {
     if(cl!=codeLocs.begin()) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << (*cl)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;");
     cl++;
@@ -739,7 +739,7 @@ set<boost::shared_ptr<SgValueExp> > UnknownValueObject::getConcreteValue()
 ValueObjectPtr UnknownValueObject::copyV() const
 { return boost::make_shared<UnknownValueObject>(); }
 
-std::string UnknownValueObject::str(std::string indent)
+std::string UnknownValueObject::str(std::string indent) const
 { return "[UnknownValueObject]"; }
 
 /* ################################
@@ -965,12 +965,12 @@ ValueObjectPtr CombinedValueObject<defaultMayEq>::copyV() const
 { return boost::make_shared<CombinedValueObject>(vals); }
 
 template <bool defaultMayEq>
-std::string CombinedValueObject<defaultMayEq>::str(std::string indent)
+std::string CombinedValueObject<defaultMayEq>::str(std::string indent) const
 {
   ostringstream oss;
   if(vals.size()>1) oss << "["<<(defaultMayEq? "UnionV" : "IntersectV")<<": ";
   if(vals.size()>1) oss << endl;
-  for(list<ValueObjectPtr>::iterator v=vals.begin(); v!=vals.end(); ) {
+  for(list<ValueObjectPtr>::const_iterator v=vals.begin(); v!=vals.end(); ) {
     if(v!=vals.begin()) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << (*v)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;");
     v++;
@@ -1437,12 +1437,12 @@ ValueObjectPtr CombinedMemRegionObject<defaultMayEq>::getRegionSize(PartEdgePtr 
 }
 
 template <bool defaultMayEq>
-std::string CombinedMemRegionObject<defaultMayEq>::str(std::string indent)
+std::string CombinedMemRegionObject<defaultMayEq>::str(std::string indent) const
 {
   ostringstream oss;
   if(memRegions.size()>1) oss << "["<<(defaultMayEq? "UnionMR" : "IntersectMR")<<": ";
   if(memRegions.size()>1) oss << endl;
-  for(list<MemRegionObjectPtr>::iterator mr=memRegions.begin(); mr!=memRegions.end(); ) {
+  for(list<MemRegionObjectPtr>::const_iterator mr=memRegions.begin(); mr!=memRegions.end(); ) {
     if(mr!=memRegions.begin()) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << (*mr)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;");
     mr++;
@@ -1643,7 +1643,7 @@ MemLocObject* MemLocObject::copyMLPtr() const
 { return new MemLocObject(*this); }
 
 
-std::string MemLocObject::str(std::string indent) { // pretty print for the object
+std::string MemLocObject::str(std::string indent) const { // pretty print for the object
   ostringstream oss; 
   oss << "[MemLocObject region="<<region->str(indent+"    ");
   if(index) {
@@ -1840,12 +1840,12 @@ MemLocObjectPtr CombinedMemLocObject<defaultMayEq>::copyML() const
 { return boost::make_shared<CombinedMemLocObject>(memLocs); }
 
 template <bool defaultMayEq>
-std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent)
+std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
 {
   ostringstream oss;
   if(memLocs.size()>1) oss << "["<<(defaultMayEq? "UnionML" : "IntersectML")<<": ";
   if(memLocs.size()>1) oss << endl;
-  for(list<MemLocObjectPtr>::iterator ml=memLocs.begin(); ml!=memLocs.end(); ) {
+  for(list<MemLocObjectPtr>::const_iterator ml=memLocs.begin(); ml!=memLocs.end(); ) {
     if(ml!=memLocs.begin()) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << (*ml)->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;");
     ml++;
@@ -1862,7 +1862,7 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent)
 
 //std::string IndexVector::str(const string& indent)
 // pretty print for the object
-std::string IndexVector::str(std::string indent)
+std::string IndexVector::str(std::string indent) const
 {
  dbg<<"Error. Direct call to base class (IndexVector)'s str() is not allowed."<<endl;
  //assert (false);

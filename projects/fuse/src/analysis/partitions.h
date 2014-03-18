@@ -153,10 +153,10 @@ class MLRemapper: public sight::printable
   
   private:
   // String representation of object
-  std::string map2Str(std::map<ComposedAnalysis*, std::set<std::set<MLMapping> > >& ml2ml, std::string indent="");
+  std::string map2Str(const std::map<ComposedAnalysis*, std::set<std::set<MLMapping> > >& ml2ml, std::string indent="") const;
   
   public:
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 
@@ -281,7 +281,7 @@ class Context//: public sight::printable
   bool operator<=(const ContextPtr& that) const;
   bool operator> (const ContextPtr& that) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   // Generates the string representation of this context by recursively 
   // calling the string method of this parent's 
   //std::string str_rec(ConstPartPtr part, std::string indent="");
@@ -574,7 +574,7 @@ class IntersectionPartContext : public PartContext
   bool operator==(const PartContextPtr& that) const;
   bool operator< (const PartContextPtr& that) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 // The intersection of multiple Parts. Maintains multiple Parts and responds to API calls with the most 
@@ -665,7 +665,7 @@ class IntersectionPart : public Part
   //   this.parts[i] < that.parts[i].
   bool less(const PartPtr& that) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 
@@ -747,7 +747,7 @@ class IntersectionPartEdge : public PartEdge
   Lattice* forwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
   Lattice* backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge, ComposedAnalysis* client);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 }; // namespace fuse

@@ -24,7 +24,7 @@ class OrthoIndexVector_Impl : public IndexVector
     std::vector<IndexSet *> index_vector; // a vector of memory objects of named objects or temp expression objects */
     std::vector<ValueObjectPtr> index_vector; // a vector of memory objects of named objects or temp expression objects
     std::string str(std::string indent) const; // pretty print for the object
-    std::string str(std::string indent) { return ((const OrthoIndexVector_Impl*)this)->str(indent); }
+    // std::string str(std::string indent) { return ((const OrthoIndexVector_Impl*)this)->str(indent); }
     
     // Allocates a copy of this object and returns a pointer to it
     IndexVectorPtr copyIV() const;
@@ -87,7 +87,7 @@ class OrthoArrayML : public MemLocObject
     }
     // pretty print
     std::string str(std::string indent="") const;
-    std::string str(std::string indent="") { return ((const OrthoArrayML*)this)->str(indent); }
+    // std::string str(std::string indent="") { return ((const OrthoArrayML*)this)->str(indent); }
 
     // copy this object and return a pointer to it
     MemLocObjectPtr copyML() const { return boost::make_shared<OrthoArrayML>(*this); }
@@ -183,7 +183,7 @@ class OrthogonalArrayAnalysis : virtual public UndirDataflow
   bool implementsExpr2MemLoc() { return true; }
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "OrthogonalArrayAnalysis"; }
 };
 

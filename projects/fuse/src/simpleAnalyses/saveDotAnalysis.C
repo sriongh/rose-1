@@ -90,7 +90,7 @@ list<PartContextPtr> DummyContext::getSubPartContexts() const {
 bool DummyContext::operator==(const PartContextPtr& that) const { return true; }
 bool DummyContext::operator< (const PartContextPtr& that) const { return false; }
   
-std::string DummyContext::str(std::string indent) { return ""; }
+std::string DummyContext::str(std::string indent) const { return ""; }
 
 /*************************
  ***** Ctxt2PartsMap *****
@@ -218,12 +218,12 @@ void Ctxt2PartsMap::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& partI
   o << "};"<<endl;*/
 }
 
-std::string Ctxt2PartsMap::str(std::string indent) {
+std::string Ctxt2PartsMap::str(std::string indent) const {
   ostringstream oss;
   oss << "Ctxt2PartsMap["<<endl;
   oss << indent << "    " << l->str(indent+"    ") << endl;
   
-  for(map<PartContextPtr, Ctxt2PartsMap* >::iterator i=m.begin(); i!=m.end(); i++) {
+  for(map<PartContextPtr, Ctxt2PartsMap* >::const_iterator i=m.begin(); i!=m.end(); i++) {
     oss << indent << i->first.get()->str(indent+"  ") << " =&gt; " << endl;
     oss << indent << "    " << i->second->str(indent+"    ") << endl;
   }
@@ -348,10 +348,10 @@ void Ctxt2PartsMap_Leaf::map2dot(std::ostream& o, map<PartPtr, partDotInfoPtr>& 
   }
 }
 
-std::string Ctxt2PartsMap_Leaf::str(std::string indent) {
+std::string Ctxt2PartsMap_Leaf::str(std::string indent) const {
   ostringstream oss;
   oss << "Ctxt2PartsMap_Leaf["<<endl;
-  for(map<PartContextPtr, set<PartPtr> >::iterator i=m.begin(); i!=m.end(); i++) {
+  for(map<PartContextPtr, set<PartPtr> >::const_iterator i=m.begin(); i!=m.end(); i++) {
     oss << indent << i->first.get()->str(indent+"  ") << " =&gt; " << endl;
     for(set<PartPtr>::iterator j=i->second.begin(); j!=i->second.end(); j++)
       oss << indent << "    " << j->get()->str(indent+"    ") << endl;

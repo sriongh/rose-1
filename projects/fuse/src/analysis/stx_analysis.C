@@ -504,7 +504,7 @@ bool StxFuncContext::operator< (const PartContextPtr& that_arg) const
   return func<that->func;
 }
 
-std::string StxFuncContext::str(std::string indent) {
+std::string StxFuncContext::str(std::string indent) const {
   ostringstream oss;
   oss << "[StxFuncContext: "<<func.str()<<"]";
   return oss.str();
@@ -912,7 +912,7 @@ bool StxPart::less(const PartPtr& o) const
   return n < dynamicPtrCast<StxPart>(o)->n;
 }
 
-std::string StxPart::str(std::string indent)
+std::string StxPart::str(std::string indent) const
 {
   ostringstream oss;
   if(isNULLCFGNode(n.getNode())) oss << "[*]";
@@ -1027,7 +1027,7 @@ bool StxPartEdge::less(const PartEdgePtr& o) const
           p.target() < dynamicPtrCast<StxPartEdge>(o)->p.target());
 }
 
-std::string StxPartEdge::str(std::string indent)
+std::string StxPartEdge::str(std::string indent) const
 {
   ostringstream oss;
   oss << (isNULLCFGNode(p.source().getNode())? "*" : source()->str()) << 
@@ -1227,7 +1227,7 @@ std::set<boost::shared_ptr<SgValueExp> > StxValueObject::getConcreteValue()
 }
  
 //std::string StxValueObject::str(const string& indent) {
-std::string StxValueObject::str(std::string indent) { // pretty print for the object
+std::string StxValueObject::str(std::string indent) const { // pretty print for the object
   return "[StxValueObject: "+(val? val->unparseToString() : "NULL")+"]";
 }
 
@@ -1593,7 +1593,7 @@ MemRegionObjectPtr StxMemRegionObject::copyMR() const {
   return boost::make_shared<StxMemRegionObject>(*this);
 }
 
-std::string StxMemRegionObject::str(std::string indent) { // pretty print for the object
+std::string StxMemRegionObject::str(std::string indent) const { // pretty print for the object
   return txt() << "[StxMR: "<<type->str()<<"]";
 }
 
@@ -1735,7 +1735,7 @@ bool StxExprMemRegionType::isLiveMR(PartEdgePtr pedge) {
   }*/
 }
 
-std::string StxExprMemRegionType::str(std::string indent) { // pretty print for the object
+std::string StxExprMemRegionType::str(std::string indent) const { // pretty print for the object
   return txt() << "Expr: "<<SgNode2Str(expr);
 }
 
@@ -1801,7 +1801,7 @@ bool StxNamedMemRegionType::isLiveMR(PartEdgePtr pedge) {
   dbg << "part=["<<part.getNode()->unparseToString()<<" | "<<part.getNode()->class_name()<<"]"<<endl;*/
 }
 
-std::string StxNamedMemRegionType::str(std::string indent) { // pretty print for the object
+std::string StxNamedMemRegionType::str(std::string indent) const { // pretty print for the object
   return txt() << "Named: "<<(symbol? SgNode2Str(symbol): SgNode2Str(iname));
 }
 
@@ -1810,7 +1810,7 @@ StxStorageMemRegionTypePtr StxStorageMemRegionType::getInstance(SgNode* n) {
   return boost::make_shared<StxStorageMemRegionType>();
 }
 
-std::string StxStorageMemRegionType::str(std::string indent) { // pretty print for the object
+std::string StxStorageMemRegionType::str(std::string indent) const { // pretty print for the object
   return "Storage";
 }
 
@@ -1819,7 +1819,7 @@ StxAllMemRegionTypePtr StxAllMemRegionType::getInstance(SgNode* n) {
   return boost::make_shared<StxAllMemRegionType>();
 }
 
-std::string StxAllMemRegionType::str(std::string indent) { // pretty print for the object
+std::string StxAllMemRegionType::str(std::string indent) const { // pretty print for the object
   return "All";
 }
 

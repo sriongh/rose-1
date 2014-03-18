@@ -324,9 +324,9 @@ class NodeState
   /*public:
   void operator=(NodeState& that);*/
   public:
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
     
-  std::string str(Analysis* analysis, std::string indent="");
+  std::string str(Analysis* analysis, std::string indent="") const;
   
   // Returns the string representation of the Lattices stored in the given map
   static std::string str(const std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo, std::string indent="");

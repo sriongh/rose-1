@@ -6,9 +6,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/casts.hpp>
-
 using namespace std;
-using namespace sight;
 
 
 #include <cwchar>
@@ -587,13 +585,13 @@ CPValueObject::isEmptyLat()
 { return isEmptyV(getPartEdge()); }
 
 string
-CPValueObject::str(string indent) const
+CPValueObject::str(string indent)
 {
   return strp(latPEdge, indent);
 }
 
 string
-CPValueObject::strp(PartEdgePtr pedge, string indent) const
+CPValueObject::strp(PartEdgePtr pedge, string indent)
 {
   return kind->str(indent);
 }
@@ -769,7 +767,7 @@ bool CPUninitializedKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPUninitializedKind::isEmptyV(PartEdgePtr pedge) { return true; }
 
-std::string CPUninitializedKind::str(std::string indent) const
+std::string CPUninitializedKind::str(std::string indent)
 { return "[CPUninitializedKind]"; }
 
 // ******************************
@@ -1016,9 +1014,8 @@ CPValueKindPtr CPConcreteKind::op(SgUnaryOp* op) {
     // What is this?
   
   } else if(isSgAddressOfOp(op)) {
-    // TODO
-    return boost::make_shared<CPUnknownKind>();
-    
+    // This should be handled inside CPMemLocObjects
+    assert(0);
     
   } else if(isSgPointerDerefExp(op)) {
     // This should be handled inside CPMemLocObjects
@@ -2314,7 +2311,7 @@ bool CPConcreteKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPConcreteKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPConcreteKind::str(std::string indent) const
+std::string CPConcreteKind::str(std::string indent)
 { return txt()<<"[CPConcreteKind: val="<<(exp? SgNode2Str(exp.get()): "NULL")<<"]"; }
 
 
@@ -2838,11 +2835,11 @@ bool CPOffsetListKind::isFullV(PartEdgePtr pedge) { return false; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPOffsetListKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPOffsetListKind::str(std::string indent) const { 
+std::string CPOffsetListKind::str(std::string indent) { 
   ostringstream oss; 
   
   oss <<"[CPOffsetListKind: offsetL=";
-  for(list<intWrap>::const_iterator o=offsetL.begin(); o!=offsetL.end(); o++) {
+  for(list<intWrap>::iterator o=offsetL.begin(); o!=offsetL.end(); o++) {
     if(o!=offsetL.begin()) oss << ",";
     oss << o->get();
   }
@@ -2921,7 +2918,7 @@ bool CPUnknownKind::isFullV(PartEdgePtr pedge) { return true; }
 // Returns whether this AbstractObject denotes the empty set.
 bool CPUnknownKind::isEmptyV(PartEdgePtr pedge) { return false; }
 
-std::string CPUnknownKind::str(std::string indent) const
+std::string CPUnknownKind::str(std::string indent)
 { return "[CPUnknownKind]"; }
 
 
@@ -3228,7 +3225,7 @@ MemLocObject* CPMemLocObject::copyMLPtr() const {
   return new CPMemLocObject(*this);
 }
 
-std::string CPMemLocObject::str(std::string indent) const { // pretty print for the object
+std::string CPMemLocObject::str(std::string indent) { // pretty print for the object
   if(isCPFull)       return "[CPMemLocObject: Full]";
   else if(isCPEmpty) return "[CPMemLocObject: Empty]";
   
@@ -3701,7 +3698,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
     if(constantPropagationAnalysisDebugLevel()>=2) dbg << "state="<<state->str()<<endl;
     
     // Get the value map at the NULL edge, which denotes the meet over all incoming edges
-    AbstractObjectMap* cpMap = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, pedge, 0));
+    AbstractObjectMap* cpMap = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, NULLPartEdge, 0));
     assert(cpMap);
     
     if(constantPropagationAnalysisDebugLevel()>=2) {

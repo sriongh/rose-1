@@ -198,10 +198,10 @@ bool CallPartContext::setToFull() {
   return modified;
 }
 
-std::string CallPartContext::str(std::string indent) {
+std::string CallPartContext::str(std::string indent) const {
   std::ostringstream oss;
   oss << "[CallPartContext: ";
-  for(list<PartPtr>::iterator i=stack.begin(); i!=stack.end(); i++) {
+  for(list<PartPtr>::const_iterator i=stack.begin(); i!=stack.end(); i++) {
     if(i!=stack.begin()) oss << endl << indent;
     oss << (*i)->str(indent+"    ");
   }
@@ -384,7 +384,7 @@ bool CallCtxSensPart::less(const PartPtr& o)  const {
 }
 
 // Pretty print for the object
-std::string CallCtxSensPart::str(std::string indent) {
+std::string CallCtxSensPart::str(std::string indent) const {
   ostringstream oss;
   
   oss << "[CallCtxSensPart: "<<getParent()->str(indent+"    ");
@@ -497,7 +497,7 @@ bool CallCtxSensPartEdge::less(const PartEdgePtr& o)  const
 }
 
 // Pretty print for the object
-std::string CallCtxSensPartEdge::str(std::string indent)
+std::string CallCtxSensPartEdge::str(std::string indent) const
 {
   ostringstream oss;
   oss << "[CallCtxSensPartEdge: parent="<<getParent()->str(indent+"    ")<<endl;
@@ -520,7 +520,7 @@ CallCtxSensMR::CallCtxSensMR(const CallCtxSensMR& that) : MemRegionObject(that)
   ccsa    = that.ccsa;
 }
 // pretty print
-string CallCtxSensMR::str(string indent){
+string CallCtxSensMR::str(string indent) const{
   ostringstream oss;
   oss << "[CallCtxSensMR: baseMR="<< baseMR->str(indent+"    ")<<endl;
   oss << indent << "    " << context.str(indent+"    ")<<"]";
@@ -678,7 +678,7 @@ CallCtxSensML::CallCtxSensML(const CallCtxSensML& that) : MemLocObject(that)
   ccsa    = that.ccsa;
 }
 // pretty print
-string CallCtxSensML::str(string indent){
+string CallCtxSensML::str(string indent) const {
   ostringstream oss;
   oss << "[CallCtxSensML: baseML="<< baseML->str(indent+"    ")<<endl;
   oss << indent << "    " << context.str(indent+"    ")<<"]";
@@ -1052,11 +1052,11 @@ bool CallCtxSensLattice::isEmptyLat()
          incoming.size()==0;
 }
 
-std::string CallCtxSensLattice::str(std::string indent) {
+std::string CallCtxSensLattice::str(std::string indent) const {
   ostringstream oss;
   
   oss << "[CallCtxSensLattice: outgoing("<<outgoing.size()<<")="<<endl;
-  for(map<CallCtxSensPartPtr, set<CallCtxSensPartPtr> >::iterator i=outgoing.begin(); i!=outgoing.end(); i++) {
+  for(map<CallCtxSensPartPtr, set<CallCtxSensPartPtr> >::const_iterator i=outgoing.begin(); i!=outgoing.end(); i++) {
     oss << indent << (i->first.get()? i->first.get()->str(indent+"    "): "NULLPartPtr")<< " ==&gt (#"<<i->second.size()<<");"<<endl;
     for(set<CallCtxSensPartPtr>::iterator j=i->second.begin(); j!=i->second.end(); j++)
       oss << indent << "            "<<(*j? j->get()->str(indent+"        "): "NULL")<<endl;
