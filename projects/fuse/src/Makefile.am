@@ -1,7 +1,7 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
 include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 
-bin_PROGRAMS = fuse fuseLayout
+bin_PROGRAMS = fuse fuseLayout fuseMPI
 
 fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
 fuse_LDADD = -lrose
@@ -52,6 +52,43 @@ fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINK
 fuseLayout_SOURCES = \
 	sight/widgets/ats_graph_layout.C
 
+
+fuseMPI_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS) $(ROSE_WITH_MPI_CXXFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseMPI_LDADD = -lrose
+fuseMPI_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LDFLAGS) $(ROSE_WITH_MPI_CXXLDFLAGS)
+
+fuseMPI_DEPENDENCIES=fuseLayout
+
+fuseMPI_SOURCES = \
+	analysis/abstract_object.C \
+	analysis/abstract_object_map.C \
+	analysis/abstract_object_set.C \
+	analysis/analysis.C \
+	analysis/analysis_tester.C \
+	analysis/compose.C \
+	analysis/composed_analysis.C \
+	analysis/factor_trans_system.C \
+	analysis/graphIterator.C \
+	analysis/partitions.C \
+	analysis/stx_analysis.C \
+	cfgUtils/CallGraphTraverse.C \
+	cfgUtils/cfgUtils.C \
+	cfgUtils/DataflowCFG.C \
+	cfgUtils/VirtualCFGIterator.C \
+	sight/widgets/ats_graph_structure.C \
+	lattice/lattice.C \
+	simpleAnalyses/call_context_sensitivity_analysis.C \
+	simpleAnalyses/const_prop_analysis.C \
+	simpleAnalyses/dead_path_elim_analysis.C \
+	simpleAnalyses/live_dead_analysis.C \
+	simpleAnalyses/mpi_rank_analysis.C \
+	simpleAnalyses/pointsToAnalysis.C \
+	simpleAnalyses/printAnalysisStates.C \
+	simpleAnalyses/saveDotAnalysis.C \
+	simpleAnalyses/taintAnalysis.C \
+	state/nodeState.C \
+	fuseTestMPIAnalysis.C
+
 include_HEADERS =\
 	analysis/abstract_object.h \
 	analysis/abstract_object_map.h \
@@ -77,6 +114,7 @@ include_HEADERS =\
 	simpleAnalyses/const_prop_analysis.h \
 	simpleAnalyses/dead_path_elim_analysis.h \
 	simpleAnalyses/live_dead_analysis.h \
+	simpleAnalyses/mpi_rank_analysis.h \
 	simpleAnalyses/pointsToAnalysis.h \
 	simpleAnalyses/printAnalysisStates.h \
 	simpleAnalyses/saveDotAnalysis.h \
@@ -322,6 +360,9 @@ clean-debug:
 
 clean-fuse:
 	rm -rf fuse fuse-*.o
+
+clean-fuseMPI:
+	rm -rf fuseMPI fuseMPI-*.o
 
 clean-check:
 	rm -f *.passed *.failed *.out *.err
