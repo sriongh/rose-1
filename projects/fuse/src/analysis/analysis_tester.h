@@ -30,7 +30,7 @@ class HierEdgeMapFunctor {
 };
 
 template <class EdgeTypePtr>
-class HierEdge : public dbglog::printable {
+class HierEdge : public sight::printable {
   typedef CompSharedPtr<HierEdge<EdgeTypePtr> > HierEdgePtr;
   typedef CompSharedPtr<HierEdge_Leaf<EdgeTypePtr> > HierEdge_LeafPtr;
   
@@ -95,11 +95,11 @@ class HierEdge : public dbglog::printable {
   // Returns true if this edge is at the end of the graph and thus cannot advance further
   bool end() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 template <class EdgeTypePtr>
-class HierEdge_Leaf : public dbglog::printable {
+class HierEdge_Leaf : public sight::printable {
   typedef CompSharedPtr<HierEdge_Leaf<EdgeTypePtr> > HierEdge_LeafPtr;
   
   // Indicates whether during the traversal each leaf edge should be visited just once
@@ -133,7 +133,7 @@ class HierEdge_Leaf : public dbglog::printable {
   // Returns true if this edge is at the end of the graph and thus cannot advance further
   bool end() const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 void AnalysisTester_selfTest();
@@ -170,5 +170,3 @@ class ComposedAnalysisSelfTester {
 };
 
 } // namespace fuse
-
-

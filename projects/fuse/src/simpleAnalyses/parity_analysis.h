@@ -4,7 +4,7 @@
 #include "compose.h"
 namespace fuse
 {
-    class CPValueObject;
+    class ParityValueObject;
 };
 #include "VariableStateTransfer.h"
 #include "abstract_object_map.h"
@@ -12,19 +12,19 @@ namespace fuse
 
 namespace fuse
 {
-/***************************************
- ***** ConstantPropagationAnalysis *****
- ***************************************/
+/**************************
+ ***** ParityAnalysis *****
+ **************************/
 
-class ConstantPropagationAnalysis;
+class ParityAnalysis;
   
 // This is a forward dataflow analysis that implements a simple abstraction of values 
 // that consists of the universal set, a single constant value and an empty set. It 
 // maintains a map of memory locations to these value abstractions.
   
-class CPValueObject;
-typedef boost::shared_ptr<CPValueObject> CPValueObjectPtr;
-extern CPValueObjectPtr NULLCPValueObject;
+class ParityValueObject;
+typedef boost::shared_ptr<ParityValueObject> ParityValueObjectPtr;
+extern ParityValueObjectPtr NULLParityValueObject;
 
 class CPValueKind;
 typedef boost::shared_ptr<CPValueKind> CPValueKindPtr;
@@ -42,10 +42,10 @@ typedef boost::shared_ptr<CPOffsetListKind> CPOffsetListKindPtr;
 class CPUnknownKind;
 typedef boost::shared_ptr<CPUnknownKind> CPUnknownKindPtr;
 
-class CPValueKind: public sight::printable, public boost::enable_shared_from_this<CPValueKind> {
+class CPValueKind: public printable, public boost::enable_shared_from_this<CPValueKind> {
   public:
   
-  // The different kinds of CPValueObjects
+  // The different kinds of ParityValueObjects
   typedef enum {uninitialized, // The value has not been initialized (analyses may set this value to anything they want)
                 concrete,   // The exact value is known and can be described with an SgValueExp
                 //rank,     // The exact value is not known but we know their relative order
@@ -78,7 +78,7 @@ class CPValueKind: public sight::printable, public boost::enable_shared_from_thi
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
+  //       this in the parent ParityValueObject's list, return that.
   virtual CPValueKindPtr op(SgUnaryOp* op)=0;
   virtual CPValueKindPtr op(SgBinaryOp* op, CPValueKindPtr that)=0;
   
@@ -113,7 +113,7 @@ class CPValueKind: public sight::printable, public boost::enable_shared_from_thi
   virtual CPValueKindPtr copyV() const=0;
 }; // CPValueKind
 
-class CPValueObject : public FiniteLattice, public ValueObject {
+class ParityValueObject : public FiniteLattice, public ValueObject {
   //SgNode* n;
 
   // StxValueObjects are used to identify both raw values and the locations of class fields within 
@@ -142,22 +142,22 @@ class CPValueObject : public FiniteLattice, public ValueObject {
   public:
 
   // Do we need a default constructor?
-  CPValueObject(PartEdgePtr pedge);
+  ParityValueObject(PartEdgePtr pedge);
   
   // This constructor builds a constant value lattice.
-  //CPValueObject(SgValueExp* val, PartEdgePtr pedge);
+  //ParityValueObject(SgValueExp* val, PartEdgePtr pedge);
   
-  CPValueObject(CPValueKindPtr kind, PartEdgePtr pedge);
+  ParityValueObject(CPValueKindPtr kind, PartEdgePtr pedge);
   
   // Do we need th copy constructor?
-  CPValueObject(const CPValueObject & X);
+  ParityValueObject(const ParityValueObject & X);
   
   // Wrapper for shared_from_this that returns an instance of this class rather than its parent
-  CPValueObjectPtr shared_from_this() { return boost::static_pointer_cast<CPValueObject>(ValueObject::shared_from_this()); }
+  ParityValueObjectPtr shared_from_this() { return boost::static_pointer_cast<ParityValueObject>(ValueObject::shared_from_this()); }
   
   // Access functions.
   CPValueKindPtr getKind() const;
-  // Sets this object's kind to the given kind, returning true if this causes the CPValueObject to change
+  // Sets this object's kind to the given kind, returning true if this causes the ParityValueObject to change
   bool setKind(CPValueKindPtr kind);
   
   void initialize();
@@ -173,7 +173,7 @@ class CPValueObject : public FiniteLattice, public ValueObject {
   // computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdate(Lattice* that);
-  bool meetUpdate(CPValueObject* that);
+  bool meetUpdate(ParityValueObject* that);
   
   // Set this Lattice object to represent the set of all possible execution prefixes.
   // Return true if this causes the object to change and false otherwise.
@@ -193,17 +193,17 @@ class CPValueObject : public FiniteLattice, public ValueObject {
   bool isEmptyLat();
   
   // pretty print for the object
-  std::string str(std::string indent="") const;
-  std::string strp(PartEdgePtr pedge, std::string indent="") const;
+  std::string str(std::string indent="");
+  std::string strp(PartEdgePtr pedge, std::string indent="");
   
   // Applies the given unary or binary operation to this and the given CPValueKind
   // Returns:
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
-  CPValueObjectPtr op(SgUnaryOp* op);
-  CPValueObjectPtr op(SgBinaryOp* op, CPValueObjectPtr that);
+  //       this in the parent ParityValueObject's list, return that.
+  ParityValueObjectPtr op(SgUnaryOp* op);
+  ParityValueObjectPtr op(SgBinaryOp* op, ParityValueObjectPtr that);
     
   bool mayEqualV(ValueObjectPtr o, PartEdgePtr pedge);
   bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
@@ -233,7 +233,7 @@ class CPValueObject : public FiniteLattice, public ValueObject {
   // Returns the concrete value (if there is one) as an SgValueExp, which allows callers to use
   // the normal ROSE mechanisms to decode it
   set<boost::shared_ptr<SgValueExp> > getConcreteValue();
-}; // class CPValueObject
+}; // class ParityValueObject
 
 class CPUninitializedKind : public CPValueKind {
   public:
@@ -245,7 +245,7 @@ class CPUninitializedKind : public CPValueKind {
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
+  //       this in the parent ParityValueObject's list, return that.
   CPValueKindPtr op(SgUnaryOp* op);
   CPValueKindPtr op(SgBinaryOp* op, CPValueKindPtr that);
   
@@ -279,7 +279,7 @@ class CPUninitializedKind : public CPValueKind {
   // Returns a copy of this CPUninitializedKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPUninitializedKind>(); }
   
-  std::string str(std::string indent="") const;
+  std::string str(std::string indent="");
 }; // CPUninitializedKind
 
 class CPConcreteKind : public CPValueKind {
@@ -345,7 +345,7 @@ class CPConcreteKind : public CPValueKind {
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
+  //       this in the parent ParityValueObject's list, return that.
   CPValueKindPtr op(SgUnaryOp* op);
   CPValueKindPtr op(SgBinaryOp* op, CPValueKindPtr that);
   
@@ -379,7 +379,7 @@ class CPConcreteKind : public CPValueKind {
   // Returns a copy of this CPConcreteKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPConcreteKind>(getVal()); }
   
-  std::string str(std::string indent="") const;
+  std::string str(std::string indent="");
 }; // CPConcreteKind
 
 class CPOffsetListKind : public CPValueKind {
@@ -443,7 +443,7 @@ class CPOffsetListKind : public CPValueKind {
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
+  //       this in the parent ParityValueObject's list, return that.
   CPValueKindPtr op(SgUnaryOp* op);
   CPValueKindPtr op(SgBinaryOp* op, CPValueKindPtr that);
   
@@ -477,7 +477,7 @@ class CPOffsetListKind : public CPValueKind {
   // Returns a copy of this CPOffsetListKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPOffsetListKind>(offsetL); }
   
-  std::string str(std::string indent="") const;
+  std::string str(std::string indent="");
 }; // CPOffsetListKind
 
 class CPUnknownKind : public CPValueKind {
@@ -490,7 +490,7 @@ class CPUnknownKind : public CPValueKind {
   //    - if this CPValueKind can be updated to incorporate the result of the addition, 
   //       return a freshly-allocated CPValueKind that holds the result.
   //    - if the two objects could not be merged and therefore that must be placed after 
-  //       this in the parent CPValueObject's list, return that.
+  //       this in the parent ParityValueObject's list, return that.
   CPValueKindPtr op(SgUnaryOp* op);
   CPValueKindPtr op(SgBinaryOp* op, CPValueKindPtr that);
   
@@ -524,7 +524,7 @@ class CPUnknownKind : public CPValueKind {
   // Returns a copy of this CPUnknownKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPUnknownKind>(); }
   
-  std::string str(std::string indent="") const;
+  std::string str(std::string indent="");
 }; // CPUnknownKind
 
 class CPMemLocObject;
@@ -532,13 +532,13 @@ typedef boost::shared_ptr<CPMemLocObject> CPMemLocObjectPtr;
 
 class CPMemLocObject: public MemLocObject, public FiniteLattice
 {
-  ConstantPropagationAnalysis* analysis;
+  ParityAnalysis* analysis;
   // Records whether this object is full or empty
   bool isCPFull;
   bool isCPEmpty;
   
   public:
-  CPMemLocObject(bool isCPFull, bool isCPEmpty, SgNode* base, PartEdgePtr pedge, ConstantPropagationAnalysis* analysis) : 
+  CPMemLocObject(bool isCPFull, bool isCPEmpty, SgNode* base, PartEdgePtr pedge, ParityAnalysis* analysis) : 
     Lattice(pedge),
     MemLocObject(base),
     FiniteLattice(pedge),
@@ -546,7 +546,7 @@ class CPMemLocObject: public MemLocObject, public FiniteLattice
     isCPFull(isCPFull), isCPEmpty(isCPEmpty)
   { }
   
-  CPMemLocObject(MemRegionObjectPtr region, CPValueObjectPtr index, SgNode* base, PartEdgePtr pedge, ConstantPropagationAnalysis* analysis) : 
+  CPMemLocObject(MemRegionObjectPtr region, ParityValueObjectPtr index, SgNode* base, PartEdgePtr pedge, ParityAnalysis* analysis) : 
     Lattice(pedge),
     MemLocObject(region, index, base),
     FiniteLattice(pedge),
@@ -562,8 +562,8 @@ class CPMemLocObject: public MemLocObject, public FiniteLattice
     isCPFull(false), isCPEmpty(false)
   { }
   
-  CPValueObjectPtr getCPIndex() const {
-    return boost::dynamic_pointer_cast<CPValueObject>(getIndex());
+  ParityValueObjectPtr getCPIndex() const {
+    return boost::dynamic_pointer_cast<ParityValueObject>(getIndex());
   }
   
   // returns a copy of this lattice
@@ -652,7 +652,7 @@ class CPMemLocObject: public MemLocObject, public FiniteLattice
   // Allocates a copy of this object and returns a regular pointer to it
   MemLocObject* copyMLPtr() const;
   
-  std::string str(std::string indent="") const; // pretty print for the object
+  std::string str(std::string indent=""); // pretty print for the object
 }; // CPMemLocObject
   
 class CPMemLocObjectNodeFact: public NodeFact
@@ -663,20 +663,20 @@ class CPMemLocObjectNodeFact: public NodeFact
   
   // returns a copy of this node fact
   NodeFact* copy() const { return new CPMemLocObjectNodeFact(ml); }
-  std::string str(std::string indent="") const { return ml->str(); }
+  std::string str(std::string indent="") { return ml->str(); }
 };
 
-class ConstantPropagationAnalysis : virtual public FWDataflow
+class ParityAnalysis : virtual public FWDataflow
 {
   protected:
   //static std::map<varID, Lattice*> constVars;
   //AbstractObjectMap constVars;
    
   public:
-  ConstantPropagationAnalysis();
+  ParityAnalysis();
   
   // Returns a shared pointer to a freshly-allocated copy of this ComposedAnalysis object
-  ComposedAnalysisPtr copy() { return boost::make_shared<ConstantPropagationAnalysis>(); }
+  ComposedAnalysisPtr copy() { return boost::make_shared<ParityAnalysis>(); }
 
   // Creates a basic CPMemLocObject for the given SgNode. This object does not take into
   // account any constant propagation and will be used as a seed from which to propagate 
@@ -702,13 +702,13 @@ class ConstantPropagationAnalysis : virtual public FWDataflow
   implTightness Expr2MemLocTightness() { return ComposedAnalysis::tight; }
   
   // pretty print for the object
-  std::string str(std::string indent="") const
-  { return "ConstantPropagationAnalysis"; }
+  std::string str(std::string indent="")
+  { return "ParityAnalysis"; }
   
-  friend class ConstantPropagationAnalysisTransfer;
-}; // class ConstantPropagationAnalysis
+  friend class ParityAnalysisTransfer;
+}; // class ParityAnalysis
 
-class ConstantPropagationAnalysisTransfer : public VariableStateTransfer<CPValueObject, ConstantPropagationAnalysis>
+class ParityAnalysisTransfer : public VariableStateTransfer<ParityValueObject, ParityAnalysis>
 {
   private:
   
@@ -733,9 +733,9 @@ class ConstantPropagationAnalysisTransfer : public VariableStateTransfer<CPValue
    
   bool finish();
    
-  ConstantPropagationAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state, 
+  ParityAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state, 
                                       std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo, 
-                                      Composer* composer, ConstantPropagationAnalysis* analysis);
+                                      Composer* composer, ParityAnalysis* analysis);
 };
 
 }; //namespace fuse

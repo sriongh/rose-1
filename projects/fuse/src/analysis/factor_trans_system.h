@@ -29,7 +29,7 @@ namespace fuse {
  *    multiplications they perform before they roll backwards by dividing the current value by a fixed number of factors.
  */
 
-extern int factorTransSystemDebugLevel;
+//extern int factorTransSystemDebugLevel;
   
 class FactorTransState;
 typedef CompSharedPtr<FactorTransState> FactorTransStatePtr;
@@ -64,7 +64,7 @@ class PartPtrPartContext: public PartContext
   bool operator==(const PartContextPtr& that_arg) const;
   bool operator< (const PartContextPtr& that_arg) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // PartPtrPartContext
 
 /****************************
@@ -159,7 +159,7 @@ class FactorTransState : public Part
   bool equal(const PartPtr& o) const;
   bool less(const PartPtr& o)  const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   
   /*FactorTransStatePtr getParent() const {
     if(commonFactors.size()>1) {
@@ -254,7 +254,7 @@ class FactorTransEdge : public PartEdge
   bool less(const PartEdgePtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // FactorTransEdge
 
 /*************************************
@@ -310,14 +310,14 @@ class FactorTransSystemAnalysis : public UndirDataflow
   std::set<PartPtr> GetEndAStates_Spec();
   
   // Returns true if this ComposedAnalysis implements the partition graph and false otherwise
-  bool implementsPartGraph() { return true; }
+  bool implementsATSGraph() { return true; }
   
   // Given a PartEdge pedge implemented by this ComposedAnalysis, returns the part from its predecessor
   // from which pedge was derived. This function caches the results if possible.
   PartEdgePtr convertPEdge_Spec(PartEdgePtr pedge);
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   //{ std::ostringstream oss; oss << "FactorTransSystemAnalysis"<<(firstAnalysis? "(first)": "")<<", &transitionFactors="<<(&transitionFactors)<<" #transitionFactors="<<transitionFactors.size(); return oss.str(); }
   { return "FactorTransSystemAnalysis"+std::string((firstAnalysis? "-First": "")); }
 }; // CallContextSensitivityAnalysis

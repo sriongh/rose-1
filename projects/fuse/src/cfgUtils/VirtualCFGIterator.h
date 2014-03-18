@@ -71,7 +71,7 @@ class CFGIterator
           
     checkpoint(const checkpoint& that);
     
-    std::string str(std::string indent="");
+    std::string str(std::string indent="") const;
     
     friend class CFGIterator;
   };
@@ -82,7 +82,7 @@ class CFGIterator
   // Loads this CFGIterator's state from the given checkpoint.
   void restartFromChkpt(checkpoint& chkpt);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 class back_CFGIterator : public virtual CFGIterator
@@ -124,7 +124,7 @@ class dataflowCFGIterator : public virtual CFGIterator
           
           checkpoint(const checkpoint &that);
                   
-          std::string str(std::string indent="");
+          std::string str(std::string indent="") const;
           
           friend class dataflowCFGIterator;
   };
@@ -135,7 +135,7 @@ class dataflowCFGIterator : public virtual CFGIterator
   // Loads this dataflow CFGIterator's state from the given checkpoint.
   void restartFromChkpt(checkpoint& chkpt);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 class back_dataflowCFGIterator: /*public virtual BaseCFG::back_dataflow,*/ public virtual dataflowCFGIterator
@@ -146,7 +146,7 @@ class back_dataflowCFGIterator: /*public virtual BaseCFG::back_dataflow,*/ publi
           
   void operator ++ (int);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 } // namespace fuse
 #endif
