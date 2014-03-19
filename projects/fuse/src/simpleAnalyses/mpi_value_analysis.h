@@ -1,9 +1,14 @@
+/*****************************************
+ * author: Sriram Aananthakrishnan, 2014 *
+ *****************************************/
+
 #ifndef _MPIRANKANALYSIS_H
 #define _MPIRANKANALYSIS_H
 
 #include "compose.h"
 #include "abstract_object_map.h"
 #include "const_prop_analysis.h"
+#include "mpi.h"
 
 namespace fuse {
 
@@ -62,6 +67,8 @@ namespace fuse {
     bool isFullLat();
     // Returns whether this lattice denotes the empty set.
     bool isEmptyLat();
+
+    bool setMLValueToFull(MemLocObjectPtr ml);
        
     bool mayEqualV(ValueObjectPtr o, PartEdgePtr pedge);
     bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
@@ -87,9 +94,11 @@ namespace fuse {
     // Returns true if this ValueObject corresponds to a concrete value that is statically-known
     bool isConcrete();
   
-  // Returns the concrete value (if there is one) as an SgValueExp, which allows callers to use
+    // Returns the concrete value (if there is one) as an SgValueExp, which allows callers to use
     // the normal ROSE mechanisms to decode it
     set<boost::shared_ptr<SgValueExp> > getConcreteValue();
+
+    SgType* getConcreteType();
 
     // pretty print for the object
     std::string str(std::string indent="") const;
@@ -100,7 +109,9 @@ namespace fuse {
    * MVATransferVisitor *
    **********************/
 
-  class MVATransferVisitor : public DFTransferVisitor {
+  class MPIValueAnalysis;
+
+  class MVATransferVisitor : public VariableStateTransfer<MPIValueObject, MPIValueAnalysis> {
     PartPtr part;
     CFGNode cfgn;
     NodeState& state;
@@ -111,7 +122,9 @@ namespace fuse {
     MVATransferVisitor(PartPtr _part,
                        CFGNode _cfgn,
                        NodeState& _state,
-                       std::map<PartEdgePtr, std::vector<Lattice*> >& _dfInfo);
+                       std::map<PartEdgePtr, std::vector<Lattice*> >& _dfInfo,
+                       Composer* _composer,
+                       MPIValueAnalysis* _analysis);
 
     void visit(SgFunctionCallExp* sgn);
     bool finish();
