@@ -1,5 +1,5 @@
 #include "sage3basic.h"
-#include "mpi_rank_analysis.h"
+#include "mpi_value_analysis.h"
 #include "const_prop_analysis.h"
 
 namespace fuse {
@@ -23,10 +23,10 @@ namespace fuse {
   
 
   /**********************
-   * MRATransferVisitor *
+   * MVATransferVisitor *
    **********************/
 
-  MRATransferVisitor::MRATransferVisitor(PartPtr _part,
+  MVATransferVisitor::MVATransferVisitor(PartPtr _part,
                                          CFGNode _cfgn,
                                          NodeState& _state,
                                          std::map<PartEdgePtr, std::vector<Lattice*> >& _dfInfo)
@@ -38,26 +38,26 @@ namespace fuse {
       modified(false) {
   }
 
-  void  MRATransferVisitor::visit(SgFunctionCallExp* sgn) {
+  void  MVATransferVisitor::visit(SgFunctionCallExp* sgn) {
   }
 
-  bool MRATransferVisitor::finish() {
+  bool MVATransferVisitor::finish() {
     return modified;
   }
 
   /*******************
-   * MPIRankAnalysis *
+   * MPIValueAnalysis *
    *******************/
 
-  MPIRankAnalysis::MPIRankAnalysis()
+  MPIValueAnalysis::MPIValueAnalysis()
     : FWDataflow() {
   }
   
-  ComposedAnalysisPtr MPIRankAnalysis::copy() {
-    return boost::make_shared<MPIRankAnalysis>();
+  ComposedAnalysisPtr MPIValueAnalysis::copy() {
+    return boost::make_shared<MPIValueAnalysis>();
   }
 
-  void MPIRankAnalysis::genInitLattice(PartPtr part, 
+  void MPIValueAnalysis::genInitLattice(PartPtr part, 
                                        PartEdgePtr pedge, 
                                        std::vector<Lattice*>& initLattices) {
     AbstractObjectMap* aMap = new AbstractObjectMap(boost::make_shared<CPValueObject>(pedge),
@@ -67,7 +67,7 @@ namespace fuse {
     initLattices.push_back(aMap);
   }
 
-  bool MPIRankAnalysis::transfer(PartPtr part, 
+  bool MPIValueAnalysis::transfer(PartPtr part, 
                                  CFGNode cfgn, 
                                  NodeState& state, 
                                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
@@ -76,23 +76,23 @@ namespace fuse {
   }
 
   boost::shared_ptr<DFTransferVisitor>
-  MPIRankAnalysis::getTransferVisitor(PartPtr part, 
+  MPIValueAnalysis::getTransferVisitor(PartPtr part, 
                                       CFGNode cfgn, 
                                       NodeState& state, 
                                       std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
-    return boost::shared_ptr<DFTransferVisitor>(new MRATransferVisitor(part, cfgn, state, dfInfo));
+    return boost::shared_ptr<DFTransferVisitor>(new MVATransferVisitor(part, cfgn, state, dfInfo));
   }
 
-  bool MPIRankAnalysis::implementsExpr2Val() {
+  bool MPIValueAnalysis::implementsExpr2Val() {
     return true;
   }
 
-  ValueObjectPtr MPIRankAnalysis::Expr2Val(SgNode* e, PartEdgePtr pedge) {
+  ValueObjectPtr MPIValueAnalysis::Expr2Val(SgNode* e, PartEdgePtr pedge) {
     return NULLValueObject;
   }
 
-  std::string MPIRankAnalysis::str(std::string indent="") {
-    return "MPIRankAnalysis";
+  std::string MPIValueAnalysis::str(std::string indent="") const {
+    return "MPIValueAnalysis";
   }
       
 }; // end namespace

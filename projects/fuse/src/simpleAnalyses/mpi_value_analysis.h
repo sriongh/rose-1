@@ -92,15 +92,15 @@ namespace fuse {
     set<boost::shared_ptr<SgValueExp> > getConcreteValue();
 
     // pretty print for the object
-    std::string str(std::string indent="");
-    std::string strp(PartEdgePtr pedge, std::string indent="");
+    std::string str(std::string indent="") const;
+    std::string strp(PartEdgePtr pedge, std::string indent="") const;
   };
 
   /**********************
-   * MRATransferVisitor *
+   * MVATransferVisitor *
    **********************/
 
-  class MRATransferVisitor : public DFTransferVisitor {
+  class MVATransferVisitor : public DFTransferVisitor {
     PartPtr part;
     CFGNode cfgn;
     NodeState& state;
@@ -108,7 +108,7 @@ namespace fuse {
     bool modified;
 
   public:
-    MRATransferVisitor(PartPtr _part,
+    MVATransferVisitor(PartPtr _part,
                        CFGNode _cfgn,
                        NodeState& _state,
                        std::map<PartEdgePtr, std::vector<Lattice*> >& _dfInfo);
@@ -118,14 +118,14 @@ namespace fuse {
   };
 
   /*******************
-   * MPIRankAnalysis *
+   * MPIValueAnalysis *
    *******************/
 
-  class MPIRankAnalysis : public FWDataflow {
+  class MPIValueAnalysis : public FWDataflow {
 
   public:
     // constructors
-    MPIRankAnalysis();
+    MPIValueAnalysis();
 
     ComposedAnalysisPtr copy();
     void genInitLattice(PartPtr part, 
@@ -147,9 +147,9 @@ namespace fuse {
     ValueObjectPtr Expr2Val(SgNode* e, PartEdgePtr pedge);
 
     // analysis name
-    std::string str(std::string indent);
+    std::string str(std::string indent) const;
 
-    friend class MRATransferVisitor;
+    friend class MVATransferVisitor;
   };
 
 } // end namespace;

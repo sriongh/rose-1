@@ -53,9 +53,9 @@ fuseLayout_SOURCES = \
 	sight/widgets/ats_graph_layout.C
 
 
-fuseMPI_CXXFLAGS = $(ROSE_WITH_SIGHT_CPPFLAGS) $(ROSE_WITH_MPI_CXXFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseMPI_CXXFLAGS = $(SIGHT_CFLAGS) $(ROSE_WITH_MPI_CXXFLAGS) -DROSE_PREFIX="\"${prefix}\""
 fuseMPI_LDADD = -lrose
-fuseMPI_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(ROSE_WITH_SIGHT_LDFLAGS) $(ROSE_WITH_MPI_CXXLDFLAGS)
+fuseMPI_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS) $(ROSE_WITH_MPI_CXXLDFLAGS)
 
 fuseMPI_DEPENDENCIES=fuseLayout
 
@@ -81,7 +81,7 @@ fuseMPI_SOURCES = \
 	simpleAnalyses/const_prop_analysis.C \
 	simpleAnalyses/dead_path_elim_analysis.C \
 	simpleAnalyses/live_dead_analysis.C \
-	simpleAnalyses/mpi_rank_analysis.C \
+	simpleAnalyses/mpi_value_analysis.C \
 	simpleAnalyses/pointsToAnalysis.C \
 	simpleAnalyses/printAnalysisStates.C \
 	simpleAnalyses/saveDotAnalysis.C \
@@ -114,7 +114,7 @@ include_HEADERS =\
 	simpleAnalyses/const_prop_analysis.h \
 	simpleAnalyses/dead_path_elim_analysis.h \
 	simpleAnalyses/live_dead_analysis.h \
-	simpleAnalyses/mpi_rank_analysis.h \
+	simpleAnalyses/mpi_value_analysis.h \
 	simpleAnalyses/pointsToAnalysis.h \
 	simpleAnalyses/printAnalysisStates.h \
 	simpleAnalyses/saveDotAnalysis.h \
