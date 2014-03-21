@@ -7,6 +7,7 @@
 #include "dead_path_elim_analysis.h"
 #include "printAnalysisStates.h"
 #include "pointsToAnalysis.h"
+#include "mpi_value_analysis.h"
 #include "analysis_tester.h"
 #include "sight.h"
 #include "mpi.h"
@@ -22,11 +23,11 @@ int main(int argc, char* argv[])
 
   // Run the front end
   SgProject* project = frontend(argc, argv);
-  //generatePDF(*project);
+  // //generatePDF(*project);
   printf("Frontend done\n");fflush(stdout);
 
   std::list<ComposedAnalysis*> analyses;
-  analyses.push_back(new ConstantPropagationAnalysis());
+  analyses.push_back(new MPIValueAnalysis());
   checkDataflowInfoPass* cdip = new checkDataflowInfoPass();
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();
