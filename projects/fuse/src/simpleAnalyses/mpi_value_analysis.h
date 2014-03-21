@@ -117,6 +117,7 @@ namespace fuse {
     NodeState& state;
     std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo;
     bool modified;
+    Composer* composer;
 
   public:
     MVATransferVisitor(PartPtr _part,
@@ -127,6 +128,10 @@ namespace fuse {
                        MPIValueAnalysis* _analysis);
 
     void visit(SgFunctionCallExp* sgn);
+    void transferCommRank(SgFunctionCallExp* sgn);
+    void transferCommSize(SgFunctionCallExp* sgn);
+
+    bool isMPIFuncCall(const Function& func);
     bool finish();
   };
 

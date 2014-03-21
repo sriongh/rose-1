@@ -211,10 +211,75 @@ namespace fuse {
                                                cfgn(_cfgn),
                                                state(_state),
                                                dfInfo(_dfInfo),
-                                               modified(false) {
+                                               modified(false),
+                                               composer(_composer) {
   }
 
+
   void  MVATransferVisitor::visit(SgFunctionCallExp* sgn) {
+    // if the function call exp is a MPI operation
+    // and if the abstract state (part) denotes entry back to caller
+    // set the mpi value for the variables
+    Function func(sgn);
+    if(isMPIFuncCall(func) && part->isIncomingFuncCall(cfgn)) {
+      string func_name = func.get_name().getString();
+      if(func_name == "MPI_Comm_rank") {
+        transferCommRank(sgn);
+      }
+      else if(func_name == "MPI_Comm_size") {
+        transferCommSize(sgn);
+      }
+    }
+  }
+
+  // transfer function for MPI_Comm_rank(comm, &rank) 
+  // first argument is the communicator(MPI_Comm), second argument is the pid variable
+  // MPI_Comm_rank assigns integer value to the second argument from MPI runtime
+  // transferCommRank assigns MPIValueObject to the second argument by
+  // executing MPI_Comm_rank on the first argument
+  void MVATransferVisitor::transferCommRank(SgFunctionCallExp* sgn) {
+    // get the argument list
+    SgExpressionPtrList& args_list = sgn->get_args()->get_expressions();
+    // strip cast and get the comm expression
+    SgExpression* commExpr = isSgCastExp(args_list[0])->get_operand();
+    // MPI_Comms are integer values assigned by MPI runtime
+    // before issuing MPI_Comm_rank the integer value for the comm should be known
+    // query the composer for the value of comm expr
+    // MPI_COMM_WORLD is a special integer and the composer returns this special integer
+    // MPI_Comm variables on the other hand are like regular int variables assigned a value
+    // by calls such as MPI_Comm_split
+    // NOTE: values for MPI_Comm variables can be obtained by implementing 
+    // MPIValueAnalsis as a tight compositional analysis 
+    ValueObjectPtr commVO = composer->Expr2Val(commExpr, part->inEdgeFromAny());
+    ROSE_ASSERT(commVO->isConcrete());
+    set<boost::shared_ptr<SgValueExp> > commVals = commVO->getConcreteValue();
+    // there should be only one value
+    ROSE_ASSERT(commVals.size()==1);
+    // get the value expression
+    boost::shared_ptr<SgIntVal> commValue = boost::dynamic_pointer_cast<SgIntVal>(*commVals.begin());
+    // SgIntVal& commValue = dynamic_cast<SgIntVal&>((*commVals.begin()).get());
+    MPI_Comm comm = commValue->get_value();
+    // issue the MPI_Comm_rank operation
+    int pid;
+    MPI_Comm_rank(comm, &pid);
+    // create MPIValueObject for the pid
+    // boost::shared_ptr<SgValueExp> pidVal = boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid));
+    MPIValueObjectPtr pidMVO = boost::make_shared<MPIValueObject> (boost::make_shared<CPConcreteKind>(boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid))),
+                                                                   part->inEdgeFromAny());
+    // set the lattice for the second argument
+    setLatticeOperand(args_list[1],
+                      isSgAddressOfOp(args_list[1])->get_operand(),
+                      pidMVO);
+
+  }
+
+  void MVATransferVisitor::transferCommSize(SgFunctionCallExp* sgn) {
+  }
+
+  bool MVATransferVisitor::isMPIFuncCall(const Function& func) {
+    if(func.get_name().getString().find("MPI_") == 0)
+      return true;
+    return false;
   }
 
   bool MVATransferVisitor::finish() {
