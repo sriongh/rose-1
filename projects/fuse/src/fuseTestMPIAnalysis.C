@@ -32,7 +32,11 @@ int main(int argc, char* argv[])
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();
 
+  if(cdip->getNumErrors() > 0) cout << cdip->getNumErrors() << " Errors Reported!"<<endl;
+  else                         cout << "PASS"<<endl;
+
   MPI_Finalize();
+
   cout << "==========  E  N  D  ==========\n";
   return 0;
 }
