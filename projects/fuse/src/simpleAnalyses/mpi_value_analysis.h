@@ -129,6 +129,8 @@ namespace fuse {
 
     void visit(SgFunctionCallExp* sgn);
     void transferCommRank(SgFunctionCallExp* sgn);
+    SgExpression* stripCastExprGetOp(SgExpression* exp);
+    SgExpression* stripAddrOfExprGetOp(SgExpression* exp);
     void transferCommSize(SgFunctionCallExp* sgn);
 
     bool isMPIFuncCall(const Function& func);

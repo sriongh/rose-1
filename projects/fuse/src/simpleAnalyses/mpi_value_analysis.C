@@ -215,6 +215,16 @@ namespace fuse {
                                                composer(_composer) {
   }
 
+  SgExpression* MVATransferVisitor::stripCastExprGetOp(SgExpression* exp) {
+    ROSE_ASSERT(isSgCastExp(exp));
+    return isSgCastExp(exp)->get_operand();
+  }
+
+  SgExpression* MVATransferVisitor::stripAddrOfExprGetOp(SgExpression* exp) {
+    ROSE_ASSERT(isSgAddressOfOp(exp));
+    return isSgAddressOfOp(exp)->get_operand();
+  }
+
 
   void  MVATransferVisitor::visit(SgFunctionCallExp* sgn) {
     // if the function call exp is a MPI operation
@@ -240,8 +250,10 @@ namespace fuse {
   void MVATransferVisitor::transferCommRank(SgFunctionCallExp* sgn) {
     // get the argument list
     SgExpressionPtrList& args_list = sgn->get_args()->get_expressions();
+    // assert it has only two arguments
+    ROSE_ASSERT(args_list.size() == 2);
     // strip cast and get the comm expression
-    SgExpression* commExpr = isSgCastExp(args_list[0])->get_operand();
+    SgExpression* commExpr = stripCastExprGetOp(args_list[0]);
     // MPI_Comms are integer values assigned by MPI runtime
     // before issuing MPI_Comm_rank the integer value for the comm should be known
     // query the composer for the value of comm expr
@@ -256,24 +268,53 @@ namespace fuse {
     // there should be only one value
     ROSE_ASSERT(commVals.size()==1);
     // get the value expression
-    boost::shared_ptr<SgIntVal> commValue = boost::dynamic_pointer_cast<SgIntVal>(*commVals.begin());
-    // SgIntVal& commValue = dynamic_cast<SgIntVal&>((*commVals.begin()).get());
+    boost::shared_ptr<SgIntVal> commValue = boost::dynamic_pointer_cast<SgIntVal>(*commVals.begin()); 
     MPI_Comm comm = commValue->get_value();
+
     // issue the MPI_Comm_rank operation
     int pid;
     MPI_Comm_rank(comm, &pid);
+
     // create MPIValueObject for the pid
-    // boost::shared_ptr<SgValueExp> pidVal = boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid));
-    MPIValueObjectPtr pidMVO = boost::make_shared<MPIValueObject> (boost::make_shared<CPConcreteKind>(boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid))),
-                                                                   part->inEdgeFromAny());
+    CPConcreteKindPtr pidValKind = boost::make_shared<CPConcreteKind>(boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid)));
+    MPIValueObjectPtr pidMVO = boost::make_shared<MPIValueObject>(pidValKind,
+                                                                  part->inEdgeFromAny());
     // set the lattice for the second argument
     setLatticeOperand(args_list[1],
-                      isSgAddressOfOp(args_list[1])->get_operand(),
+                      stripAddrOfExprGetOp(args_list[1]),
                       pidMVO);
-
+    modified = true;
   }
 
   void MVATransferVisitor::transferCommSize(SgFunctionCallExp* sgn) {
+    // get the argument list
+    SgExpressionPtrList& args_list = sgn->get_args()->get_expressions();
+    // assert it has only two arguments
+    ROSE_ASSERT(args_list.size() == 2);
+    // strip cast and get the comm expression
+    SgExpression* commExpr = stripCastExprGetOp(args_list[0]);    
+    ValueObjectPtr commVO = composer->Expr2Val(commExpr, part->inEdgeFromAny());
+    ROSE_ASSERT(commVO->isConcrete());
+    set<boost::shared_ptr<SgValueExp> > commVals = commVO->getConcreteValue();
+    // there should be only one value
+    ROSE_ASSERT(commVals.size()==1);
+    // get the value expression
+    boost::shared_ptr<SgIntVal> commValue = boost::dynamic_pointer_cast<SgIntVal>(*commVals.begin()); 
+    MPI_Comm comm = commValue->get_value();
+
+    // issue the MPI_Comm_size operation
+    int size;
+    MPI_Comm_size(comm, &size);
+
+    // create MPIValueObject for the pid
+    CPConcreteKindPtr sizeValKind = boost::make_shared<CPConcreteKind>(boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(size)));
+    MPIValueObjectPtr sizeMVO = boost::make_shared<MPIValueObject>(sizeValKind,
+                                                                   part->inEdgeFromAny());
+    // set the lattice for the second argument
+    setLatticeOperand(args_list[1],
+                      stripAddrOfExprGetOp(args_list[1]),
+                      sizeMVO);
+    modified = true;
   }
 
   bool MVATransferVisitor::isMPIFuncCall(const Function& func) {
@@ -328,8 +369,59 @@ namespace fuse {
     return true;
   }
 
-  ValueObjectPtr MPIValueAnalysis::Expr2Val(SgNode* e, PartEdgePtr pedge) {
-    return NULLValueObject;
+  ValueObjectPtr MPIValueAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedge) {
+    scope s(sight::txt()<<"MPIValueAnalysis::Expr2Val(n="<<SgNode2Str(n)<<
+            ", pedge="<<pedge->str()<<")", scope::medium, attrGE("mpiValueAnalysisDebugLevel", 2));
+
+    MemLocObjectPtr ml = getComposer()->Expr2MemLoc(n, pedge, this);
+    if(mpiValueAnalysisDebugLevel()>=1) dbg << "ml="<<(ml? ml->str(): "NULL")<<endl;
+
+    // if the edge is not a wildcard
+    if(pedge->source()) {
+      NodeState* state = NodeState::getNodeState(this, pedge->source());
+      // specific edges are exposed to transfer functions
+      // in a fwd analysis edge specific information are associated below
+      Lattice* l = state->getLatticeBelow(this, pedge, 0);
+      AbstractObjectMap* mvMap = dynamic_cast<AbstractObjectMap*>(l);
+      ROSE_ASSERT(mvMap);
+
+      // We currently can only handle requests for the SgNode that corresponds to the current Part
+      set<CFGNode> nodes = pedge->source()->CFGNodes();
+      assert(nodes.size()==1);
+      assert(nodes.begin()->getNode() == n);
+
+      // print debug info
+      if(mpiValueAnalysisDebugLevel() >= 2) {
+        dbg << "mvMap Below=" << mvMap << "=" << mvMap->str() << endl;
+        dbg << "state=" << state->str() << endl;
+      }
+
+      MPIValueObjectPtr mvo = boost::dynamic_pointer_cast<MPIValueObject>(mvMap->get(ml));
+      ROSE_ASSERT(mvo);
+      return mvo->copyV();
+    }
+    else if(pedge->target()) {
+      NodeState* state = NodeState::getNodeState(this, pedge->target());
+      Lattice* l = state->getLatticeAbove(this, pedge, 0);
+      AbstractObjectMap* mvMap = dynamic_cast<AbstractObjectMap*>(l);
+      ROSE_ASSERT(mvMap);
+
+      // We currently can only handle requests for the SgNode that corresponds to the current Part
+      set<CFGNode> nodes = pedge->target()->CFGNodes();
+      assert(nodes.size()==1);
+      assert(nodes.begin()->getNode() == n);
+
+      // print debug info
+      if(mpiValueAnalysisDebugLevel() >= 2) {
+        dbg << "mvMap Above=" << mvMap << "=" << mvMap->str() << endl;
+        dbg << "state=" << state->str() << endl;
+      }
+
+      MPIValueObjectPtr mvo = boost::dynamic_pointer_cast<MPIValueObject>(mvMap->get(ml));
+      ROSE_ASSERT(mvo);
+      return mvo->copyV();
+    }
+    else ROSE_ASSERT(false);
   }
 
   std::string MPIValueAnalysis::str(std::string indent="") const {
