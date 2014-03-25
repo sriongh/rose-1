@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
 
   std::list<ComposedAnalysis*> analyses;
   analyses.push_back(new MPIValueAnalysis());
+  analyses.push_back(new ConstantPropagationAnalysis());
   checkDataflowInfoPass* cdip = new checkDataflowInfoPass();
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();
