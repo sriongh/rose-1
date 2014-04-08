@@ -30,6 +30,7 @@ fuse_SOURCES = \
 	analysis/graphIterator.C \
 	analysis/partitions.C \
 	analysis/stx_analysis.C \
+	analysis/tight_composer.C \
 	cfgUtils/CallGraphTraverse.C \
 	cfgUtils/cfgUtils.C \
 	cfgUtils/DataflowCFG.C \
@@ -66,6 +67,7 @@ include_HEADERS =\
 	analysis/graphIterator.h \
 	analysis/partitions.h \
 	analysis/stx_analysis.h \
+	analysis/tight_composer.h \
 	cfgUtils/CallGraphTraverse.h \
 	cfgUtils/cfgUtils.h \
 	cfgUtils/DataflowCFG.h \
