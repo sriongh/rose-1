@@ -12,6 +12,7 @@ namespace fuse {
   class TightComposer : public Composer, public ComposedAnalysis
   {
     std::list<ComposedAnalysis*> allAnalyses;
+    direction dir;
 
   public:
     TightComposer(const std::list<ComposedAnalysis*>& analyses);
@@ -138,14 +139,15 @@ namespace fuse {
     // -----------------------------------------
     // ----- Methods from ComposedAnalysis -----
     // -----------------------------------------
-
-    // Runs the analysis, combining the intra-analysis with the inter-analysis of its choice
-    // ChainComposer invokes the runAnalysis methods of all its constituent analyses in sequence
-    void runAnalysis();
-
+    //! initialize the NodeState for the given part for each analysis in the list
+    void initNodeState(PartPtr part);
     bool transfer(PartPtr part, CFGNode cn, NodeState& state, 
                   std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
-    std::set<PartPtr> getInitialWorklist();
+    void transferPropagateAState(PartPtr part, std::set<PartPtr>& visited, bool firstVisit, 
+                                 std::set<PartPtr>& initialized, dataflowPartEdgeIterator* curNodeIt, anchor curPartAnchor, 
+                                 graph& worklistGraph,std::map<PartPtr, std::set<anchor> >& toAnchors,
+                                 std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors);
+  std::set<PartPtr> getInitialWorklist();
     std::map<PartEdgePtr, std::vector<Lattice*> >& getLatticeAnte(NodeState *state);
     std::map<PartEdgePtr, std::vector<Lattice*> >& getLatticePost(NodeState *state);
     void setLatticeAnte(NodeState *state, std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo, bool overwrite);
@@ -181,6 +183,7 @@ namespace fuse {
     bool implementsExpr2CodeLoc  ();
     bool implementsExpr2MemRegion();
     bool implementsExpr2MemLoc   ();
+    bool implementsATSGraph      ();
   
     // Returns whether the class implements Expr* loosely or tightly (if it does at all)
     ComposedAnalysis::implTightness Expr2ValTightness();
