@@ -235,8 +235,8 @@ void ComposedAnalysis::runAnalysis()
   {
     PartPtr part = curNodeIt->getPart();
 
-    bool firstVisit = false;
-    if(firstVisit = (visited.find(part) == visited.end())) {
+    bool firstVisit = visited.find(part) == visited.end();
+    if(firstVisit) {
       visited.insert(part);
     }
     
@@ -643,8 +643,11 @@ void ComposedAnalysis::propagateDF2Desc(ComposedAnalysis* analysis,
     if(composedAnalysisDebugLevel()>=1) 
       dbg << "Final modified="<<modified<<", visited="<<(visited.find(nextPart)!=visited.end())<<" nextPart="<<nextPart->str()<<endl;
 
-    if(modified || visited.find(nextPart)==visited.end())
+    dbg << "modified=" << modified << endl;
+    if(modified || visited.find(nextPart)==visited.end()) {   
       curNodeIt->add(nextPartEdge);
+    }
+    dbg << "curNodeIt=" << curNodeIt->str() << endl;
   }
 }
 
