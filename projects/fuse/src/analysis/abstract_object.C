@@ -9,17 +9,6 @@ using namespace std;
 namespace fuse
 {
 
-// Sriram: gcc 4.1.2 complains of undefined references to unused to template functions
-// fix: explicit template instantiation
-template class CombinedCodeLocObject<true>;
-template class CombinedCodeLocObject<false>;
-template class CombinedValueObject<true>;
-template class CombinedValueObject<false>;
-template class CombinedMemLocObject<true>;
-template class CombinedMemLocObject<false>;
-template class CombinedMemRegionObject<true>;
-template class CombinedMemRegionObject<false>;
-
 // Functions that identify the type of AbstractObject this is. Should be over-ridden by derived
 // classes to save the cost of a dynamic cast.
 bool AbstractObject::isValueObject()     { return dynamic_cast<ValueObject*>    (this); }
@@ -1226,7 +1215,8 @@ MemRegionObjectPtr FuncResultMemRegionObject::copyMR() const
    ##### CombinedMemRegionObject ##### 
    ################################### */
 
-/* // Creates a new CombinedMemRegionObject instance of the generic CombinedMemRegionObject class.
+/* 
+// Creates a new CombinedMemRegionObject instance of the generic CombinedMemRegionObject class.
 template <bool defaultMayEq>
 boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > CombinedMemRegionObject<defaultMayEq>::create(MemRegionObjectPtr memReg)
 {
@@ -1252,12 +1242,12 @@ boost::shared_ptr<CombinedMemRegionObject<defaultMayEq> > CombinedMemRegionObjec
 // fix: explicit template instantiation
 template boost::shared_ptr<CombinedMemRegionObject<true> > CombinedMemRegionObject<true>::create(const std::list<MemRegionObjectPtr>& memRegions);
 template boost::shared_ptr<CombinedMemRegionObject<false> > CombinedMemRegionObject<false>::create(const std::list<MemRegionObjectPtr>& memRegions);
+*/
 
 template <bool defaultMayEq>
 void CombinedMemRegionObject<defaultMayEq>::add(MemRegionObjectPtr memReg) {
   memRegions.push_back(memReg);
 }
-*/
 
 // Returns whether this object may/must be equal to o within the given Part p
 template <bool defaultMayEq>
@@ -1918,5 +1908,16 @@ bool IndexVector::isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* a
  assert (false);
  return false;  
 }
+
+// Sriram: gcc 4.1.2 complains of undefined references to unused to template functions
+// fix: explicit template instantiation
+template class CombinedCodeLocObject<true>;
+template class CombinedCodeLocObject<false>;
+template class CombinedValueObject<true>;
+template class CombinedValueObject<false>;
+template class CombinedMemLocObject<true>;
+template class CombinedMemLocObject<false>;
+template class CombinedMemRegionObject<true>;
+template class CombinedMemRegionObject<false>;
 
 } //namespace fuse

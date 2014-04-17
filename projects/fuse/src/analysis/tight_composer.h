@@ -27,13 +27,27 @@ namespace fuse {
     // - Methods from Composer -
     // -------------------------
 
+    template<class RetTypePtr>
+    std::list<RetTypePtr> Expr2Any(std::string opName,
+                                   SgNode* n,
+                                   PartEdgePtr pedge,
+                                   boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
+                                   boost::function<RetTypePtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
+    template<class RetTypePtr>
+    std::list<RetTypePtr> OperandExpr2Any(std::string opName,
+                                          SgNode* n,
+                                          SgNode* operand,
+                                          PartEdgePtr pedge,
+                                          boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
+                                          boost::function<RetTypePtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
+
   public:
     CodeLocObjectPtr Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  private:
-    CodeLocObjectPtr Expr2CodeLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    // private:
+    //   CodeLocObjectPtr Expr2CodeLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  public:
+    // public:
     // Variant of Expr2CodeLoc that inquires about the code location denoted by the operand of the 
     // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
     CodeLocObjectPtr OperandExpr2CodeLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
@@ -43,10 +57,10 @@ namespace fuse {
     // The objects returned by these functions are expected to be deallocated by their callers.
     ValueObjectPtr Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  private:
-    ValueObjectPtr Expr2Val_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    // private:
+    //   ValueObjectPtr Expr2Val_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  public:
+    // public:
     // Variant of Expr2Value that runs the query on the analysis that called the method rather than 
     // some prior server analysis
     //  ValueObjectPtr Expr2ValSelf(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* self);
@@ -57,20 +71,20 @@ namespace fuse {
     
     MemRegionObjectPtr Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  private:
-    MemRegionObjectPtr Expr2MemRegion_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    // private:
+    //   MemRegionObjectPtr Expr2MemRegion_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  public:
+    // public:
     // Variant of Expr2MemRegion that inquires about the memory location denoted by the operand of the given node n, where
     // the part denotes the set of prefixes that terminate at SgNode n.
     MemRegionObjectPtr OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
     
     MemLocObjectPtr Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  private:
-    MemLocObjectPtr Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    // private:
+    //   MemLocObjectPtr Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-  public:
+    // public:
     // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
     // the part denotes the set of prefixes that terminate at SgNode n.
     MemLocObjectPtr OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
