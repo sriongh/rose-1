@@ -8,12 +8,73 @@
 #include "compose.h"
 
 namespace fuse {
-  
+
+  /***************
+   * Expr2AnyKey *
+   ***************/
+
+  //! Key value used to identify any query.
+  class Expr2AnyKey : public sight::printable {
+    SgNode* sgn;
+    PartEdgePtr pedge;
+    Composer::reqType reqtype;
+  public:
+    Expr2AnyKey(SgNode* _sgn, PartEdgePtr _pedge, Composer::reqType _reqtype)
+      :  sgn(_sgn), pedge(_pedge), reqtype(_reqtype) { }
+
+    bool operator<(const Expr2AnyKey& that) const;
+
+    std::string str(std::string indent="") const;
+  };
+
+  /*****************
+   * Expr2AnyState *
+   *****************/
+
+  //! State of any Expr2Any query.
+  //! Maintaining state for query is useful cycles and return Full abstract objects.
+  //! The init state of the query denotes that query has not been forwarded to any analysis.
+  //! Query remains in analysis state when it is being forwarded to analysis by the TightComposer.
+  //! Variable analysis tracks the last analysis that the composer forwarded the query.
+  //! Receiving the same query from already queried analysis indicates cycle 
+  //! at which point TightComposer returns Full (univeral) abstract objects.
+  //! Query is retired to finished state when there are no more analyses for forwarding.
+  class Expr2AnyState {
+  public:
+    typedef enum {init=0, analysis=1, finished=2} StateT;
+    StateT state;
+    ComposedAnalysis* currAnalysis;
+    Expr2AnyState() : state(init), currAnalysis(NULL) { }
+  };
+
+  /*************************
+   * TightCompositionCache *
+   *************************/
+ 
+  class TightCompositionCache {
+    typedef std::pair<Expr2AnyState, AbstractObjectPtr> QueryInfo;
+    std::map<Expr2AnyKey, QueryInfo> tccache;
+  public:
+    TightCompositionCache() { }
+    void initializeQuery(Expr2AnyKey key);
+    bool isQueryCached(Expr2AnyKey key);
+    AbstractObjectPtr getCachedAO(Expr2AnyKey key);
+    bool isRecurringQuery(Expr2AnyKey key, ComposedAnalysis* analysis);
+    void updateQueryState(Expr2AnyKey key, ComposedAnalysis* analysis);
+    void retireQueryUpdateCache(Expr2AnyKey key, AbstractObjectPtr ao);
+  };
+
+  /*****************
+   * TightComposer *
+   *****************/
+
   class TightComposer : public Composer, public ComposedAnalysis
   {
     std::list<ComposedAnalysis*> allAnalyses;
     direction dir;
 
+    TightCompositionCache tccache;
+    
   public:
     TightComposer(const std::list<ComposedAnalysis*>& analyses);
     TightComposer(const TightComposer&);
@@ -27,19 +88,75 @@ namespace fuse {
     // - Methods from Composer -
     // -------------------------
 
-    template<class RetTypePtr>
-    std::list<RetTypePtr> Expr2Any(std::string opName,
-                                   SgNode* n,
-                                   PartEdgePtr pedge,
-                                   boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
-                                   boost::function<RetTypePtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
-    template<class RetTypePtr>
-    std::list<RetTypePtr> OperandExpr2Any(std::string opName,
+    //! Generic method for answering Expr2* queries.
+    //! Consider two analysis A, B composed by TightComposer.
+    //! Analysis A or B when implementing transfer functions invoke composer->Expr2* query on the incoming edge.
+    //! The query from the analysis is forwarded to the TightComposer which is responsible for 
+    //! computing the tightest possible abstraction for the given query.
+    //! For any given Expr2* query, TightComposer forwards the query to all the analyses in the composition list and its predecessor.
+    //! To compute tightest abstraction for the query it computes the intersection of the abstract objects returned by the analyses.
+    //! It checks if each analysis can answer the query and calls the corresponding query method implemented by the analysis.
+    //! The intersection is facilitated by creating abstract objects 
+    //! such as IntersectMemLocObject, IntersectMemRegionObject, IntersectValueObject or IntersectCodeLocObject.
+    //! Forwarding query to analyses creates cycles.
+    //! \dot
+    //! digraph query {
+    //!  rankdir=TB
+    //!  node [shape=record];
+    //!  {
+    //!   rank=same; A; B;
+    //!   A [label="{Analysis A| {<f1> transfer|<f2> Expr2Any}}"]
+    //!   B [label="{Analysis B| {<f1> transfer|<f2> Expr2Any}}"]
+    //!  }
+    //!  TC[label="{<f1> Expr2Any| TightComposer}"]
+    //!  A:f1 -> TC:f1 [label="composer->expr2any" color="darkgreen"];
+    //!  TC:f1 -> A:f2 [label="analysis->expr2any" color="blue"];
+    //!  TC:f1 -> B:f2 [label="analysis->expr2any" color="blue"];
+    //!  B:f2 -> TC:f1 [label="composer->expr2any" color="red"];
+    //! }
+    //! \enddot
+    //! Analysis A queries the composer using composers' Expr2Any method.
+    //! Composer forwards the queries to each analysis invoking analysis' Expr2Any method.
+    //! Analysis answers those queries based on what is already known to it.
+    //! However an analysis can forward the query back to the composer as it may not know anything about the expression.
+    //! For example, points to analysis understands pointers but does not anything about non-pointer variables or arrays.
+    //! As it does not know anything about the expression an analysis consults the composer thereby creating cycles.
+    //! TightComposer should detect such cycles and return universal objects (that are true) to break the cycles.
+    //! Analysis::Expr2Any method can be invoked only by the composer.
+    //! Before invoking the Analysis::Expr2Any method TightComposer records the fact that it is consulting an analysis for the query at a given edge.
+    //! If the analysis forwards the query back to the composer, 
+    //! it would know that it already consulted the analysis for the same expression at a given edge.
+    //! The query that was forwarded back to the composer is answered by returning full abstract objects.
+    //! Note that the composer does not consult other analyses for the recurring query.
+    //! Full abstract objects are returned only for the cases of recurring queries.
+    //! The full abstract objects are returned to the analysis which may wrap its 
+    //! own abstract object around it and return the wrapped abstract object back to the composer.
+    //! On constructing intersect abstract objects, full abstract objects are dropped from it as \f$ True \cap dfinfo = dfinfo \f$.
+
+    //! \tparam AOType AbstractObject type that can be MemLocObject, ValueObject, MemRegionObject or CodeLocObject.
+    //! \tparam FullAOType Full or universal version of AOType which can be FullMemLocObject, FullValueObject, FullMemRegionObject, FullCodeLocObject.
+    //! \tparam IntersectAOType The result of TightComposer is represented as an intersection of AbstractObject.
+    //! \result Returns a boost::shared_ptr of AOType 
+    //!
+    template<class AOType, class FullAOType, class IntersectAOType>
+    boost::shared_ptr<AOType> Expr2Any(std::string opName,
+                                       SgNode* n,
+                                       PartEdgePtr pedge,
+                                       ComposedAnalysis* client,
+                                       Composer::reqType reqtype,
+                                       boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
+                                       boost::function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp,
+                                       boost::function<boost::shared_ptr<AOType> (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp);
+
+    template<class AOType, class FullAOType, class IntersectAOType>
+    boost::shared_ptr<AOType> OperandExpr2Any(std::string opName,
                                           SgNode* n,
                                           SgNode* operand,
                                           PartEdgePtr pedge,
+                                          ComposedAnalysis* client,
+                                          Composer::reqType reqtype,
                                           boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
-                                          boost::function<RetTypePtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
+                                          boost::function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
 
   public:
     CodeLocObjectPtr Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
@@ -81,8 +198,8 @@ namespace fuse {
     
     MemLocObjectPtr Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // private:
-    //   MemLocObjectPtr Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    private:
+    MemLocObjectPtr Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
     // public:
     // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
