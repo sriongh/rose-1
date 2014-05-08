@@ -293,6 +293,50 @@ std::string CodeLocObject::str(std::string indent) const { // pretty print for t
 }
 
 /* #################################
+   ##### UnknownCodeLocObject ##### 
+   ################################# */
+
+bool UnknownCodeLocObject::mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownCodeLocObject::mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  return false;
+}
+  
+bool UnknownCodeLocObject::equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  return isFullCL(pedge);
+}
+  
+bool UnknownCodeLocObject::subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  return isFullCL(pedge);
+}
+  
+bool UnknownCodeLocObject::isLiveCL(PartEdgePtr pedge) {
+  return true;
+}
+  
+bool UnknownCodeLocObject::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  return false;
+}
+  
+bool UnknownCodeLocObject::isFullCL(PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownCodeLocObject::isEmptyCL(PartEdgePtr pedge) {
+  return false;
+}
+  
+CodeLocObjectPtr UnknownCodeLocObject::copyCL() const {
+  return boost::make_shared<UnknownCodeLocObject>();
+}
+  
+string UnknownCodeLocObject::str(string indent) const {
+  return "UnknownCodeLocObject";    
+}
+
+/* #################################
    ##### CombinedCodeLocObject ##### 
    ################################# */
 
@@ -1211,6 +1255,54 @@ MemRegionObjectPtr FuncResultMemRegionObject::copyMR() const
   return boost::make_shared<FuncResultMemRegionObject>(func);
 }
 
+/* ##################################
+   ##### UnknownMemRegionObject ##### 
+   ################################## */
+
+bool UnknownMemRegionObject::mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownMemRegionObject::mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {  
+  return false;
+}
+
+bool UnknownMemRegionObject::equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+  return isFullMR(pedge);
+}
+                                                                                                                                                                                                        
+bool UnknownMemRegionObject::subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+  return isFullMR(pedge);
+}
+                                     
+MemRegionObjectPtr  UnknownMemRegionObject::copyMR() const {
+  return boost::make_shared<UnknownMemRegionObject>();
+}
+
+bool UnknownMemRegionObject::isLiveMR(PartEdgePtr pedge) {
+  return true;
+}
+                                    
+bool UnknownMemRegionObject::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    return false;
+}
+
+bool UnknownMemRegionObject::isFullMR(PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownMemRegionObject::isEmptyMR(PartEdgePtr pedge) {
+  return false;
+}
+
+ValueObjectPtr UnknownMemRegionObject::getRegionSize(PartEdgePtr pedge) const {
+  return boost::make_shared<UnknownValueObject>();
+}
+
+string UnknownMemRegionObject::str(string indent) const {
+  return "UnknownMemRegionObject";
+}
+
 /* ###################################
    ##### CombinedMemRegionObject ##### 
    ################################### */
@@ -1663,6 +1755,50 @@ MemLocObjectPtr FuncResultMemLocObject::copyML() const
   return boost::make_shared<FuncResultMemLocObject>(*this);
 }
 
+/* #############################
+   #### UnknownMemLocObject ####
+   ############################# */
+
+bool UnknownMemLocObject::mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownMemLocObject::mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
+  return false;
+}
+  
+bool UnknownMemLocObject::equalSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
+  return isFullML(pedge);
+}
+  
+bool UnknownMemLocObject::subSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
+  return isFullML(pedge);
+}
+  
+MemLocObjectPtr UnknownMemLocObject::copyML() const {
+  return boost::make_shared<UnknownMemLocObject>();
+}
+  
+bool UnknownMemLocObject::isLiveML(PartEdgePtr pedge) {
+  return true;
+}
+  
+bool UnknownMemLocObject::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  return false;
+}
+  
+bool UnknownMemLocObject::isFullML(PartEdgePtr pedge) {
+  return true;
+}
+
+bool UnknownMemLocObject::isEmptyML(PartEdgePtr pedge) {
+  return false;
+}
+  
+string UnknownMemLocObject::str(string indent) const {
+  return "UnknownMemLocObject";
+}
+
 /* ################################
    ##### CombinedMemLocObject ##### 
    ################################ */
@@ -1845,6 +1981,7 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
   
   return oss.str();
 }
+
 
 /* #######################
    ##### IndexVector ##### 

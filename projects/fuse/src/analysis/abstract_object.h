@@ -267,6 +267,45 @@ public:
   virtual std::string str(std::string indent="") const; // pretty print for the object
 };
 
+/* ################################
+   ##### UnknownCodeLocObject ##### 
+   ################################ */
+
+class UnknownCodeLocObject : public CodeLocObject {
+public:
+  UnknownCodeLocObject() : CodeLocObject(NULL) { }
+
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveCL(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullCL(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyCL(PartEdgePtr pedge);
+  
+  // Allocates a copy of this object and returns a pointer to it
+  CodeLocObjectPtr copyCL() const;
+  
+  std::string str(std::string indent="") const;    
+};
+
+
 // The combination of multiple CodeLocObjects. Maintains multiple CodeLocObjects and responds to
 //   API calls with the most or least accurate response that its constituent objects return, depending
 //   on the value of the template parameter defaultMayEq (the default value that mayEqual would return
@@ -720,6 +759,46 @@ class FuncResultMemRegionObject : public MemRegionObject
 };
 typedef boost::shared_ptr<FuncResultMemRegionObject> FuncResultMemRegionObjectPtr;
 
+//! Default implementation of MemRegionObject that denotes all MemRegionObject
+//! Composers use the objects to conservatively answer queries
+//! Analyses should never see these objects
+class UnknownMemRegionObject : public MemRegionObject
+{
+ public:
+  UnknownMemRegionObject() : MemRegionObject(NULL) { }
+
+  //! Returns whether this object may/must be equal to o within the given Part p                                                                                                                       
+  bool mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+
+  // Returns whether the two abstract objects denote the same set of concrete objects                                                                                                                    
+  bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted                                                                                           // by the given abstract object.
+  bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+
+  // Allocates a copy of this object and returns a pointer to it
+  MemRegionObjectPtr copyMR() const;
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveMR(PartEdgePtr pedge);
+
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullMR(PartEdgePtr pedge);
+
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyMR(PartEdgePtr pedge);
+
+  // Returns a ValueObject that denotes the size of this memory region
+  ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
+
+  std::string str(std::string indent="") const;
+};
+
+
 // The combination of multiple MemRegionObjects. Maintains multiple MemRegionObjects and responds to
 //   API calls with the most or least accurate response that its constituent objects return, depending
 //   on the value of the template parameter defaultMayEq (the default value that mayEqual would return
@@ -943,6 +1022,41 @@ class FuncResultMemLocObject : public MemLocObject
   MemLocObjectPtr copyML() const;
 };
 typedef boost::shared_ptr<FuncResultMemLocObject> FuncResultMemLocObjectPtr;
+
+//! Default implementation of MemLocObject that denotes the set of all MemLocObjects
+class UnknownMemLocObject : public MemLocObject
+{
+public:
+  UnknownMemLocObject() : MemLocObject(NULL) { }
+
+  // Returns whether this object may/must be equal to o within the given Part p
+  bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Allocates a copy of this object and returns a pointer to it
+  MemLocObjectPtr copyML() const;
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveML(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullML(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyML(PartEdgePtr pedge);
+  
+  std::string str(std::string indent="") const;
+};
 
 // The combination of multiple MemLocObjects. Maintains multiple MemLocObjects and responds to
 //   API calls with the most or least accurate response that its constituent objects return, depending
