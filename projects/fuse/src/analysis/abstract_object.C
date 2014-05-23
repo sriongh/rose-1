@@ -538,6 +538,205 @@ static void exampleCombinedCodeLocObjects2(CodeLocObjectPtr cl, std::list<CodeLo
   exampleCombinedCodeLocObjects(cl, cls);
 }
 
+/* ###############################
+   ##### MappedCodeLocObject ##### 
+   ############################### */
+
+template<class Key, bool MostAccurate>
+//! If the CodeLocObject is not full add it to the map under key
+//! If the CodeLocObject is full add UnknowCodeLocObject under key only if MostAccurate=false (union of sub-executions)
+void MappedCodeLocObject<Key, MostAccurate>::add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge) {
+  if(!clo_p->isFullCL(pedge)) {  
+    codeLocsMap[key] = clo_p;
+  }
+  // if the object is full
+  // Empty the map if MostAccurate=false
+  // Empty map indicates full set of objects
+  else {
+    if(!MostAccurate)
+      codeLocsMap.clear();
+  }
+}
+
+template<class Key, bool MostAccurate>
+const map<Key, CodeLocObjectPtr>& MappedCodeLocObject<Key,  MostAccurate>::getCodeLocsMap() const {
+  return codeLocsMap;
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! Return true for mayEquals as UnknownAbstractObject denotes the full set.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::mayEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return true;
+  else return (*it).second->mayEqualCL(o, pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! Return false for mustEquals are singletons.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::mustEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return false;
+  else return (*it).second->mustEqualCL(o, pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! The two objects are equal if that object is also full.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::equalSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return o->isFullCL(pedge);
+  else return (*it).second->equalSetCL(o, pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! The two objects are equal if that object is also full.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::subSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return o->isFullCL(pedge);
+  else return (*it).second->subSetCL(o, pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! Return true conservatively?
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isLiveCL(Key key, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return true;
+  else return (*it).second->isLiveCL(pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! Return true as the key is mapped to UnknownAbstractObject which denotes the full set.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isFullCL(Key key, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return true;
+  else return (*it).second->isFullCL(pedge);
+}
+
+//! Lookup the CodeLocObjectPtr from the map using the key.
+//! If key found query is routed to the analysis implementation.
+//! key not found implies that it is mapped to UnknownAbstractObject.
+//! Return false as the key is mapped to UnknownAbstractObject which denotes the full set.
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isEmptyCL(Key key, PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.find(key);
+  if(it == codeLocsMap.end()) return false;
+  else return (*it).second->isEmptyCL(pedge);
+}
+
+//! MayEquals=false implies under all executions the two objects are not may equal
+//! MayEquals=true implies that there are atleast one or more executions under which
+//! the two objects are equal.
+//! 
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > that_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> > (o);
+  assert(that_p);
+
+  const map<Key, CodeLocObjectPtr>& thatCodeLocsMap = that_p->getCodeLocsMap();
+  
+  typename map<Key, CodeLocObjectPtr>::const_iterator it = thatCodeLocsMap.begin();
+  for( ; it != thatCodeLocsMap.end(); ++it) {
+    if(mayEqualCL(it->first, it->second, pedge) == MostAccurate) return MostAccurate;
+  }
+  return !MostAccurate;
+}
+
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedCodeLocObject<Key, MostAccurate> > that_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, MostAccurate> > (o);
+  assert(that_p);
+
+  const map<Key, CodeLocObjectPtr>& thatCodeLocsMap = that_p->getCodeLocsMap();
+  
+  typename map<Key, CodeLocObjectPtr>::const_iterator it = thatCodeLocsMap.begin();
+  for( ; it != thatCodeLocsMap.end(); ++it) {
+    if(mustEqualCL(it->first, it->second, pedge) == !MostAccurate) return !MostAccurate;
+  }
+  return MostAccurate;
+}
+  
+ template<class Key, bool MostAccurate>
+ bool MappedCodeLocObject<Key, MostAccurate>::equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+   boost::shared_ptr<MappedCodeLocObject<Key, MostAccurate> > that_p = 
+     boost::dynamic_pointer_cast<MappedCodeLocObject<Key, MostAccurate> > (o);
+   assert(that_p);
+
+   const map<Key, CodeLocObjectPtr>& thatCodeLocsMap = that_p->getCodeLocsMap();
+  
+   typename map<Key, CodeLocObjectPtr>::const_iterator it = thatCodeLocsMap.begin();
+   for( ; it != thatCodeLocsMap.end(); ++it) {
+     if(equalSetCL(it->first, it->second, pedge) == !MostAccurate) return !MostAccurate;
+   }
+   return MostAccurate;
+ }
+  
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+     boost::shared_ptr<MappedCodeLocObject<Key, MostAccurate> > that_p = 
+     boost::dynamic_pointer_cast<MappedCodeLocObject<Key, MostAccurate> > (o);
+   assert(that_p);
+
+   // const map<Key, CodeLocObjectPtr>& thatCodeLocsMap = that_p->getCodeLocsMap();
+  
+   // typename map<Key, CodeLocObjectPtr>::const_iterator it = thatCodeLocsMap.begin();
+   // for( ; it != thatCodeLocsMap.end(); ++it) {
+   //   if(subSetCL(it->first, it->second, pedge) == !MostAccurate) return !MostAccurate;
+   // }
+   return MostAccurate;
+}
+  
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isLiveCL(PartEdgePtr pedge) {
+  return false;
+}
+  
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  return false;
+}
+  
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isFullCL(PartEdgePtr pedge) {
+  return false;
+}
+
+template<class Key, bool MostAccurate>
+bool MappedCodeLocObject<Key, MostAccurate>::isEmptyCL(PartEdgePtr pedge) {
+  return false;
+}
+  
+template<class Key, bool MostAccurate>
+CodeLocObjectPtr MappedCodeLocObject<Key, MostAccurate>::copyCL() const {
+  return boost::make_shared<MappedCodeLocObject<Key, MostAccurate> > (*this);
+}
+ 
+template<class Key, bool MostAccurate> 
+string MappedCodeLocObject<Key, MostAccurate>::str(string indent) const {
+  ostringstream oss;
+  oss << "MappedCodeLocObject";
+  return oss.str();
+}
+
+
 /* #######################
    ##### ValueObject ##### 
    ####################### */
@@ -1982,6 +2181,90 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
   return oss.str();
 }
 
+/* ##############################
+   ##### MappedMemLocObject #####
+   ############################## */
+
+//! MemLocObjects that are full can be returned by either analysis or tight composer (UnknownMemLocObject)
+//! Query dispatching to analysis compares two MLs implemented by it.
+//! If an UnknownMemLocObject is passed to analysis it breaks the analysis implementation of the set operations for MLs.
+//! Storing analysis MLs that are full is also not useful.
+//! Consequently full MLs are never stored in object collection.
+//! To compare two MappedML query, is dispatched based on the key.
+//! If the key is not common in the two MappedML then it is assumed that the MappedML missing the key 
+//! has UnknownML(full set of objects) mapped to the corresponding key.
+//! Since full MLs are never stored in the map, an empty map does not imply that the MappedML is full.
+//! Bool variable full=true along with empty map determines that the MappedML denotes full set of ML.
+//! Empty map with full=false indicates that the MappedML is empty.
+//! If ml_p is the ML to be added to the collection and if ml_p is UnknownML or ml_p->isFullML=true
+//! then mapped ML is set to full only if MostAccurate=false.
+template<class Key, bool mostAccurate>
+void MappedMemLocObject<Key, mostAccurate>::add(Key key, MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  if(!ml_p->isFullML(pedge) && !isFullML(pedge)) {
+    memLocsMap[key] = ml_p;
+  }
+  else {
+    if(!mostAccurate) setToFull();
+  }
+}
+
+template<class Key, bool mostAccurate>
+void MappedMemLocObject<Key, mostAccurate>::setToFull() {
+  mappedMLFull=true;
+  memLocsMap.clear();
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  // if this object is already full
+  if(isFullML(pedge)) return false;
+
+  MappedMemLocObject<Key, mostAccurate> that_p = boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(that);
+  assert(that_p);
+
+  // if that object is full set this object to full
+  if(that_p->isFullML(pedge)) {
+    setToFull();
+    return true;
+  }
+
+  // both objects are not full
+  bool modified = false;
+  const map<Key, MemLocObjectPtr> thatMLMap = that_p->getMemLocs();
+  
+  map<Key, MemLocObjectPtr>::iterator it = memLocsMap.begin();
+  map<Key, MemLocObjectPtr>::iterator s_it;   // search iterator for thatMLMap
+  for( ; it != memLocsMap.end(); ++it) {
+    s_it = thatML.find(it->first);
+    if(s_it != thatMLMap.end()) {
+      modified = it->second->meetUpdateML(s_it->second, pedge) || modified;
+    }
+    else {
+      // thatMLMap does not have the key and has UnknownML mapped to the key
+      // Set the object mapped to key of this ML by deleting it
+      // Remove this object only if !mostAccurate?
+      if(!mostAccurate) memLocsMap.erase(it);
+    }
+  }
+ 
+  // Check if this object became full as a result of meetUpdate
+}
+
+template<class Key, bool mostAccurate>
+void MappedMemLocObject<Key, mostAccurate>::isFullML(PartEdgePtr pedge) {
+  return mappedMLFull && (memLocsMap.size() == 0);
+}
+
+template<class Key, bool mostAccurate>
+void MappedMemLocObject<Key, mostAccurate>::isEmptyML(PartEdgePtr pedge) {
+  if(!mappedMLFull && memLocsMap.size() == 0) return true;
+  return false;
+}
+
+template<class Key, bool mostAccurate>
+MemLocObjectPtr MappedMemLocObject<Key, mostAccurate>::copyML() const {
+  return boost::make_shared<MappedMemLocObject<Key, mostAccurate> >(*this);
+}
 
 /* #######################
    ##### IndexVector ##### 
@@ -2056,5 +2339,8 @@ template class CombinedMemLocObject<true>;
 template class CombinedMemLocObject<false>;
 template class CombinedMemRegionObject<true>;
 template class CombinedMemRegionObject<false>;
+
+template class MappedCodeLocObject<Analysis*, true>;
+template class MappedCodeLocObject<Analysis*, false>;
 
 } //namespace fuse

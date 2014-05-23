@@ -4,6 +4,7 @@
 #include "sight.h"
 #include "partitions.h"
 #include "CallGraphTraverse.h"
+#include "analysis.h"
 #include <string>
 #include <cstring>
 #include <vector>
@@ -364,6 +365,75 @@ typedef boost::shared_ptr<UnionCodeLocObject> UnionCodeLocObjectPtr;
 // fix: explicit template instantiation
 extern template class CombinedCodeLocObject<true>;
 extern template class CombinedCodeLocObject<false>;
+
+/* #############################
+   #### MappedCodeLocObject ####
+   ############################# */
+
+//! Collection of combined CodeLocObjects stored using map.
+//! MostAccurate=true -> query is answered based on intersection of sub-executions.
+//! MostAccurate=false -> query is answered based on union of sub-executions.
+template<class Key, bool MostAccurate>
+class MappedCodeLocObject : public CodeLocObject
+{
+  std::map<Key, CodeLocObjectPtr> codeLocsMap;
+public:
+  MappedCodeLocObject() : CodeLocObject(NULL) { }
+  MappedCodeLocObject(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge) : CodeLocObject(NULL) {
+    add(key, clo_p);
+  }
+  MappedCodeLocObject(const MappedCodeLocObject& that) : CodeLocObject(that), codeLocsMap(that.codeLocsMap) { }
+
+  void add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge);
+  const std::map<Key, CodeLocObjectPtr>& getCodeLocsMap() const;
+  
+private:
+  //! Helper methods.
+  //! Use key and look into your own map.
+  //! Call the appropriate query function on the individual mapped element.
+  //! If key is not found treat the object mapped to as UnknownAbstractObject 
+  //! and return conservative answer for the queries
+  bool mayEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool equalSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool subSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool isLiveCL(Key key, PartEdgePtr pedge);
+  bool isFullCL(Key key, PartEdgePtr pedge);
+  bool isEmptyCL(Key key, PartEdgePtr pedge);
+
+public:  
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveCL(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullCL(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyCL(PartEdgePtr pedge);
+  
+  // Allocates a copy of this object and returns a pointer to it
+  CodeLocObjectPtr copyCL() const;
+  
+  std::string str(std::string indent="") const;
+};
+
+extern template class MappedCodeLocObject<Analysis*, true>;
+extern template class MappedCodeLocObject<Analysis*, false>;
 
 /* #######################
    ##### ValueObject ##### 
@@ -1122,6 +1192,119 @@ typedef boost::shared_ptr<UnionMemLocObject> UnionMemLocObjectPtr;
 // fix: explicit template instantiation
 extern template class CombinedMemLocObject<true>;
 extern template class CombinedMemLocObject<false>; // not sure if this is needed as there were no errors
+
+/* #############################
+   #### MappedMemLocObject ####
+   ############################# */
+
+//! Collection of MLs are used by composers to store results from multiple analysis.
+//! They can also used by any analysis to denote a set of memory objects.
+//! Combination of multiple MemLocObjects that are aligned using a map with a key.
+//! Key is either Analysis* or PartEdgePtr.
+//! Boolean template parameter determines if the response to the queries are least accurate (defaultMayEq=true) 
+//! or most accurate(defaultMayEq=false).
+//! For mayEqual and mustEqual queries the response is computed by unioning the executions for least accurate answer.
+//! Intersecting the executions yields the most accurate answer.
+//! Consider the code 
+//! \f{verbatim} if(*) p=&a; else p=&b; *p=5; \f}
+//! The set of executions for this of code at the assignment statement are \f$E=\{e_1, e_2, e_3, e_4, e_5\} \f$ where
+//! \f$e_1: p \rightarrow \{ \}\f$,
+//! \f$e_2: p \rightarrow  \{a \}\f$,
+//! \f$e_3: p \rightarrow  \{b \}\f$,
+//! \f$e_4: p \rightarrow  \{a,b \}\f$,
+//! \f$e_5: p \rightarrow  \top \f$.
+//! The ML object exported by Points-to at the assignment is \f$ p \rightarrow \{a, b\} \f$.
+//! This ML object refines the set of executions to contain only \f$PT_E=\{e_2, e_3, e_4\} \f$.
+//! Constant propagation knows nothing about the pointers.
+//! Its set of executions contain everything \f$CP_E=\{e_1, e_2, e_3, e_4, e_5\} \f$.
+//! \f$ PT_E \cup CP_E=\{e_1, e_2, e_3, e_4, e_5\} \f$.
+//! \f$ PT_E \cap CP_E=\{e_2,e_3,e_4\} \f$.
+//! Consider the following may equality queries \f$ *p =_{may} a, *p =_{may} b, *p =_{may} c \f$.
+//! The least accurate answer is provided by the set of executions \f$ PT_E \cup CT_E \f$.
+//! The most accurate answer is provided by the set of executions \f$ PT_E \cap CT_E \f$.
+/*! \f{tabular} {| l | l | l | l |}
+   \hline
+   &  $*p=_{may}a$ & $*p=_{may}b$ & $*p=_{may}c$ \\ \hline
+   PT & T & T & F \\
+   CP & T & T & T \\
+   $PT \cup CP$  & T & T & T \\
+   $PT \cap CP$  & T & T & F \\
+   \hline
+  \f} */
+//! Now consider the code
+//! \f{verbatim} q=&c; if(*) p=&a; else p=&b; *p=5; \f}
+//! The executions \f$e_2, e_3, e_4 \f$ also have the information \f$ q \rightarrow \{c\} \f$.
+//! Consider the must equality queries \f$ *p =_{must} a, *p =_{must} b, *p =_{must} c \f$.
+//! As before the must equality queries are answered based on union (least accurate) or intersection (most accurate) of executions.
+/*! \f{tabular} {| l | l | l | l |}
+   \hline
+   &  $*p=_{must}a$ & $*p=_{must}b$ & $*p=_{must}c$ \\ \hline
+   PT & F & F & T \\
+   CP & F & F & F \\
+   $PT \cup CP$  & F & F & F \\
+   $PT \cap CP$  & F & F & T \\
+   \hline
+  \f}*/
+template<class Key, bool mostAccurate>
+class MappedMemLocObject : public MemLocObject
+{
+  std::map<Key, MemLocObjectPtr> memLocsMap;
+  bool mappedMLFull;
+
+public:
+  MappedMemLocObject() : MemLocObject(NULL), full(false) { }
+  MappedMemLocObject(const MappedMemLocObject& that) : MemLocObject(that), memLocsMap(that.memLocsMap), full(that.full) { }
+
+  void add(Key key, MemLocObjectPtr clo_p, PartEdgePtr pedge);
+  const std::map<Key, MemLocObjectPtr>& getMemLocsMap() const;
+  
+private:
+  //! Helper methods.
+  //! Use key and look into your own map.
+  //! Call the appropriate query function on the individual mapped element.
+  //! If key is not found treat the object mapped to as UnknownAbstractObject 
+  //! and return conservative answer for the queries
+  bool mayEqualML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
+  bool equalSetML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
+  bool subSetML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
+  bool isLiveML(Key key, PartEdgePtr pedge);
+  bool isFullML(Key key, PartEdgePtr pedge);
+  bool isEmptyML(Key key, PartEdgePtr pedge);
+
+public:  
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveML(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullML(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyML(PartEdgePtr pedge);
+  
+  // Allocates a copy of this object and returns a pointer to it
+  MemLocObjectPtr copyML() const;
+  
+  std::string str(std::string indent="") const;
+};
+
+extern template class MappedMemLocObject<Analysis*, true>;
+extern template class MappedMemLocObject<Analysis*, false>;
 
 /* ###########################################
    ##### Specific Types of MemLocObjects ##### 
