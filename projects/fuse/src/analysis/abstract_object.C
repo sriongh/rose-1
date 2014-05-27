@@ -2185,79 +2185,100 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
    ##### MappedMemLocObject #####
    ############################## */
 
-//! MemLocObjects that are full can be returned by either analysis or tight composer (UnknownMemLocObject)
-//! Query dispatching to analysis compares two MLs implemented by it.
-//! If an UnknownMemLocObject is passed to analysis it breaks the analysis implementation of the set operations for MLs.
-//! Storing analysis MLs that are full is also not useful.
-//! Consequently full MLs are never stored in object collection.
-//! To compare two MappedML query, is dispatched based on the key.
-//! If the key is not common in the two MappedML then it is assumed that the MappedML missing the key 
-//! has UnknownML(full set of objects) mapped to the corresponding key.
-//! Since full MLs are never stored in the map, an empty map does not imply that the MappedML is full.
-//! Bool variable full=true along with empty map determines that the MappedML denotes full set of ML.
-//! Empty map with full=false indicates that the MappedML is empty.
-//! If ml_p is the ML to be added to the collection and if ml_p is UnknownML or ml_p->isFullML=true
-//! then mapped ML is set to full only if MostAccurate=false.
+//! Method to add mls to the map.
+//! MLs that are full are never added to the map.
+//! If ml_p is UnknownML or ml_p->isFullML=true then mapped ML is set to full only if mostAccurate=false.
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::add(Key key, MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  if(!ml_p->isFullML(pedge) && !isFullML(pedge)) {
+  // If the object is already full don't add anything
+  if(isFullML(pedge)) return;
+
+  // If the ml_p is not full add/update the map
+  if(!ml_p->isFullML(pedge)) {
     memLocsMap[key] = ml_p;
   }
   else {
-    if(!mostAccurate) setToFull();
+    n_FullML++;
+    if(!mostAccurate) setMLToFull();
   }
 }
 
+// This mapped ML is dead if all the mapped mls are dead otherwise it is alive
 template<class Key, bool mostAccurate>
-void MappedMemLocObject<Key, mostAccurate>::setToFull() {
-  mappedMLFull=true;
-  memLocsMap.clear();
+bool MappedMemLocObject<class Key, bool mostAccurate>::isLiveML(PartEdgePtr pedge) {
+  if(isFullML(pedge)) return true;
 }
 
+//! meetUpdateML performs the join operation of abstractions of two mls
 template<class Key, bool mostAccurate>
 bool MappedMemLocObject<Key, mostAccurate>::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
   // if this object is already full
   if(isFullML(pedge)) return false;
 
-  MappedMemLocObject<Key, mostAccurate> that_p = boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(that);
+  MappedMemLocObject<Key, mostAccurate> that_p = boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(that);  
   assert(that_p);
 
-  // if that object is full set this object to full
+  // If that object is full set this object to full
   if(that_p->isFullML(pedge)) {
-    setToFull();
+    n_FullML++;
+    setMLToFull();
     return true;
   }
 
-  // both objects are not full
-  bool modified = false;
+  // Both objects are not full
   const map<Key, MemLocObjectPtr> thatMLMap = that_p->getMemLocs();
   
   map<Key, MemLocObjectPtr>::iterator it = memLocsMap.begin();
   map<Key, MemLocObjectPtr>::iterator s_it;   // search iterator for thatMLMap
-  for( ; it != memLocsMap.end(); ++it) {
+
+  bool modified = false;
+  while(it != memLocsMap.end()) {
     s_it = thatML.find(it->first);
+    // If two objects have the same key then discharge meetUpdate to the corresponding keyed ML objects
     if(s_it != thatMLMap.end()) {
-      modified = it->second->meetUpdateML(s_it->second, pedge) || modified;
+      modified = (it->second)->meetUpdateML(s_it->second, pedge) || modified;
     }
-    else {
-      // thatMLMap does not have the key and has UnknownML mapped to the key
-      // Set the object mapped to key of this ML by deleting it
-      // Remove this object only if !mostAccurate?
-      if(!mostAccurate) memLocsMap.erase(it);
+
+    // Remove the current ML object (current iterator it) from the map if the mapepd object is full.
+    // Two cases under which the current ML object can be full.
+    // (1) If current key is not found in thatMLMap then the mapped object
+    // in thatMLMap is full and the meetUpdate of the current ML with that is also full.
+    // (2) meetUpdateML above of the two keyed objects resulted in this mapped object being full.
+    // Under both cases remove the mapped ml from this map
+    if(s_it == thatMLMap.end() || (it->second)->isFullML(pedge)) {
+      // Current mapped ML has become full as a result of (1) or (2).
+      // Remove the item from the map.
+      // Note that post-increment which increments the iterator and returns the old value for deletion.
+      memLocsMap.erase(it++);
+      n_FullML++;
+      modified = true;
+
+      // If mostAccurate=false then set this entire object to full and return
+      if(!mostAccurate) {
+        setMLToFull();
+        return true;
+      }
     }
+    else ++it;
   }
- 
-  // Check if this object became full as a result of meetUpdate
+  return modified;
+}
+
+//! Method that sets this mapped object to full
+template<class Key, bool mostAccurate>
+void MappedMemLocObject<Key, mostAccurate>::setMLToFull() {
+  if(memLocsMap.size() > 0) memLocsMap.clear();
 }
 
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::isFullML(PartEdgePtr pedge) {
-  return mappedMLFull && (memLocsMap.size() == 0);
+  if(n_FullML > 0 && memLocsMap.size() == 0) return true;
+  return false;
 }
 
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::isEmptyML(PartEdgePtr pedge) {
-  if(!mappedMLFull && memLocsMap.size() == 0) return true;
+  if(n_FullML == 0 && memLocsMap.size() == 0) return true;
   return false;
 }
 

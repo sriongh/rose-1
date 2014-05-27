@@ -1245,15 +1245,28 @@ extern template class CombinedMemLocObject<false>; // not sure if this is needed
    $PT \cap CP$  & F & F & T \\
    \hline
   \f}*/
+//! MemLocObjects that are full can be returned by either analysis or tight composer (UnknownMemLocObject)
+//! Query dispatching to analysis compares two MLs implemented by it.
+//! If an UnknownMemLocObject is passed to analysis it breaks the analysis implementation of the set operations for MLs.
+//! Storing analysis MLs that are full is also not useful.
+//! Consequently full MLs are never stored in object collection.
+//! Comparison of two MappedML is performed by dispatching the query based on the key.
+//! If the key is not common in the two MappedML then it is assumed that the MappedML missing the key 
+//! has UnknownML(full set of objects) mapped to the corresponding key.
+//! Since full MLs are never stored in the map, an empty map does not imply that the MappedML is full.
+//! To distinguish the full state from empty state the MappedMemLocObject uses the variable n_FullML
+//! that counts the number of full mls subjected to be added to the map using add  or meetUpdateML method.
+//! n_FullML != 0 along with empty map determines that the MappedML denotes full set of ML.
+//! n_FullML == 0 and en empty map indicates that the MappedML is empty.
 template<class Key, bool mostAccurate>
 class MappedMemLocObject : public MemLocObject
 {
   std::map<Key, MemLocObjectPtr> memLocsMap;
-  bool mappedMLFull;
+  int n_FullML;
 
 public:
-  MappedMemLocObject() : MemLocObject(NULL), full(false) { }
-  MappedMemLocObject(const MappedMemLocObject& that) : MemLocObject(that), memLocsMap(that.memLocsMap), full(that.full) { }
+  MappedMemLocObject() : MemLocObject(NULL), n_FullML(0) { }
+  MappedMemLocObject(const MappedMemLocObject& that) : MemLocObject(that), memLocsMap(that.memLocsMap), n_FullML(that.n_FullML) { }
 
   void add(Key key, MemLocObjectPtr clo_p, PartEdgePtr pedge);
   const std::map<Key, MemLocObjectPtr>& getMemLocsMap() const;
@@ -1291,6 +1304,8 @@ public:
   // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
+
+  void setMLToFull();
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
   bool isFullML(PartEdgePtr pedge);
