@@ -1273,17 +1273,10 @@ public:
   
 private:
   //! Helper methods.
-  //! Use key and look into your own map.
-  //! Call the appropriate query function on the individual mapped element.
-  //! If key is not found treat the object mapped to as UnknownAbstractObject 
-  //! and return conservative answer for the queries
-  bool mayEqualML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
-  bool mustEqualML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
-  bool equalSetML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
-  bool subSetML(Key key, MemLocObjectPtr o, PartEdgePtr pedge);
-  bool isLiveML(Key key, PartEdgePtr pedge);
-  bool isFullML(Key key, PartEdgePtr pedge);
-  bool isEmptyML(Key key, PartEdgePtr pedge);
+  bool mayEqualMLWithKey(Key key, const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool mustEqualMLWithKey(Key key, const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool equalSetMLWithKey(Key key,const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool subSetMLWithKey(Key key,const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
 
 public:  
   // Returns whether this object may/must be equal to o within the given Part p

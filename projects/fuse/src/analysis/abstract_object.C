@@ -2203,20 +2203,266 @@ void MappedMemLocObject<Key, mostAccurate>::add(Key key, MemLocObjectPtr ml_p, P
   }
 }
 
-// This mapped ML is dead if all the mapped mls are dead otherwise it is alive
 template<class Key, bool mostAccurate>
-bool MappedMemLocObject<class Key, bool mostAccurate>::isLiveML(PartEdgePtr pedge) {
+bool MappedMemLocObject<Key, mostAccurate>::mayEqualMLWithKey(Key key,
+                                                              const map<Key, MemLocObjectPtr>& thatMLMap, 
+                                                              PartEdgePtr pedge) {
+  map<Key, MemLocObjectPtr>::iterator s_it;
+  s_it = thatMLMap.find(key);
+  if(s_it == thatMLMap.end()) return true;
+  return memLocsMap[key]->mayEqualML(s_it->second, pedge);
+}
+
+//! Two ML objects are may equals if there is atleast one execution or sub-exectuion
+//! in which they represent the same memory location.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise conservative answer for mayEqualML is true.
+//! Mapped MLs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed ML object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MayEquality check on mapped ML is performed on intersection (mostAccurate=true) of sub-executions
+//! or union (mostAccurate=false) of sub-executions over the keyed ML objects. 
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > thatML_p = 
+    boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(thatML);
+  assert(thatML_p);
+
+  // This object denotes full set of ML (full set of executions)
   if(isFullML(pedge)) return true;
+
+  // denotes empty set
+  if(isEmptyML(pedge)) return false;
+
+  // mostAccurate=false
+  // presence of one more full objects will result in full set over union
+  if(!mostAccurate && n_FullML > 0) return true;
+
+  // Two cases reach here
+  // For both cases iterate on the ML map and discharge the mayEqualML query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts)
+  // computed by the corresponding analysis.
+  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullML != 0)
+  // The sub-executions are intersected and therefore it does not matter if we have full objects.
+  // If the discharged query returns false then return false. 
+  // We found set of executions corresponding to this ML under which the two objects are not may equals.
+  // Note that set of executions are contained over keyed objects as the analyses are conservative.
+  // This set only shrinks during intersection and it is not going to affect the result of this query.
+  // If it returns true iterate further as some executions corresponding to true may be dropped.
+  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullML=0)
+  // If the discharged query comes back as true for this case then we have found atleast one execution
+  // under which the two objects are same and the set can only grow and the result of this query is not going
+  // to change due to union.
+  // If it returns false we iterate further as any ML can add more executions under which the objects are may equals.
+  const map<Key, MemLocObjectPtr> thatMLMap = thatML_p->getMemLocsMap();
+  for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
+    // discharge query
+    if(mayEqualMLWithKey(key, thatMLMap, pedge) == !mostAccurate) return !mostAccurate;
+  }
+
+  // 1. mostAccurate = true return true 
+  // Even after intersection the set consists of executions under which the 
+  // 2. mostAccurate = false return false
+  return mostAccurate;
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::mustEqualMLWithKey(Key key,
+                                                               const map<Key, MemLocObjectPtr>& thatMLMap, 
+                                                               PartEdgePtr pedge) {
+  map<Key, MemLocObjectPtr>::iterator s_it;
+  s_it = thatMLMap.find(key);
+  if(s_it == thatMLMap.end()) return false;
+  return memLocsMap[key]->mustEqualML(s_it->second, pedge);
+}
+
+//! Two ML objects are must equals if they represent the same single memory 
+//! location on all executions.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise conservative answer for mustEqualML is false.
+//! Mapped MLs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed ML object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MustEquality check on mapped ML is performed on intersection (mostAccurate=true) of sub-executions
+//! or union (mostAccurate=false) of sub-executions over the keyed ML objects. 
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::mustEqualML(MemLocObjectPtr thatML, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > thatML_p = 
+    boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(thatML);
+  assert(thatML_p);
+
+  // This object denotes full set of ML (full set of executions)
+  if(isFullML(pedge)) return false;
+
+  // denotes empty set
+  if(isEmptyML(pedge)) return false;
+
+  // mostAccurate=false
+  // presence of one more full objects will result in full set over union
+  if(!mostAccurate && n_FullML > 0) return false;
+
+  // Two cases reach here
+  // For both cases iterate on the ML map and discharge the mustEqualML query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts)
+  // computed by the corresponding analysis.
+  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullML != 0)
+  // The sub-executions are intersected and therefore it does not matter if we have full objects.
+  // If the discharged query returns true then return true. 
+  // We found set of executions corresponding to this ML under which the two objects must equals.
+  // Note that set of executions are contained over keyed objects as the analyses are conservative.
+  // This set only shrinks during intersection and it is not going to affect the result of this query.
+  // If it returns false iterate further as some executions corresponding to false may be dropped.
+  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullML=0)
+  // If the discharged query comes back as false for this case then we have found atleast one execution
+  // under which the two objects are not same and the set can only grow and the result of this query is not going
+  // to change due to union.
+  // If it returns true we iterate further as any ML can add more executions under which the objects are not must equals.
+  const map<Key, MemLocObjectPtr> thatMLMap = thatML_p->getMemLocsMap();
+  for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
+    // discharge query
+    if(mustEqualMLWithKey(key, thatMLMap, pedge) == mostAccurate) return mostAccurate;
+  }
+
+  // 1. mostAccurate = true return false
+  // After iterating none of the objects returned true. 
+  // 2. mostAccurate = false return true
+  // After iterating none of the objects returned false.
+  return !mostAccurate;
+}
+
+
+//! Discharge the query to the corresponding ML
+//! If key not found in thatMLMap return false
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::equalSetMLWithKey(Key key,
+                                                              const map<Key, MemLocObjectPtr>& thatMLMap, 
+                                                              PartEdgePtr pedge) {
+  map<Key, MemLocObjectPtr>::iterator s_it;
+  s_it = thatMLMap.find(key);
+  if(s_it == thatMLMap.end()) return false;
+  return memLocsMap[key]->equalSetML(s_it->second, pedge);
+}
+
+//! Two objects are equal sets if they denote the same set of memory locations
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed MemLoc objects
+//! If all the discharged queries come back equal then the two objects are equal otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::equalSetML(MemLocObjectPtr thatML, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > thatML_p = 
+    boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(thatML);  
+  assert(thatML_p);
+
+  // This object denotes full set of ML (full set of executions)
+  if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+  // denotes empty set
+  if(isEmptyML(pedge)) return thatML_p->isEmptyML(pedge);
+
+  const map<Key, MemLocObjectPtr> thatMLMap = thatML_p->getMemLocsMap();
+  for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(equalSetMLWithKey(key, thatMLMap, pedge) == false) return false;
+  }
+
+  return true;
+}
+
+//! Discharge the query to the corresponding ML
+//! If key not found in thatMLMap return true as the
+//! keyed object on thatMLMap denotes full set
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::subSetMLWithKey(Key key,
+                                                            const map<Key, MemLocObjectPtr>& thatMLMap, 
+                                                            PartEdgePtr pedge) {
+  map<Key, MemLocObjectPtr>::iterator s_it;
+  s_it = thatMLMap.find(key);
+  if(s_it == thatMLMap.end()) return true;
+  return memLocsMap[key]->equalSetML(s_it->second, pedge);
+}
+
+//! This object is a non-strict subset of the other if the set of memory locations denoted by this
+//! is a subset of the set of memory locations denoted by that.
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed MemLoc objects
+//! If all the discharged queries come back true then this is a subset of that otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::subSetML(MemLocObjectPtr thatML, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > thatML_p = 
+    boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(thatML);  
+  assert(thatML_p);
+
+  // This object denotes full set of ML (full set of executions)
+  if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+  // denotes empty set
+  // thatML could be empty or non-empty eitherway this will be a non-strict subset of that.
+  if(isEmptyML(pedge)) return true;
+
+  // If both objects have the same keys discharge
+  // If this object has a key and that does not then 
+  // the keyed object is subset of that (return true) implemented by subsetMLWithKey
+  // If any of the discharged query return false then return false.
+  const map<Key, MemLocObjectPtr> thatMLMap = thatML_p->getMemLocsMap();
+  for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(subSetMLWithKey(key, thatMLMap, pedge) == false) return false;
+  }
+
+  // If this object doesn't have the key and that object has the key then 
+  // return false as this object has full object mapped to the key
+  for(it = thatMLMap.begin(); it != thatMLMap.end() && (n_FullML != 0); ++it) {
+    if(memLocsMap.find(it->first) == memLocsMap.end()) return false;
+  }
+
+  return true;
+}
+
+//! Mapped object liveness is determined based on finding executions
+//! in which it may be live.
+//! It can be answered based on union (mostAccurate=false) or intersection
+//! (mostAccurate=true) of executions
+//! The conservative answer is to assume that the object is live
+template<class Key, bool mostAccurate>
+bool MappedMemLocObject<Key, mostAccurate>::isLiveML(PartEdgePtr pedge) {
+  // If this object is full return the conservative answer
+  if(isFullML(pedge)) return true;
+
+  // If it has one or more full objects added to it
+  // and if the object has mostAccurate=false then return true (weakest answer)
+  if(n_FullML > 0 && !mostAccurate) return true;
+
+  // 1. This object may have have one or more full objects but mostAccurate=true
+  // 2. This object doesnt have any full objects added to it
+  // Under both cases the answer is based on how individual analysis respond to the query
+  map<Key, MemLocObjectPtr>::iterator it = memLocsMap.begin();
+  for( ; it != memLocsMap.end(); ++it) {
+    if(it->second->isLiveML(pedge) == !mostAccurate) return !mostAccurate;
+  }
+  
+  // leftover case of individual analysis response
+  return mostAccurate;
 }
 
 //! meetUpdateML performs the join operation of abstractions of two mls
 template<class Key, bool mostAccurate>
 bool MappedMemLocObject<Key, mostAccurate>::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > that_p =
+    boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(that);  
+  assert(that_p);
+
   // if this object is already full
   if(isFullML(pedge)) return false;
-
-  MappedMemLocObject<Key, mostAccurate> that_p = boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(that);  
-  assert(that_p);
 
   // If that object is full set this object to full
   if(that_p->isFullML(pedge)) {
@@ -2267,6 +2513,7 @@ bool MappedMemLocObject<Key, mostAccurate>::meetUpdateML(MemLocObjectPtr that, P
 //! Method that sets this mapped object to full
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::setMLToFull() {
+  assert(n_FullML > 0);
   if(memLocsMap.size() > 0) memLocsMap.clear();
 }
 
@@ -2286,6 +2533,13 @@ template<class Key, bool mostAccurate>
 MemLocObjectPtr MappedMemLocObject<Key, mostAccurate>::copyML() const {
   return boost::make_shared<MappedMemLocObject<Key, mostAccurate> >(*this);
 }
+
+template<class Key, bool mostAccurate>
+MemLocObjectPtr MappedMemLocObject<Key, mostAccurate>::str() const {
+  return "MappedMemLocObject"
+}
+
+
 
 /* #######################
    ##### IndexVector ##### 
