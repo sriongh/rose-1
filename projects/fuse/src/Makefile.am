@@ -14,7 +14,8 @@ INCLUDES = \
 	-I$(srcdir)/sight/widgets \
 	-I$(srcdir)/lattice \
 	-I$(srcdir)/simpleAnalyses \
-	-I$(srcdir)/state
+	-I$(srcdir)/state \
+        -I${srcdir}/sparse
 
 fuse_DEPENDENCIES=fuseLayout
 
@@ -45,6 +46,12 @@ fuse_SOURCES = \
 	simpleAnalyses/saveDotAnalysis.C \
 	simpleAnalyses/taintAnalysis.C \
 	state/nodeState.C \
+        sparse/constantAnalysis.C \
+ 	sparse/heapDefsAndUsesTraversal.C \
+ 	sparse/heapSSA.C \
+ 	sparse/hssaMemObject.C \
+ 	sparse/pointerAnalysis.C \
+ 	sparse/valueNumbering.C \
 	compositionalTestAnalysis.C
 
 fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
