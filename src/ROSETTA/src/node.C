@@ -226,10 +226,14 @@ Grammar::setUpNodes ()
 
   // printf ("nonTerminalList.size() = %zu \n",nonTerminalList.size());
 
+  // DQ (4/20/2014): Adding more support for ATerm library.
+     NEW_TERMINAL_MACRO (Aterm, "Aterm", "ATERM" );
+
   // DQ (3/14/2007): Added IR support for binaries
   // NEW_NONTERMINAL_MACRO (Node, Type | Symbol | LocatedNode | Support, "Node", "NodeTag" );
-     NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode, "Node", "NodeTag", false );
+  // NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode, "Node", "NodeTag", false );
   // NEW_NONTERMINAL_MACRO (Node, Type | Symbol | LocatedNode | Support, "Node", "NodeTag" );
+     NEW_NONTERMINAL_MACRO (Node, Support | Type | LocatedNode | Symbol | AsmNode | Aterm, "Node", "NodeTag", false );
 
   // ***********************************************************************
   // ***********************************************************************
@@ -435,6 +439,25 @@ Grammar::setUpNodes ()
      LocatedNodeSupport.setFunctionPrototype ( "HEADER_LOCATED_NODE_SUPPORT", "../Grammar/LocatedNode.code");
 
 
+  // ***************************************************************************************
+  // ***************************************************************************************
+  //                                 ATerm IR Node Support
+  // ***************************************************************************************
+  // ***************************************************************************************
+  // DQ (4/20/2014): Added support for ATerms in the IR.  The goal is to support a new level
+  // of reading ATerms (previously demonstrated in projects/AtermTranslation directory).
+  // This level of support reads the Aterms and represents the Aterms in a ROSE AST using
+  // specific SgAterm IR nodes that as fundamentally simpler then the more commonly use
+  // ROSE IR nodes.  This work is in contrast to the Aterm API for the ROSE AST which has
+  // become problematic to support beyond a specific level.  Current level of support for
+  // the ATerm API in ROSE is limited to the demonstration using ATerm specific tools that
+  // generate DOT graph files from any Aterm and can be make to work on the ROSE AST as 
+  // well though the use of the ATerm API in ROSE (all this is demonstrated in the examples
+  // in the projects/AtermTranslation directory).
+
+     Aterm.setFunctionPrototype ( "HEADER_ATERM_NODE", "../Grammar/LocatedNode.code");
+     Aterm.setDataPrototype     ( "std::string", "name", "= \"\"",
+                  CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
 
   // ***************************************************************************************
   // ***************************************************************************************
@@ -520,6 +543,8 @@ Grammar::setUpNodes ()
      UntypedVariableDeclaration.setFunctionPrototype      ( "HEADER_UNTYPED_VARIABLE_DECLARATION", "../Grammar/LocatedNode.code");
      UntypedVariableDeclaration.setDataPrototype     ( "SgUntypedType*", "type", "= NULL",
                   CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (3/25/2014): It would be better to name this "variables" instead of "parameters".
   // std::vector<SgUntypedInitializedName*> 
   // UntypedVariableDeclaration.setDataPrototype     ( "SgUntypedInitializedNamePtrList", "variables", "",
   //              NO_CONSTRUCTOR_PARAMETER, BUILD_LIST_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
@@ -535,6 +560,8 @@ Grammar::setUpNodes ()
                   NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      UntypedFunctionDeclaration.setDataPrototype     ( "SgUntypedFunctionScope*", "scope", "= NULL",
                   NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+     UntypedFunctionDeclaration.setDataPrototype     ( "SgUntypedNamedStatement*", "end_statement", "= NULL",
+                  NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
 #if 0
      UntypedFunctionDeclaration.setDataPrototype     ( "UntypedNamedStatement*", "end_statement", "= NULL",
                   NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
@@ -542,8 +569,8 @@ Grammar::setUpNodes ()
 
   // These are derived from UntypedFunctionDeclaration
      UntypedProgramHeaderDeclaration.setFunctionPrototype ( "HEADER_UNTYPED_PROGRAM_HEADER_DECLARATION", "../Grammar/LocatedNode.code");
-     UntypedProgramHeaderDeclaration.setDataPrototype     ( "SgUntypedNamedStatement*", "end_statement", "= NULL",
-                  NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+  // UntypedProgramHeaderDeclaration.setDataPrototype     ( "SgUntypedNamedStatement*", "end_statement", "= NULL",
+  //              NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
      UntypedSubroutineDeclaration.setFunctionPrototype    ( "HEADER_UNTYPED_SUBROUTINE_DECLARATION", "../Grammar/LocatedNode.code");
 
      UntypedModuleDeclaration.setFunctionPrototype      ( "HEADER_UNTYPED_MODULE_DECLARATION", "../Grammar/LocatedNode.code");
@@ -925,6 +952,15 @@ Grammar::setUpNodes ()
 
      LocatedNodeSupport.setFunctionSource ( "SOURCE_LOCATED_NODE_SUPPORT", "../Grammar/LocatedNode.code");
 
+
+  // ***************************************************************************************
+  // ***************************************************************************************
+  //                                 ATerm IR Node Support
+  // ***************************************************************************************
+  // ***************************************************************************************
+  // DQ (4/20/2014): Added support for ATerms in the IR.
+
+     Aterm.setFunctionSource    ( "SOURCE_ATERM_NODE", "../Grammar/LocatedNode.code");
 
   // ***************************************************************************************
   // ***************************************************************************************

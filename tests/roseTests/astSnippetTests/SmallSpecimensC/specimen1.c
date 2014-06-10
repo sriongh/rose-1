@@ -36,8 +36,14 @@ ipoint3()
 
     INSERT_HERE;
     return f3;
+#pragma message "this is a pragma, which is a kind of SgDeclarationStatement"
 }
 
+double
+ipoint4()
+{
+    INSERT_HERE;
+}
 
 int
 main(int argc, char *argv[]) 
