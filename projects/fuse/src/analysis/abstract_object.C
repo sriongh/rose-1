@@ -293,47 +293,47 @@ std::string CodeLocObject::str(std::string indent) const { // pretty print for t
 }
 
 /* #################################
-   ##### UnknownCodeLocObject ##### 
+   ##### FullCodeLocObject ##### 
    ################################# */
 
-bool UnknownCodeLocObject::mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+bool FullCodeLocObject::mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownCodeLocObject::mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+bool FullCodeLocObject::mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
   return false;
 }
   
-bool UnknownCodeLocObject::equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+bool FullCodeLocObject::equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
   return isFullCL(pedge);
 }
   
-bool UnknownCodeLocObject::subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
+bool FullCodeLocObject::subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
   return isFullCL(pedge);
 }
   
-bool UnknownCodeLocObject::isLiveCL(PartEdgePtr pedge) {
+bool FullCodeLocObject::isLiveCL(PartEdgePtr pedge) {
   return true;
 }
   
-bool UnknownCodeLocObject::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+bool FullCodeLocObject::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
   return false;
 }
   
-bool UnknownCodeLocObject::isFullCL(PartEdgePtr pedge) {
+bool FullCodeLocObject::isFullCL(PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownCodeLocObject::isEmptyCL(PartEdgePtr pedge) {
+bool FullCodeLocObject::isEmptyCL(PartEdgePtr pedge) {
   return false;
 }
   
-CodeLocObjectPtr UnknownCodeLocObject::copyCL() const {
-  return boost::make_shared<UnknownCodeLocObject>();
+CodeLocObjectPtr FullCodeLocObject::copyCL() const {
+  return boost::make_shared<FullCodeLocObject>();
 }
   
-string UnknownCodeLocObject::str(string indent) const {
-  return "UnknownCodeLocObject";    
+string FullCodeLocObject::str(string indent) const {
+  return "FullCodeLocObject";    
 }
 
 /* #################################
@@ -794,69 +794,69 @@ bool ValueObject::equalValueExp(SgValueExp* e1, SgValueExp* e2, SgType* t)
 }
 
 /* ##############################
-   ##### UnknownValueObject ##### 
+   ##### FullValueObject ##### 
    ############################## */
 
 // Returns whether this object may/must be equal to o within the given Part p
 // These methods are private to prevent analyses from calling them directly.
-bool UnknownValueObject::mayEqualV(ValueObjectPtr o, PartEdgePtr pedge)  {
+bool FullValueObject::mayEqualV(ValueObjectPtr o, PartEdgePtr pedge)  {
   // Since this object denotes the set of all values, it may-equals all value sets
   return true;
 }
 
-bool UnknownValueObject::mustEqualV(ValueObjectPtr o, PartEdgePtr pedge) {
+bool FullValueObject::mustEqualV(ValueObjectPtr o, PartEdgePtr pedge) {
   // Since this object denotes the set of all values, which has unbounded size, it is not must-equal to any value set
   return false;
 }
 
 // Returns whether the two abstract objects denote the same set of concrete objects
-bool UnknownValueObject::equalSetV(ValueObjectPtr o, PartEdgePtr pedge)  {
+bool FullValueObject::equalSetV(ValueObjectPtr o, PartEdgePtr pedge)  {
   // This object is only equal to objects that also denote the set of all values
   return o->isFullV(pedge); 
 }
 
 // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
 // by the given abstract object.
-bool UnknownValueObject::subSetV(ValueObjectPtr o, PartEdgePtr pedge) {
+bool FullValueObject::subSetV(ValueObjectPtr o, PartEdgePtr pedge) {
   // This object is only a subset of objects that also denote the set of all values
   return o->isFullV(pedge); 
 }
 
 // Computes the meet of this and that and saves the result in this
 // returns true if this causes this to change and false otherwise
-bool UnknownValueObject::meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge) {
+bool FullValueObject::meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge) {
   // There is no way to make this object denote a larger set of values since it already denotes
   // the set of all values
   return false;
 }
 
 // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
-bool UnknownValueObject::isFullV(PartEdgePtr pedge)
+bool FullValueObject::isFullV(PartEdgePtr pedge)
 { return true; }
 
 // Returns whether this AbstractObject denotes the empty set.
-bool UnknownValueObject::isEmptyV(PartEdgePtr pedge)
+bool FullValueObject::isEmptyV(PartEdgePtr pedge)
 { return false; }
 
 // Returns true if this ValueObject corresponds to a concrete value that is statically-known
-bool UnknownValueObject::isConcrete()
+bool FullValueObject::isConcrete()
 { return false; }
 
 // Returns the type of the concrete value (if there is one)
-SgType* UnknownValueObject::getConcreteType()
+SgType* FullValueObject::getConcreteType()
 { return NULL; }
 
 // Returns the concrete value (if there is one) as an SgValueExp, which allows callers to use
 // the normal ROSE mechanisms to decode it
-set<boost::shared_ptr<SgValueExp> > UnknownValueObject::getConcreteValue()
+set<boost::shared_ptr<SgValueExp> > FullValueObject::getConcreteValue()
 { return set<boost::shared_ptr<SgValueExp> >(); }
 
 // Allocates a copy of this object and returns a pointer to it
-ValueObjectPtr UnknownValueObject::copyV() const
-{ return boost::make_shared<UnknownValueObject>(); }
+ValueObjectPtr FullValueObject::copyV() const
+{ return boost::make_shared<FullValueObject>(); }
 
-std::string UnknownValueObject::str(std::string indent) const
-{ return "[UnknownValueObject]"; }
+std::string FullValueObject::str(std::string indent) const
+{ return "[FullValueObject]"; }
 
 /* ################################
    ##### CombinedValueObject ##### 
@@ -1330,7 +1330,7 @@ ValueObjectPtr FuncResultMemRegionObject::getRegionSize(PartEdgePtr pedge) const
 {
   // The size of a function result is irrelevant since its internals cannot be accessed directly
   // (its possible to access the internals of its SgFunctionCallExp though) so we return an unknown size.
-  return boost::make_shared<UnknownValueObject>();
+  return boost::make_shared<FullValueObject>();
 }
 
 MemRegionObjectPtr FuncResultMemRegionObject::copyMR() const
@@ -1339,51 +1339,51 @@ MemRegionObjectPtr FuncResultMemRegionObject::copyMR() const
 }
 
 /* ##################################
-   ##### UnknownMemRegionObject ##### 
+   ##### FullMemRegionObject ##### 
    ################################## */
 
-bool UnknownMemRegionObject::mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+bool FullMemRegionObject::mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownMemRegionObject::mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {  
+bool FullMemRegionObject::mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge) {  
   return false;
 }
 
-bool UnknownMemRegionObject::equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+bool FullMemRegionObject::equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
   return isFullMR(pedge);
 }
                                                                                                                                                                                                         
-bool UnknownMemRegionObject::subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
+bool FullMemRegionObject::subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge) {
   return isFullMR(pedge);
 }
                                      
-MemRegionObjectPtr  UnknownMemRegionObject::copyMR() const {
-  return boost::make_shared<UnknownMemRegionObject>();
+MemRegionObjectPtr  FullMemRegionObject::copyMR() const {
+  return boost::make_shared<FullMemRegionObject>();
 }
 
-bool UnknownMemRegionObject::isLiveMR(PartEdgePtr pedge) {
+bool FullMemRegionObject::isLiveMR(PartEdgePtr pedge) {
   return true;
 }
                                     
-bool UnknownMemRegionObject::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+bool FullMemRegionObject::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
     return false;
 }
 
-bool UnknownMemRegionObject::isFullMR(PartEdgePtr pedge) {
+bool FullMemRegionObject::isFullMR(PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownMemRegionObject::isEmptyMR(PartEdgePtr pedge) {
+bool FullMemRegionObject::isEmptyMR(PartEdgePtr pedge) {
   return false;
 }
 
-ValueObjectPtr UnknownMemRegionObject::getRegionSize(PartEdgePtr pedge) const {
-  return boost::make_shared<UnknownValueObject>();
+ValueObjectPtr FullMemRegionObject::getRegionSize(PartEdgePtr pedge) const {
+  return boost::make_shared<FullValueObject>();
 }
 
-string UnknownMemRegionObject::str(string indent) const {
-  return "UnknownMemRegionObject";
+string FullMemRegionObject::str(string indent) const {
+  return "FullMemRegionObject";
 }
 
 /* ###################################
@@ -1839,47 +1839,47 @@ MemLocObjectPtr FuncResultMemLocObject::copyML() const
 }
 
 /* #############################
-   #### UnknownMemLocObject ####
+   #### FullMemLocObject ####
    ############################# */
 
-bool UnknownMemLocObject::mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
+bool FullMemLocObject::mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownMemLocObject::mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
+bool FullMemLocObject::mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
   return false;
 }
   
-bool UnknownMemLocObject::equalSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
+bool FullMemLocObject::equalSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
   return isFullML(pedge);
 }
   
-bool UnknownMemLocObject::subSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
+bool FullMemLocObject::subSetML(MemLocObjectPtr o, PartEdgePtr pedge) {
   return isFullML(pedge);
 }
   
-MemLocObjectPtr UnknownMemLocObject::copyML() const {
-  return boost::make_shared<UnknownMemLocObject>();
+MemLocObjectPtr FullMemLocObject::copyML() const {
+  return boost::make_shared<FullMemLocObject>();
 }
   
-bool UnknownMemLocObject::isLiveML(PartEdgePtr pedge) {
+bool FullMemLocObject::isLiveML(PartEdgePtr pedge) {
   return true;
 }
   
-bool UnknownMemLocObject::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
+bool FullMemLocObject::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
   return false;
 }
   
-bool UnknownMemLocObject::isFullML(PartEdgePtr pedge) {
+bool FullMemLocObject::isFullML(PartEdgePtr pedge) {
   return true;
 }
 
-bool UnknownMemLocObject::isEmptyML(PartEdgePtr pedge) {
+bool FullMemLocObject::isEmptyML(PartEdgePtr pedge) {
   return false;
 }
   
-string UnknownMemLocObject::str(string indent) const {
-  return "UnknownMemLocObject";
+string FullMemLocObject::str(string indent) const {
+  return "FullMemLocObject";
 }
 
 /* ################################
@@ -2071,7 +2071,7 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
 
 //! Method to add mls to the map.
 //! MLs that are full are never added to the map.
-//! If ml_p is UnknownML or ml_p->isFullML=true then mapped ML is set to full only if mostAccurate=false.
+//! If ml_p is FullML or ml_p->isFullML=true then mapped ML is set to full only if mostAccurate=false.
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::add(Key key, MemLocObjectPtr ml_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything

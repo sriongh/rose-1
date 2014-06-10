@@ -138,7 +138,7 @@ namespace fuse {
     //! \tparam IntersectAOType The result of TightComposer is represented as an intersection of AbstractObject.
     //! \result Returns a boost::shared_ptr of AOType 
     //!
-    template<class AOType, class UnknownAOType, class IntersectAOType>
+    template<class AOType, class FullAOType, class IntersectAOType>
     boost::shared_ptr<AOType> Expr2Any(std::string opName,
                                        SgNode* n,
                                        PartEdgePtr pedge,
@@ -148,7 +148,7 @@ namespace fuse {
                                        boost::function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp,
                                        boost::function<boost::shared_ptr<AOType> (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp);
 
-    template<class AOType, class UnknownAOType, class IntersectAOType>
+    template<class AOType, class FullAOType, class IntersectAOType>
     boost::shared_ptr<AOType> OperandExpr2Any(std::string opName,
                                           SgNode* n,
                                           SgNode* operand,

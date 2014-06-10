@@ -131,7 +131,7 @@ namespace fuse {
   TightComposer::TightComposer(const TightComposer& that) : allAnalyses(that.allAnalyses), dir(that.dir) {
   }
 
-  template<class AOType, class UnknownAOType, class IntersectAOType>
+  template<class AOType, class FullAOType, class IntersectAOType>
   boost::shared_ptr<AOType> TightComposer::Expr2Any(string opName,
                                                     SgNode* n,
                                                     PartEdgePtr pedge,
@@ -153,7 +153,7 @@ namespace fuse {
     }
 
     if(tccache.isRecurringQuery(key, client))
-      return boost::make_shared<UnknownAOType>();
+      return boost::make_shared<FullAOType>();
 
     tccache.initializeQuery(key);
 
@@ -184,7 +184,7 @@ namespace fuse {
   // Same as Expr2Any
   // Query for Expr2Any(operand,..) on all the PartEdge returned by getOperandPartEdge(n,operand) of the given pedge
   // Return the list of objects
-  template<class AOType, class UnknownAOType, class IntersectAOType>
+  template<class AOType, class FullAOType, class IntersectAOType>
   boost::shared_ptr<AOType> TightComposer::OperandExpr2Any(string opName,
                                                            SgNode* n,
                                                            SgNode* operand,
@@ -283,7 +283,7 @@ namespace fuse {
     assert(getComposer() != this);
     function<MemRegionObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemRegion, getComposer(), _1, _2, this));
 
-    MemRegionObjectPtr iml_p = Expr2Any<MemRegionObject, UnknownMemRegionObject, IntersectMemRegionObject>("Expr2MemRegion", 
+    MemRegionObjectPtr iml_p = Expr2Any<MemRegionObject, FullMemRegionObject, IntersectMemRegionObject>("Expr2MemRegion", 
                                                                                                         n, 
                                                                                                         pedge, 
                                                                                                         client, Composer::memregion, 
@@ -320,7 +320,7 @@ namespace fuse {
     assert(getComposer() != this);
     function<MemLocObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemLoc, getComposer(), _1, _2, this));
 
-    MemLocObjectPtr iml_p = Expr2Any<MemLocObject, UnknownMemLocObject, IntersectMemLocObject>("Expr2MemLoc", 
+    MemLocObjectPtr iml_p = Expr2Any<MemLocObject, FullMemLocObject, IntersectMemLocObject>("Expr2MemLoc", 
                                                                                                      n, 
                                                                                                      pedge, 
                                                                                                      client, Composer::memloc, 

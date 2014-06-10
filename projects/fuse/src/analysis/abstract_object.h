@@ -269,12 +269,12 @@ public:
 };
 
 /* ################################
-   ##### UnknownCodeLocObject ##### 
+   ##### FullCodeLocObject ##### 
    ################################ */
 
-class UnknownCodeLocObject : public CodeLocObject {
+class FullCodeLocObject : public CodeLocObject {
 public:
-  UnknownCodeLocObject() : CodeLocObject(NULL) { }
+  FullCodeLocObject() : CodeLocObject(NULL) { }
 
   // Returns whether this object may/must be equal to o within the given Part p
   // These methods are private to prevent analyses from calling them directly.
@@ -542,10 +542,10 @@ public:
 };
 
 // The default implementation of ValueObjects that denotes the set of all ValueObjects
-class UnknownValueObject : public ValueObject
+class FullValueObject : public ValueObject
 {
   public:
-  UnknownValueObject() {}
+  FullValueObject() {}
   
   // Returns whether this object may/must be equal to o within the given Part p
   // These methods are private to prevent analyses from calling them directly.
@@ -815,10 +815,10 @@ typedef boost::shared_ptr<FuncResultMemRegionObject> FuncResultMemRegionObjectPt
 //! Default implementation of MemRegionObject that denotes all MemRegionObject
 //! Composers use the objects to conservatively answer queries
 //! Analyses should never see these objects
-class UnknownMemRegionObject : public MemRegionObject
+class FullMemRegionObject : public MemRegionObject
 {
  public:
-  UnknownMemRegionObject() : MemRegionObject(NULL) { }
+  FullMemRegionObject() : MemRegionObject(NULL) { }
 
   //! Returns whether this object may/must be equal to o within the given Part p                                                                                                                       
   bool mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
@@ -1077,10 +1077,10 @@ class FuncResultMemLocObject : public MemLocObject
 typedef boost::shared_ptr<FuncResultMemLocObject> FuncResultMemLocObjectPtr;
 
 //! Default implementation of MemLocObject that denotes the set of all MemLocObjects
-class UnknownMemLocObject : public MemLocObject
+class FullMemLocObject : public MemLocObject
 {
 public:
-  UnknownMemLocObject() : MemLocObject(NULL) { }
+  FullMemLocObject() : MemLocObject(NULL) { }
 
   // Returns whether this object may/must be equal to o within the given Part p
   bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
@@ -1228,14 +1228,14 @@ extern template class CombinedMemLocObject<false>; // not sure if this is needed
    $PT \cap CP$  & F & F & T \\
    \hline
   \f}*/
-//! MemLocObjects that are full can be returned by either analysis or tight composer (UnknownMemLocObject)
+//! MemLocObjects that are full can be returned by either analysis or tight composer (FullMemLocObject)
 //! Query dispatching to analysis compares two MLs implemented by it.
-//! If an UnknownMemLocObject is passed to analysis it breaks the analysis implementation of the set operations for MLs.
+//! If an FullMemLocObject is passed to analysis it breaks the analysis implementation of the set operations for MLs.
 //! Storing analysis MLs that are full is also not useful.
 //! Consequently full MLs are never stored in object collection.
 //! Comparison of two MappedML is performed by dispatching the query based on the key.
 //! If the key is not common in the two MappedML then it is assumed that the MappedML missing the key 
-//! has UnknownML(full set of objects) mapped to the corresponding key.
+//! has FullML(full set of objects) mapped to the corresponding key.
 //! Since full MLs are never stored in the map, an empty map does not imply that the MappedML is full.
 //! To distinguish the full state from empty state the MappedMemLocObject uses the variable n_FullML
 //! that counts the number of full mls subjected to be added to the map using add  or meetUpdateML method.
