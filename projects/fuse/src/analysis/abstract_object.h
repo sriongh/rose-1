@@ -373,34 +373,17 @@ extern template class CombinedCodeLocObject<false>;
 //! Collection of combined CodeLocObjects stored using map.
 //! MostAccurate=true -> query is answered based on intersection of sub-executions.
 //! MostAccurate=false -> query is answered based on union of sub-executions.
-template<class Key, bool MostAccurate>
+template<class Key, bool mostAccurate>
 class MappedCodeLocObject : public CodeLocObject
 {
   std::map<Key, CodeLocObjectPtr> codeLocsMap;
 public:
   MappedCodeLocObject() : CodeLocObject(NULL) { }
-  MappedCodeLocObject(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge) : CodeLocObject(NULL) {
-    add(key, clo_p);
-  }
   MappedCodeLocObject(const MappedCodeLocObject& that) : CodeLocObject(that), codeLocsMap(that.codeLocsMap) { }
 
   void add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge);
   const std::map<Key, CodeLocObjectPtr>& getCodeLocsMap() const;
   
-private:
-  //! Helper methods.
-  //! Use key and look into your own map.
-  //! Call the appropriate query function on the individual mapped element.
-  //! If key is not found treat the object mapped to as UnknownAbstractObject 
-  //! and return conservative answer for the queries
-  bool mayEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
-  bool mustEqualCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
-  bool equalSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
-  bool subSetCL(Key key, CodeLocObjectPtr o, PartEdgePtr pedge);
-  bool isLiveCL(Key key, PartEdgePtr pedge);
-  bool isFullCL(Key key, PartEdgePtr pedge);
-  bool isEmptyCL(Key key, PartEdgePtr pedge);
-
 public:  
   // Returns whether this object may/must be equal to o within the given Part p
   // These methods are private to prevent analyses from calling them directly.
@@ -1269,14 +1252,14 @@ public:
   MappedMemLocObject(const MappedMemLocObject& that) : MemLocObject(that), memLocsMap(that.memLocsMap), n_FullML(that.n_FullML) { }
 
   void add(Key key, MemLocObjectPtr clo_p, PartEdgePtr pedge);
-  const std::map<Key, MemLocObjectPtr>& getMemLocsMap() const;
+  const std::map<Key, MemLocObjectPtr>& getMemLocsMap() const { return memLocsMap; }
   
 private:
   //! Helper methods.
-  bool mayEqualMLWithKey(Key key, const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
-  bool mustEqualMLWithKey(Key key, const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
-  bool equalSetMLWithKey(Key key,const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
-  bool subSetMLWithKey(Key key,const map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool mayEqualMLWithKey(Key key, const std::map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool mustEqualMLWithKey(Key key, const std::map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool equalSetMLWithKey(Key key,const std::map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
+  bool subSetMLWithKey(Key key,const std::map<Key, MemLocObjectPtr>& thatMLMap, PartEdgePtr pedge);
 
 public:  
   // Returns whether this object may/must be equal to o within the given Part p
