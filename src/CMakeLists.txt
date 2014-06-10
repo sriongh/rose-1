@@ -8,6 +8,7 @@ include_directories(
   ${KDE4_INCLUDES} ${KDE4_INCLUDE_DIR} ${QT_INCLUDES} ${Boost_INCLUDE_DIRS}
   ${CMAKE_BINARY_DIR}/src/roseSupport
   ${CMAKE_SOURCE_DIR}/src/roseExtensions/failSafe
+  ${CMAKE_SOURCE_DIR}/src/midend/programTransformation/transformationTracking
   ${CMAKE_BINARY_DIR}/src/3rdPartyLibraries/fortran-parser
 #-------------------------------------------------------------------------------
 # TOO1 (3/6/2014): Add Java includes for sageInterface.C: jni.h, jni_md.h, ecj.h
@@ -137,6 +138,7 @@ endif()
 set_target_properties(roseutil PROPERTIES
   DEFINE_SYMBOL ROSE_UTIL_EXPORTS
 )
+install(TARGETS roseutil DESTINATION lib)
 
 if (enable-php)
   set( phpFrontend_SRC 
@@ -205,6 +207,7 @@ set(POET_SRC
 add_library(poet ${POET_SRC})
 link_libraries(poet)
 add_executable(pcg ${CMAKE_SOURCE_DIR}/src/3rdPartyLibraries/POET/main.cpp)
+install(TARGETS pcg DESTINATION bin)
 
 set(virtualCFG_SRC
   ${CMAKE_SOURCE_DIR}/src/frontend/SageIII/virtualCFG/memberFunctions.C
@@ -439,6 +442,7 @@ set( midend_src
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/BinaryDominance.C
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/BinaryFunctionCall.C
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/BinaryCallingConvention.C
+ ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/BinaryReturnValueUsed.C
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/DwarfLineMapper.C
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/GraphAlgorithms.C
  ${CMAKE_SOURCE_DIR}/src/midend/binaryAnalyses/binary_analysis.C
@@ -502,6 +506,14 @@ set( libastprocessing_SRC  ${libastprocessing_SRC}
    )
 endif (NOT WIN32)
 
+set(libastmatching_SRC
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/AstMatching.C
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/matcherlexer.ll
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/matcherparser.yy
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/MatchOperation.C
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/RoseAst.C
+   ${CMAKE_SOURCE_DIR}/src/midend/astMatching/matcherparser.C
+)
 
 set( midend_util_src
 ${CMAKE_SOURCE_DIR}/src/midend/astUtil/astInterface/CPPAstInterface.C
@@ -897,6 +909,11 @@ set(failsafe_SRC
   ${CMAKE_SOURCE_DIR}/src/roseExtensions/failSafe/failSafePragma.C 
  )
 
+set(trans_tracking_SRC
+  ${CMAKE_SOURCE_DIR}/src/midend/programTransformation/transformationTracking/transformationTracking.cpp
+ )
+
+
 set(mstl_SRC
   ${CMAKE_SOURCE_DIR}/src/3rdPartyLibraries/MSTL/DOTGraphInterface.C)
 if (NOT enable-internalFrontendDevelopment)
@@ -957,6 +974,7 @@ set(rose_LIB_SRCS dummyCppFileForLibrose.C
  ${libastPostProcessing_SRC}
  ${roseExtensions_SRC}
  ${failsafe_SRC}
+ ${trans_tracking_SRC}
  ${binaryFrontend_SRC}
  ${AST_REWRITE_SRC}
  ${mstl_SRC}
@@ -983,6 +1001,9 @@ add_custom_target(
      DEPENDS ${CMAKE_BINARY_DIR}/src/roseSupport/stringify.C ${CMAKE_BINARY_DIR}/src/roseSupport/stringify.h
      )
 add_dependencies(generate_stringify rosetta_generated)
+install(
+  FILES ${CMAKE_BINARY_DIR}/src/roseSupport/stringify.h
+  DESTINATION include)
 
 ###############################################################################################################################
 ### The rose_config.h file generated during the configuration process contains CPP symbols that indicate what features are
@@ -998,6 +1019,7 @@ add_custom_target(
      generate_rosePublicConfig
      DEPENDS ${CMAKE_BINARY_DIR}/rosePublicConfig.h
      )
+install(FILES ${CMAKE_BINARY_DIR}/rosePublicConfig.h DESTINATION include)
 
 ###############################################################################################################################
 
@@ -1067,7 +1089,7 @@ set_target_properties(ROSE_DLL PROPERTIES
   SOVERSION 1
   DEFINE_SYMBOL ROSE_DLL_EXPORTS
 )
-install(TARGETS ROSE_DLL ${INSTALL_TARGETS_DEFAULT_ARGS})
+install(TARGETS ROSE_DLL DESTINATION lib)
 
 ########### next target ###############
 
