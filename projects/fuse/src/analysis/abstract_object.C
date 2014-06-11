@@ -542,25 +542,29 @@ static void exampleCombinedCodeLocObjects2(CodeLocObjectPtr cl, std::list<CodeLo
    ##### MappedCodeLocObject ##### 
    ############################### */
 
-template<class Key, bool MostAccurate>
-//! If the CodeLocObject is not full add it to the map under key
-//! If the CodeLocObject is full add UnknowCodeLocObject under key only if MostAccurate=false (union of sub-executions)
-void MappedCodeLocObject<Key, MostAccurate>::add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge) {
-  if(!clo_p->isFullCL(pedge)) {  
-    codeLocsMap[key] = clo_p;
+template<class Key, bool mostAccurate>
+void MappedCodeLocObject<Key, mostAccurate>::add(Key key, CodeLocObjectPtr ml_p, PartEdgePtr pedge) {
+  // If the object is already full don't add anything
+  if(isFullCL(pedge)) return;
+
+  // If the ml_p is not full add/update the map
+  if(!ml_p->isFullCL(pedge)) {
+    codeLocsMap[key] = ml_p;
   }
-  // if the object is full
-  // Empty the map if MostAccurate=false
-  // Empty map indicates full set of objects
   else {
-    if(!MostAccurate)
-      codeLocsMap.clear();
+    n_FullCL++;
+    if(!mostAccurate) setCLToFull();
   }
 }
 
-template<class Key, bool MostAccurate>
-const map<Key, CodeLocObjectPtr>& MappedCodeLocObject<Key,  MostAccurate>::getCodeLocsMap() const {
-  return codeLocsMap;
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCLWithKey(Key key,
+                                                              const map<Key, CodeLocObjectPtr>& thatCLMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::const_iterator s_it;
+  s_it = thatCLMap.find(key);
+  if(s_it == thatCLMap.end()) return true;
+  return codeLocsMap[key]->mayEqualCL(s_it->second, pedge);
 }
 
 
@@ -569,55 +573,322 @@ const map<Key, CodeLocObjectPtr>& MappedCodeLocObject<Key,  MostAccurate>::getCo
 //! the two objects are equal.
 //! 
 template<class Key, bool mostAccurate>
-bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
-  return true;
+bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCL(CodeLocObjectPtr thatCL, PartEdgePtr pedge) {
+   boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(thatCL);
+  assert(thatCL_p);
+
+  // This object denotes full set of CL (full set of executions)
+  if(isFullCL(pedge)) return true;
+
+  // denotes empty set
+  if(isEmptyCL(pedge)) return false;
+
+  // mostAccurate=false
+  // presence of one more full objects will result in full set over union
+  if(!mostAccurate && n_FullCL > 0) return true;
+
+  // Two cases reach here
+  // For both cases iterate on the CL map and discharge the mayEqualCL query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts)
+  // computed by the corresponding analysis.
+  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullCL != 0)
+  // The sub-executions are intersected and therefore it does not matter if we have full objects.
+  // If the discharged query returns false then return false. 
+  // We found set of executions corresponding to this CL under which the two objects are not may equals.
+  // Note that set of executions are contained over keyed objects as the analyses are conservative.
+  // This set only shrinks during intersection and it is not going to affect the result of this query.
+  // If it returns true iterate further as some executions corresponding to true may be dropped.
+  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullCL=0)
+  // If the discharged query comes back as true for this case then we have found atleast one execution
+  // under which the two objects are same and the set can only grow and the result of this query is not going
+  // to change due to union.
+  // If it returns false we iterate further as any CL can add more executions under which the objects are may equals.
+  const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
+  typename map<Key, CodeLocObjectPtr>::iterator it;
+  for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
+    // discharge query
+    if(mayEqualCLWithKey(it->first, thatCLMap, pedge) == !mostAccurate) return !mostAccurate;
+  }
+
+  // 1. mostAccurate = true return true 
+  // Even after intersection the set consists of executions under which the 
+  // 2. mostAccurate = false return false
+  return mostAccurate;
 }
 
 template<class Key, bool mostAccurate>
-bool MappedCodeLocObject<Key, mostAccurate>::mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
-  return false;
+bool MappedCodeLocObject<Key, mostAccurate>::mustEqualCLWithKey(Key key,
+                                                               const map<Key, CodeLocObjectPtr>& thatCLMap, 
+                                                               PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::const_iterator s_it;
+  s_it = thatCLMap.find(key);
+  if(s_it == thatCLMap.end()) return false;
+  return codeLocsMap[key]->mustEqualCL(s_it->second, pedge);
 }
-  
- template<class Key, bool mostAccurate>
- bool MappedCodeLocObject<Key, mostAccurate>::equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
-   return false;
- }
-  
+
+
+//! Two CL objects are must equals if they represent the same single memory 
+//! location on all executions.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise conservative answer for mustEqualCL is false.
+//! Mapped CLs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed CL object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MustEquality check on mapped CL is performed on intersection (mostAccurate=true) of sub-executions
+//! or union (mostAccurate=false) of sub-executions over the keyed CL objects. 
 template<class Key, bool mostAccurate>
-bool MappedCodeLocObject<Key, mostAccurate>::subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge) {
-  return false;
+bool MappedCodeLocObject<Key, mostAccurate>::mustEqualCL(CodeLocObjectPtr thatCL, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(thatCL);
+  assert(thatCL_p);
+
+  // This object denotes full set of CL (full set of executions)
+  if(isFullCL(pedge)) return false;
+
+  // denotes empty set
+  if(isEmptyCL(pedge)) return false;
+
+  // mostAccurate=false
+  // presence of one more full objects will result in full set over union
+  if(!mostAccurate && n_FullCL > 0) return false;
+
+  // Two cases reach here
+  // For both cases iterate on the CL map and discharge the mustEqualCL query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts)
+  // computed by the corresponding analysis.
+  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullCL != 0)
+  // The sub-executions are intersected and therefore it does not matter if we have full objects.
+  // If the discharged query returns true then return true. 
+  // We found set of executions corresponding to this CL under which the two objects must equals.
+  // Note that set of executions are contained over keyed objects as the analyses are conservative.
+  // This set only shrinks during intersection and it is not going to affect the result of this query.
+  // If it returns false iterate further as some executions corresponding to false may be dropped.
+  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullCL=0)
+  // If the discharged query comes back as false for this case then we have found atleast one execution
+  // under which the two objects are not same and the set can only grow and the result of this query is not going
+  // to change due to union.
+  // If it returns true we iterate further as any CL can add more executions under which the objects are not must equals.
+  const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
+  typename map<Key, CodeLocObjectPtr>::iterator it;
+  for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
+    // discharge query
+    if(mustEqualCLWithKey(it->first, thatCLMap, pedge) == mostAccurate) return mostAccurate;
+  }
+
+  // 1. mostAccurate = true return false
+  // After iterating none of the objects returned true. 
+  // 2. mostAccurate = false return true
+  // After iterating none of the objects returned false.
+  return !mostAccurate;
 }
-  
+
+//! Discharge the query to the corresponding CL
+//! If key not found in thatCLMap return false
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, mostAccurate>::equalSetCLWithKey(Key key,
+                                                              const map<Key, CodeLocObjectPtr>& thatCLMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::const_iterator s_it;
+  s_it = thatCLMap.find(key);
+  if(s_it == thatCLMap.end()) return false;
+  return codeLocsMap[key]->equalSetCL(s_it->second, pedge);
+}
+
+//! Two objects are equal sets if they denote the same set of memory locations
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed CodeLoc objects
+//! If all the discharged queries come back equal then the two objects are equal otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, mostAccurate>::equalSetCL(CodeLocObjectPtr thatCL, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(thatCL);  
+  assert(thatCL_p);
+
+  // This object denotes full set of CL (full set of executions)
+  if(isFullCL(pedge)) return thatCL_p->isFullCL(pedge);
+
+  // denotes empty set
+  if(isEmptyCL(pedge)) return thatCL_p->isEmptyCL(pedge);
+
+  const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
+  typename map<Key, CodeLocObjectPtr>::iterator it;
+  for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(equalSetCLWithKey(it->first, thatCLMap, pedge) == false) return false;
+  }
+
+  return true;
+}
+
+//! Discharge the query to the corresponding CL
+//! If key not found in thatCLMap return true as the
+//! keyed object on thatCLMap denotes full set
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, mostAccurate>::subSetCLWithKey(Key key,
+                                                            const map<Key, CodeLocObjectPtr>& thatCLMap, 
+                                                            PartEdgePtr pedge) {
+  typename map<Key, CodeLocObjectPtr>::const_iterator s_it;
+  s_it = thatCLMap.find(key);
+  if(s_it == thatCLMap.end()) return true;
+  return codeLocsMap[key]->equalSetCL(s_it->second, pedge);
+}
+
+//! This object is a non-strict subset of the other if the set of memory locations denoted by this
+//! is a subset of the set of memory locations denoted by that.
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed CodeLoc objects
+//! If all the discharged queries come back true then this is a subset of that otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedCodeLocObject<Key, mostAccurate>::subSetCL(CodeLocObjectPtr thatCL, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(thatCL);  
+  assert(thatCL_p);
+
+  // This object denotes full set of CL (full set of executions)
+  if(isFullCL(pedge)) return thatCL_p->isFullCL(pedge);
+
+  // denotes empty set
+  // thatCL could be empty or non-empty eitherway this will be a non-strict subset of that.
+  if(isEmptyCL(pedge)) return true;
+
+  // If both objects have the same keys discharge
+  // If this object has a key and that does not then 
+  // the keyed object is subset of that (return true) implemented by subsetCLWithKey
+  // If any of the discharged query return false then return false.
+  const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
+  typename map<Key, CodeLocObjectPtr>::iterator it;
+  for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(subSetCLWithKey(it->first, thatCLMap, pedge) == false) return false;
+  }
+
+  // If this object doesn't have the key and that object has the key then 
+  // return false as this object has full object mapped to the key
+  typename map<Key, CodeLocObjectPtr>::const_iterator c_it;
+  for(c_it = thatCLMap.begin(); c_it != thatCLMap.end() && (n_FullCL != 0); ++c_it) {
+    if(codeLocsMap.find(c_it->first) == codeLocsMap.end()) return false;
+  }
+
+  return true;
+}
+
+//! Mapped object liveness is determined based on finding executions
+//! in which it may be live.
+//! It can be answered based on union (mostAccurate=false) or intersection
+//! (mostAccurate=true) of executions
+//! The conservative answer is to assume that the object is live
 template<class Key, bool mostAccurate>
 bool MappedCodeLocObject<Key, mostAccurate>::isLiveCL(PartEdgePtr pedge) {
-  return true;
-}
+  // If this object is full return the conservative answer
+  if(isFullCL(pedge)) return true;
+
+  // If it has one or more full objects added to it
+  // and if the object has mostAccurate=false then return true (weakest answer)
+  if(n_FullCL > 0 && !mostAccurate) return true;
+
+  // 1. This object may have have one or more full objects but mostAccurate=true
+  // 2. This object doesnt have any full objects added to it
+  // Under both cases the answer is based on how individual analysis respond to the query
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.begin();
+  for( ; it != codeLocsMap.end(); ++it) {
+    if(it->second->isLiveCL(pedge) == !mostAccurate) return !mostAccurate;
+  }
   
+  // leftover case of individual analysis response
+  return mostAccurate;
+}
+
+//! meetUpdateCL performs the join operation of abstractions of two mls
 template<class Key, bool mostAccurate>
 bool MappedCodeLocObject<Key, mostAccurate>::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
-  return false;
-}
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p =
+    boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(that);  
+  assert(thatCL_p);
+
+  // if this object is already full
+  if(isFullCL(pedge)) return false;
+
+  // If that object is full set this object to full
+  if(thatCL_p->isFullCL(pedge)) {
+    n_FullCL++;
+    setCLToFull();
+    return true;
+  }
+
+  // Both objects are not full
+  const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
   
+  typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.begin();
+  typename map<Key, CodeLocObjectPtr>::const_iterator s_it;   // search iterator for thatCLMap
+
+  bool modified = false;
+  while(it != codeLocsMap.end()) {
+    s_it = thatCLMap.find(it->first);
+    // If two objects have the same key then discharge meetUpdate to the corresponding keyed CL objects
+    if(s_it != thatCLMap.end()) {
+      modified = (it->second)->meetUpdateCL(s_it->second, pedge) || modified;
+    }
+
+    // Remove the current CL object (current iterator it) from the map if the mapepd object is full.
+    // Two cases under which the current CL object can be full.
+    // (1) If current key is not found in thatCLMap then the mapped object
+    // in thatCLMap is full and the meetUpdate of the current CL with that is also full.
+    // (2) meetUpdateCL above of the two keyed objects resulted in this mapped object being full.
+    // Under both cases remove the mapped ml from this map
+    if(s_it == thatCLMap.end() || (it->second)->isFullCL(pedge)) {
+      // Current mapped CL has become full as a result of (1) or (2).
+      // Remove the item from the map.
+      // Note that post-increment which increments the iterator and returns the old value for deletion.
+      codeLocsMap.erase(it++);
+      n_FullCL++;
+      modified = true;
+
+      // If mostAccurate=false then set this entire object to full and return
+      if(!mostAccurate) {
+        setCLToFull();
+        return true;
+      }
+    }
+    else ++it;
+  }
+  return modified;
+}
+
+//! Method that sets this mapped object to full
+template<class Key, bool mostAccurate>
+void MappedCodeLocObject<Key, mostAccurate>::setCLToFull() {
+  assert(n_FullCL > 0);
+  if(codeLocsMap.size() > 0) codeLocsMap.clear();
+}
+
 template<class Key, bool mostAccurate>
 bool MappedCodeLocObject<Key, mostAccurate>::isFullCL(PartEdgePtr pedge) {
-  return true;
+  if(n_FullCL > 0 && codeLocsMap.size() == 0) return true;
+  return false;
 }
 
 template<class Key, bool mostAccurate>
 bool MappedCodeLocObject<Key, mostAccurate>::isEmptyCL(PartEdgePtr pedge) {
+  if(n_FullCL == 0 && codeLocsMap.size() == 0) return true;
   return false;
 }
-  
+
 template<class Key, bool mostAccurate>
 CodeLocObjectPtr MappedCodeLocObject<Key, mostAccurate>::copyCL() const {
-  return boost::make_shared<MappedCodeLocObject<Key, mostAccurate> > (*this);
+  return boost::make_shared<MappedCodeLocObject<Key, mostAccurate> >(*this);
 }
- 
-template<class Key, bool mostAccurate> 
+
+template<class Key, bool mostAccurate>
 string MappedCodeLocObject<Key, mostAccurate>::str(string indent) const {
-  ostringstream oss;
-  oss << "MappedCodeLocObject";
-  return oss.str();
+  return "MappedCodeLocObject";
 }
 
 

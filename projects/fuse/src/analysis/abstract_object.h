@@ -377,13 +377,22 @@ template<class Key, bool mostAccurate>
 class MappedCodeLocObject : public CodeLocObject
 {
   std::map<Key, CodeLocObjectPtr> codeLocsMap;
+  int n_FullCL;
+
 public:
-  MappedCodeLocObject() : CodeLocObject(NULL) { }
-  MappedCodeLocObject(const MappedCodeLocObject& that) : CodeLocObject(that), codeLocsMap(that.codeLocsMap) { }
+  MappedCodeLocObject() : CodeLocObject(NULL), n_FullCL(0) { }
+  MappedCodeLocObject(const MappedCodeLocObject& that) : CodeLocObject(that), codeLocsMap(that.codeLocsMap), n_FullCL(that.n_FullCL) { }
 
   void add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge);
-  const std::map<Key, CodeLocObjectPtr>& getCodeLocsMap() const;
+  const std::map<Key, CodeLocObjectPtr>& getCodeLocsMap() const { return codeLocsMap; }
   
+private:
+  //! Helper methods.
+  bool mayEqualCLWithKey(Key key, const std::map<Key, CodeLocObjectPtr>& thatCLMap, PartEdgePtr pedge);
+  bool mustEqualCLWithKey(Key key, const std::map<Key, CodeLocObjectPtr>& thatCLMap, PartEdgePtr pedge);
+  bool equalSetCLWithKey(Key key,const std::map<Key, CodeLocObjectPtr>& thatCLMap, PartEdgePtr pedge);
+  bool subSetCLWithKey(Key key,const std::map<Key, CodeLocObjectPtr>& thatCLMap, PartEdgePtr pedge);
+
 public:  
   // Returns whether this object may/must be equal to o within the given Part p
   // These methods are private to prevent analyses from calling them directly.
@@ -403,6 +412,8 @@ public:
   // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
+
+  void setCLToFull();
   
   // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
   bool isFullCL(PartEdgePtr pedge);
