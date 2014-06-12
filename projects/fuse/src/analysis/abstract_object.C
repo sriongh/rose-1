@@ -553,7 +553,7 @@ void MappedCodeLocObject<Key, mostAccurate>::add(Key key, CodeLocObjectPtr ml_p,
   }
   else {
     n_FullCL++;
-    if(!mostAccurate) setCLToFull();
+    if(union_) setCLToFull();
   }
 }
 
@@ -568,13 +568,21 @@ bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCLWithKey(Key key,
 }
 
 
-//! MayEquals=false implies under all executions the two objects are not may equal
-//! MayEquals=true implies that there are atleast one or more executions under which
-//! the two objects are equal.
-//! 
+//! Two CL objects are may equals if there is atleast one execution or sub-exectuion
+//! in which they represent the same code location.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise, the conservative answer for mayEqualCL is true.
+//! Mapped CLs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed CL object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MayEquality check on mapped CL is performed on intersection of sub-executions
+//! or union of sub-executions over the keyed CL objects. 
 template<class Key, bool mostAccurate>
 bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCL(CodeLocObjectPtr thatCL, PartEdgePtr pedge) {
-   boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
+  boost::shared_ptr<MappedCodeLocObject<Key, mostAccurate> > thatCL_p = 
     boost::dynamic_pointer_cast<MappedCodeLocObject<Key, mostAccurate> >(thatCL);
   assert(thatCL_p);
 
@@ -584,37 +592,43 @@ bool MappedCodeLocObject<Key, mostAccurate>::mayEqualCL(CodeLocObjectPtr thatCL,
   // denotes empty set
   if(isEmptyCL(pedge)) return false;
 
-  // mostAccurate=false
   // presence of one more full objects will result in full set over union
-  if(!mostAccurate && n_FullCL > 0) return true;
+  if(union_ && n_FullCL > 0) return true;
 
-  // Two cases reach here
+  // Two cases reach here [1] union_=true && nFull_CL=0 [2] intersect=true && nFullCL=0 or nFull_CL!=0.
   // For both cases iterate on the CL map and discharge the mayEqualCL query to individual objects 
-  // which are answered based on its set of sub-executions (or its dataflow facts)
-  // computed by the corresponding analysis.
-  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullCL != 0)
-  // The sub-executions are intersected and therefore it does not matter if we have full objects.
-  // If the discharged query returns false then return false. 
-  // We found set of executions corresponding to this CL under which the two objects are not may equals.
-  // Note that set of executions are contained over keyed objects as the analyses are conservative.
-  // This set only shrinks during intersection and it is not going to affect the result of this query.
-  // If it returns true iterate further as some executions corresponding to true may be dropped.
-  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullCL=0)
-  // If the discharged query comes back as true for this case then we have found atleast one execution
-  // under which the two objects are same and the set can only grow and the result of this query is not going
-  // to change due to union.
-  // If it returns false we iterate further as any CL can add more executions under which the objects are may equals.
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
   const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
   typename map<Key, CodeLocObjectPtr>::iterator it;
   for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
     // discharge query
-    if(mayEqualCLWithKey(it->first, thatCLMap, pedge) == !mostAccurate) return !mostAccurate;
+    bool isMayEq = mayEqualCLWithKey(it->first, thatCLMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects.
+    // If the discharged query comes back as true for this case then we have found atleast one execution
+    // under which the two objects are same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If false we iterate further as any CL can add more executions under which the objects are may equals.
+    if(union_ && isMayEq==true) return true;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullCL != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns false then return false.
+    // We did not find one execution in which the two objects are may equals. 
+    // Note that set of executions are contained over keyed objects (analyses are conservative).
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns true iterate further as some executions corresponding to true may be dropped.
+    else if(intersect_ && isMayEq==false) return false;
   }
 
-  // 1. mostAccurate = true return true 
-  // Even after intersection the set consists of executions under which the 
-  // 2. mostAccurate = false return false
-  return mostAccurate;
+
+  // All the keyed objects returned false for the discharged query under union.
+  // We haven't found a single execution under which the two objects are may equals.
+  if(union_) return false;
+  // All the keyed objects returned true for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are may equals.
+  else if(intersect_) return true;
+  else assert(0);
 }
 
 template<class Key, bool mostAccurate>
@@ -627,8 +641,7 @@ bool MappedCodeLocObject<Key, mostAccurate>::mustEqualCLWithKey(Key key,
   return codeLocsMap[key]->mustEqualCL(s_it->second, pedge);
 }
 
-
-//! Two CL objects are must equals if they represent the same single memory 
+//! Two CL objects are must equals if they represent the same code 
 //! location on all executions.
 //! Analyses are conservative as they start with full set of executions.
 //! Dataflow facts (predicates) shrink the set of sub-executions.
@@ -652,38 +665,42 @@ bool MappedCodeLocObject<Key, mostAccurate>::mustEqualCL(CodeLocObjectPtr thatCL
   // denotes empty set
   if(isEmptyCL(pedge)) return false;
 
-  // mostAccurate=false
   // presence of one more full objects will result in full set over union
-  if(!mostAccurate && n_FullCL > 0) return false;
+  if(union_ && n_FullCL > 0) return true;
 
-  // Two cases reach here
-  // For both cases iterate on the CL map and discharge the mustEqualCL query to individual objects 
-  // which are answered based on its set of sub-executions (or its dataflow facts)
-  // computed by the corresponding analysis.
-  // 1. mostAccurate=true (intersection) and the object may contain full objects (n_FullCL != 0)
-  // The sub-executions are intersected and therefore it does not matter if we have full objects.
-  // If the discharged query returns true then return true. 
-  // We found set of executions corresponding to this CL under which the two objects must equals.
-  // Note that set of executions are contained over keyed objects as the analyses are conservative.
-  // This set only shrinks during intersection and it is not going to affect the result of this query.
-  // If it returns false iterate further as some executions corresponding to false may be dropped.
-  // 2. mostAccurate=false (union) and the object does not contain any full objects (n_FullCL=0)
-  // If the discharged query comes back as false for this case then we have found atleast one execution
-  // under which the two objects are not same and the set can only grow and the result of this query is not going
-  // to change due to union.
-  // If it returns true we iterate further as any CL can add more executions under which the objects are not must equals.
+  // Two cases reach here [1] union_=true && nFull_CL=0 [2] intersect=true && nFullCL=0 or nFull_CL!=0.
+  // For both cases iterate on the CL map and discharge the mayEqualCL query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
   const map<Key, CodeLocObjectPtr> thatCLMap = thatCL_p->getCodeLocsMap();
   typename map<Key, CodeLocObjectPtr>::iterator it;
   for(it = codeLocsMap.begin(); it != codeLocsMap.end(); ++it) {
     // discharge query
-    if(mustEqualCLWithKey(it->first, thatCLMap, pedge) == mostAccurate) return mostAccurate;
+    bool isMustEq = mustEqualCLWithKey(it->first, thatCLMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects
+    // If the discharged query comes back as false for this case then we have found atleast one execution
+    // under which the two objects are not same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If it returns true we iterate further as any CL can add more executions under which the objects are not must equals.
+    if(union_ && isMustEq==false) return false;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullCL != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns true then return true. 
+    // Under all sub-executions (corresponding to the CL) the two objects must equal.
+    // Note that set of executions are contained over keyed objects as the analyses are conservative.
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns false iterate further as some executions corresponding to false may be dropped.
+    else if(intersect_ && isMustEq==true) return true;
   }
 
-  // 1. mostAccurate = true return false
-  // After iterating none of the objects returned true. 
-  // 2. mostAccurate = false return true
-  // After iterating none of the objects returned false.
-  return !mostAccurate;
+  // All the keyed objects returned true for the discharged query under union.
+  // We haven't found a single execution under which the two objects are not equal.
+  if(union_) return true;
+  // All the keyed objects returned false for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are not equal.
+  else if(intersect_) return false;
+  else assert(0);
 }
 
 //! Discharge the query to the corresponding CL
@@ -792,18 +809,22 @@ bool MappedCodeLocObject<Key, mostAccurate>::isLiveCL(PartEdgePtr pedge) {
 
   // If it has one or more full objects added to it
   // and if the object has mostAccurate=false then return true (weakest answer)
-  if(n_FullCL > 0 && !mostAccurate) return true;
+  if(n_FullCL > 0 && union_) return true;
 
-  // 1. This object may have have one or more full objects but mostAccurate=true
-  // 2. This object doesnt have any full objects added to it
+  // 1. This object may have have one or more full objects under intersection
+  // 2. This object doesnt have any full objects added to it under union
   // Under both cases the answer is based on how individual analysis respond to the query
   typename map<Key, CodeLocObjectPtr>::iterator it = codeLocsMap.begin();
   for( ; it != codeLocsMap.end(); ++it) {
-    if(it->second->isLiveCL(pedge) == !mostAccurate) return !mostAccurate;
+    bool isLive = it->second->isLiveCL(pedge);
+    if(union_ && isLive==true) return true;
+    else if(intersect_ && isLive==false) return false;
   }
   
-  // leftover case of individual analysis response
-  return mostAccurate;
+  // leftover cases
+  if(union_) return false;
+  else if(intersect_) return true;
+  else assert(0);
 }
 
 //! meetUpdateCL performs the join operation of abstractions of two mls
@@ -2395,8 +2416,6 @@ bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, P
   // presence of one more full objects will result in full set over union
   if(union_ && n_FullML > 0) return true;
 
-  bool isMayEq=true;
-
   // Two cases reach here [1] union_=true && nFull_ML=0 [2] intersect=true && nFullML=0 or nFull_ML!=0.
   // For both cases iterate on the ML map and discharge the mayEqualML query to individual objects 
   // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
@@ -2404,7 +2423,7 @@ bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, P
   typename map<Key, MemLocObjectPtr>::iterator it;
   for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
     // discharge query
-    isMayEq = mayEqualMLWithKey(it->first, thatMLMap, pedge);
+    bool isMayEq = mayEqualMLWithKey(it->first, thatMLMap, pedge);
 
     // 1. Union of sub-executions and the object does not contain any full objects.
     // If the discharged query comes back as true for this case then we have found atleast one execution
@@ -2426,12 +2445,11 @@ bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, P
 
   // All the keyed objects returned false for the discharged query under union.
   // We haven't found a single execution under which the two objects are may equals.
-  if(union_) isMayEq = false;
+  if(union_) return false;
   // All the keyed objects returned true for the discharged query under intersection.
   // We have atleast one execution in common in which the two objects are may equals.
-  else if(intersect_) isMayEq = true;
-
-  return isMayEq;
+  else if(intersect_) return true;
+  else assert(0);
 }
 
 template<class Key, bool mostAccurate>
@@ -2471,8 +2489,6 @@ bool MappedMemLocObject<Key, mostAccurate>::mustEqualML(MemLocObjectPtr thatML, 
   // presence of one more full objects will result in full set over union
   if(union_ && n_FullML > 0) return true;
 
-  bool isMustEq=false;
-
   // Two cases reach here [1] union_=true && nFull_ML=0 [2] intersect=true && nFullML=0 or nFull_ML!=0.
   // For both cases iterate on the ML map and discharge the mayEqualML query to individual objects 
   // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
@@ -2480,7 +2496,7 @@ bool MappedMemLocObject<Key, mostAccurate>::mustEqualML(MemLocObjectPtr thatML, 
   typename map<Key, MemLocObjectPtr>::iterator it;
   for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
     // discharge query
-    isMustEq = mustEqualMLWithKey(it->first, thatMLMap, pedge);
+    bool isMustEq = mustEqualMLWithKey(it->first, thatMLMap, pedge);
 
     // 1. Union of sub-executions and the object does not contain any full objects
     // If the discharged query comes back as false for this case then we have found atleast one execution
@@ -2501,12 +2517,11 @@ bool MappedMemLocObject<Key, mostAccurate>::mustEqualML(MemLocObjectPtr thatML, 
 
   // All the keyed objects returned true for the discharged query under union.
   // We haven't found a single execution under which the two objects are not equal.
-  if(union_) isMustEq = true;
+  if(union_) return true;
   // All the keyed objects returned false for the discharged query under intersection.
   // We have atleast one execution in common in which the two objects are not equal.
-  else if(intersect_) isMustEq = false;
-
-  return isMustEq;
+  else if(intersect_) return false;
+  else assert(0);
 }
 
 
@@ -2618,23 +2633,20 @@ bool MappedMemLocObject<Key, mostAccurate>::isLiveML(PartEdgePtr pedge) {
   // and if the object has mostAccurate=false then return true (weakest answer)
   if(n_FullML > 0 && union_) return true;
 
-  bool isLive=true;
-
   // 1. This object may have have one or more full objects under intersection
   // 2. This object doesnt have any full objects added to it under union
   // Under both cases the answer is based on how individual analysis respond to the query
   typename map<Key, MemLocObjectPtr>::iterator it = memLocsMap.begin();
   for( ; it != memLocsMap.end(); ++it) {
-    isLive = it->second->isLiveML(pedge);
+    bool isLive = it->second->isLiveML(pedge);
     if(union_ && isLive==true) return true;
     else if(intersect_ && isLive==false) return false;
   }
   
   // leftover cases
-  if(union_) isLive = false;
-  else if(intersect_) isLive = true;
-
-  return isLive;
+  if(union_) return false;
+  else if(intersect_) return true;
+  else assert(0);
 }
 
 //! meetUpdateML performs the join operation of abstractions of two mls

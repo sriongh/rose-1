@@ -378,10 +378,19 @@ class MappedCodeLocObject : public CodeLocObject
 {
   std::map<Key, CodeLocObjectPtr> codeLocsMap;
   int n_FullCL;
+  //! Value for boolean variables is determined by the boolean template parameter
+  //! mostAccurate=false then union_=true, intersect_=false
+  //! mostAccurate=true then intersect_=true, union_=false
+  bool union_, intersect_;
 
 public:
-  MappedCodeLocObject() : CodeLocObject(NULL), n_FullCL(0) { }
-  MappedCodeLocObject(const MappedCodeLocObject& that) : CodeLocObject(that), codeLocsMap(that.codeLocsMap), n_FullCL(that.n_FullCL) { }
+  MappedCodeLocObject() : CodeLocObject(NULL), n_FullCL(0), union_(!mostAccurate), intersect_(mostAccurate) { }
+  MappedCodeLocObject(const MappedCodeLocObject& that) : 
+    CodeLocObject(that), 
+    codeLocsMap(that.codeLocsMap), 
+    n_FullCL(that.n_FullCL), 
+    union_(that.union_),
+    intersect_(that.intersect_) { }
 
   void add(Key key, CodeLocObjectPtr clo_p, PartEdgePtr pedge);
   const std::map<Key, CodeLocObjectPtr>& getCodeLocsMap() const { return codeLocsMap; }
