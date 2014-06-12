@@ -211,7 +211,7 @@ namespace scc_private
     }
 
     // pretty print for the object
-    std::string str(std::string indent="") { return "Sparse Constant Analysis"; }
+    std::string str(std::string indent="") const { return "Sparse Constant Analysis"; }
   
     friend class SparseConstantAnalysisTransfer;
   

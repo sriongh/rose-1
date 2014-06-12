@@ -185,7 +185,7 @@ namespace scc_private
     bool implementsExpr2MemLoc() { return true; }
     bool implementsExpr2Val() { return false; };
 
-    std::string str(std::string indent) { return "Sparse PointTo Analysis"; };
+    std::string str(std::string indent) const { return "Sparse PointTo Analysis"; };
 
     /// Create the PointTo memory location on demand
     SPTMemLocPtr getSPTMemLoc(SgExpression* expr);

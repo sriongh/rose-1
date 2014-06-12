@@ -35,11 +35,11 @@ using namespace std;
 
 namespace fuse {
 
-DEBUG_LEVEL(analysisDebugLevel, 0);
+DEBUG_LEVEL(analysisDebugLevel, 1);
 
 // Initializes Fuse
 void FuseInit(int argc, char **argv) {
-  setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/projects/fuse/src/fuseLayout").c_str(), 1);
+  setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/bin//fuseLayout").c_str(), 1);
   SightInit(argc, argv);
 }
 

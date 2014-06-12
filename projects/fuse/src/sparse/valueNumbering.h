@@ -203,7 +203,7 @@ namespace scc_private
     ComposedAnalysisPtr copy();
 
     // pretty print for the object
-    virtual std::string str(std::string indent="") { return "Sparse Value Numbering"; }
+    virtual std::string str(std::string indent="") const { return "Sparse Value Numbering"; }
 
     friend class SparseConstantAnalysisTransfer;
 
