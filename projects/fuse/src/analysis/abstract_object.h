@@ -1256,11 +1256,20 @@ template<class Key, bool mostAccurate>
 class MappedMemLocObject : public MemLocObject
 {
   std::map<Key, MemLocObjectPtr> memLocsMap;
-  int n_FullML;
+  int n_FullML; 
+  //! Value for boolean variables is determined by the boolean template parameter
+  //! mostAccurate=false then union_=true, intersect_=false
+  //! mostAccurate=true then intersect_=true, union_=false
+  bool union_, intersect_;
 
 public:
-  MappedMemLocObject() : MemLocObject(NULL), n_FullML(0) { }
-  MappedMemLocObject(const MappedMemLocObject& that) : MemLocObject(that), memLocsMap(that.memLocsMap), n_FullML(that.n_FullML) { }
+  MappedMemLocObject() : MemLocObject(NULL), n_FullML(0), union_(!mostAccurate), intersect_(mostAccurate) { }
+  MappedMemLocObject(const MappedMemLocObject& that) : 
+    MemLocObject(that), 
+    memLocsMap(that.memLocsMap), 
+    n_FullML(that.n_FullML), 
+    union_(that.union_),
+    intersect_(that.intersect_) { }
 
   void add(Key key, MemLocObjectPtr clo_p, PartEdgePtr pedge);
   const std::map<Key, MemLocObjectPtr>& getMemLocsMap() const { return memLocsMap; }
