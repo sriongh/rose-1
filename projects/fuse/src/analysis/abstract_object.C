@@ -543,13 +543,13 @@ static void exampleCombinedCodeLocObjects2(CodeLocObjectPtr cl, std::list<CodeLo
    ############################### */
 
 template<class Key, bool mostAccurate>
-void MappedCodeLocObject<Key, mostAccurate>::add(Key key, CodeLocObjectPtr ml_p, PartEdgePtr pedge) {
+void MappedCodeLocObject<Key, mostAccurate>::add(Key key, CodeLocObjectPtr cl_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything
   if(isFullCL(pedge)) return;
 
-  // If the ml_p is not full add/update the map
-  if(!ml_p->isFullCL(pedge)) {
-    codeLocsMap[key] = ml_p;
+  // If the cl_p is not full add/update the map
+  if(!cl_p->isFullCL(pedge)) {
+    codeLocsMap[key] = cl_p;
   }
   else {
     n_FullCL++;
@@ -1406,6 +1406,458 @@ static void exampleCombinedValueObjects2(ValueObjectPtr val, std::list<ValueObje
   exampleCombinedValueObjects(val, vals);
 }
 */
+
+/* ###########################
+   #### MappedValueObject ####
+   ########################### */
+
+//! Method to add values to the map.
+//! Vs that are full are never added to the map.
+//! If v_p is FullV or v_p->isFullV=true then mapped V is set to full only if mostAccurate=false.
+template<class Key, bool mostAccurate>
+void MappedValueObject<Key, mostAccurate>::add(Key key, ValueObjectPtr v_p, PartEdgePtr pedge) {
+  // If the object is already full don't add anything
+  if(isFullV(pedge)) return;
+
+  // If the v_p is not full add/update the map
+  if(!v_p->isFullV(pedge)) {
+    valuesMap[key] = v_p;
+  }
+  else {
+    n_FullV++;
+    if(union_) setVToFull();
+  }
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::mayEqualVWithKey(Key key,
+                                                              const map<Key, ValueObjectPtr>& thatVMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, ValueObjectPtr>::const_iterator s_it;
+  s_it = thatVMap.find(key);
+  if(s_it == thatVMap.end()) return true;
+  return valuesMap[key]->mayEqualV(s_it->second, pedge);
+}
+
+//! Two Value objects are may equals if there is atleast one execution or sub-exectuion
+//! in which they represent the same value.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise, the conservative answer for mayEqualV is true.
+//! Mapped Values are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed Value object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MayEquality check on mapped Value is performed on intersection of sub-executions
+//! or union of sub-executions over the keyed Value objects. 
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::mayEqualV(ValueObjectPtr thatV, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > thatV_p = 
+    boost::dynamic_pointer_cast<MappedValueObject<Key, mostAccurate> >(thatV);
+  assert(thatV_p);
+
+  // This object denotes full set of Values (full set of executions)
+  if(isFullV(pedge)) return true;
+
+  // denotes empty set
+  if(isEmptyV(pedge)) return false;
+
+  // presence of one more full objects will result in full set over union
+  if(union_ && n_FullV > 0) return true;
+
+  // Two cases reach here [1] union_=true && nFull_V=0 [2] intersect=true && nFullV=0 or nFull_V!=0.
+  // For both cases iterate on the Value map and discharge the mayEqualV query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
+  const map<Key, ValueObjectPtr> thatVMap = thatV_p->getValuesMap();
+  typename map<Key, ValueObjectPtr>::iterator it;
+  for(it = valuesMap.begin(); it != valuesMap.end(); ++it) {
+    // discharge query
+    bool isMayEq = mayEqualVWithKey(it->first, thatVMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects.
+    // If the discharged query comes back as true for this case then we have found atleast one execution
+    // under which the two objects are same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If false we iterate further as any Value can add more executions under which the objects are may equals.
+    if(union_ && isMayEq==true) return true;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullV != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns false then return false.
+    // We did not find one execution in which the two objects are may equals. 
+    // Note that set of executions are contained over keyed objects (analyses are conservative).
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns true iterate further as some executions corresponding to true may be dropped.
+    else if(intersect_ && isMayEq==false) return false;
+  }
+
+
+  // All the keyed objects returned false for the discharged query under union.
+  // We haven't found a single execution under which the two objects are may equals.
+  if(union_) return false;
+  // All the keyed objects returned true for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are may equals.
+  else if(intersect_) return true;
+  else assert(0);
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::mustEqualVWithKey(Key key,
+                                                               const map<Key, ValueObjectPtr>& thatVMap, 
+                                                               PartEdgePtr pedge) {
+  typename map<Key, ValueObjectPtr>::const_iterator s_it;
+  s_it = thatVMap.find(key);
+  if(s_it == thatVMap.end()) return false;
+  return valuesMap[key]->mustEqualV(s_it->second, pedge);
+}
+
+//! Two Value objects are must equals if they represent the same value
+//! on all executions.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise conservative answer for mustEqualV is false.
+//! Mapped Values are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed Value object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MustEquality check on mapped Value is performed on intersection (mostAccurate=true) of sub-executions
+//! or union (mostAccurate=false) of sub-executions over the keyed Value objects. 
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::mustEqualV(ValueObjectPtr thatV, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > thatV_p = 
+    boost::dynamic_pointer_cast<MappedValueObject<Key, mostAccurate> >(thatV);
+  assert(thatV_p);
+
+  // This object denotes full set of Value (full set of executions)
+  if(isFullV(pedge)) return false;
+
+  // denotes empty set
+  if(isEmptyV(pedge)) return false;
+
+  // presence of one more full objects will result in full set over union
+  if(union_ && n_FullV > 0) return true;
+
+  // Two cases reach here [1] union_=true && nFull_V=0 [2] intersect=true && nFullV=0 or nFull_V!=0.
+  // For both cases iterate on the Value map and discharge the mayEqualV query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
+  const map<Key, ValueObjectPtr> thatVMap = thatV_p->getValuesMap();
+  typename map<Key, ValueObjectPtr>::iterator it;
+  for(it = valuesMap.begin(); it != valuesMap.end(); ++it) {
+    // discharge query
+    bool isMustEq = mustEqualVWithKey(it->first, thatVMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects
+    // If the discharged query comes back as false for this case then we have found atleast one execution
+    // under which the two objects are not same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If it returns true we iterate further as any Value can add more executions under which the objects are not must equals.
+    if(union_ && isMustEq==false) return false;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullV != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns true then return true. 
+    // Under all sub-executions (corresponding to the Value) the two objects must equal.
+    // Note that set of executions are contained over keyed objects as the analyses are conservative.
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns false iterate further as some executions corresponding to false may be dropped.
+    else if(intersect_ && isMustEq==true) return true;
+  }
+
+  // All the keyed objects returned true for the discharged query under union.
+  // We haven't found a single execution under which the two objects are not equal.
+  if(union_) return true;
+  // All the keyed objects returned false for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are not equal.
+  else if(intersect_) return false;
+  else assert(0);
+}
+
+//! Discharge the query to the corresponding VO
+//! If key not found in thatVMap return false
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::equalSetVWithKey(Key key,
+                                                              const map<Key, ValueObjectPtr>& thatVMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, ValueObjectPtr>::const_iterator s_it;
+  s_it = thatVMap.find(key);
+  if(s_it == thatVMap.end()) return false;
+  return valuesMap[key]->equalSetV(s_it->second, pedge);
+}
+
+//! Two objects are equal sets if they denote the same set of values.
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed Value objects
+//! If all the discharged queries come back equal then the two objects are equal otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::equalSetV(ValueObjectPtr thatV, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > thatV_p = 
+    boost::dynamic_pointer_cast<MappedValueObject<Key, mostAccurate> >(thatV);  
+  assert(thatV_p);
+
+  // This object denotes full set of Values (full set of executions)
+  if(isFullV(pedge)) return thatV_p->isFullV(pedge);
+
+  // denotes empty set
+  if(isEmptyV(pedge)) return thatV_p->isEmptyV(pedge);
+
+  const map<Key, ValueObjectPtr> thatVMap = thatV_p->getValuesMap();
+  typename map<Key, ValueObjectPtr>::iterator it;
+  for(it = valuesMap.begin(); it != valuesMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(equalSetVWithKey(it->first, thatVMap, pedge) == false) return false;
+  }
+
+  return true;
+}
+
+//! Discharge the query to the corresponding VO
+//! If key not found in thatVMap return true as the
+//! keyed object on thatVMap denotes full set
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::subSetVWithKey(Key key,
+                                                            const map<Key, ValueObjectPtr>& thatVMap, 
+                                                            PartEdgePtr pedge) {
+  typename map<Key, ValueObjectPtr>::const_iterator s_it;
+  s_it = thatVMap.find(key);
+  if(s_it == thatVMap.end()) return true;
+  return valuesMap[key]->subSetV(s_it->second, pedge);
+}
+
+//! This object is a non-strict subset of the other if the set of values denoted by this
+//! is a subset of the set of values denoted by that.
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed Value objects
+//! If all the discharged queries come back true then this is a subset of that otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::subSetV(ValueObjectPtr thatV, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > thatV_p = 
+    boost::dynamic_pointer_cast<MappedValueObject<Key, mostAccurate> >(thatV);  
+  assert(thatV_p);
+
+  // This object denotes full set of Values (full set of executions)
+  if(isFullV(pedge)) return thatV_p->isFullV(pedge);
+
+  // denotes empty set
+  // thatV could be empty or non-empty eitherway this will be a non-strict subset of that.
+  if(isEmptyV(pedge)) return true;
+
+  // If both objects have the same keys discharge
+  // If this object has a key and that does not then 
+  // the keyed object is subset of that (return true) implemented by subsetVWithKey
+  // If any of the discharged query return false then return false.
+  const map<Key, ValueObjectPtr> thatVMap = thatV_p->getValuesMap();
+  typename map<Key, ValueObjectPtr>::iterator it;
+  for(it = valuesMap.begin(); it != valuesMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(subSetVWithKey(it->first, thatVMap, pedge) == false) return false;
+  }
+
+  // If this object doesn't have the key and that object has the key then 
+  // return false as this object has full object mapped to the key
+  typename map<Key, ValueObjectPtr>::const_iterator c_it;
+  for(c_it = thatVMap.begin(); c_it != thatVMap.end() && (n_FullV != 0); ++c_it) {
+    if(valuesMap.find(c_it->first) == valuesMap.end()) return false;
+  }
+
+  return true;
+}
+
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isLiveV(PartEdgePtr pedge) {
+  // If this object is full return the conservative answer
+  if(isFullV(pedge)) return true;
+
+  // If it has one or more full objects added to it
+  // and if the object has mostAccurate=false then return true (weakest answer)
+  if(n_FullV > 0 && union_) return true;
+
+  // 1. This object may have have one or more full objects under intersection
+  // 2. This object doesnt have any full objects added to it under union
+  // Under both cases the answer is based on how individual analysis respond to the query
+  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
+  for( ; it != valuesMap.end(); ++it) {
+    bool isLive = it->second->isLiveV(pedge);
+    if(union_ && isLive==true) return true;
+    else if(intersect_ && isLive==false) return false;
+  }
+  
+  // leftover cases
+  if(union_) return false;
+  else if(intersect_) return true;
+  else assert(0);
+}
+
+//! meetUpdateV performs the join operation of abstractions of two value objects
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > thatV_p =
+    boost::dynamic_pointer_cast<MappedValueObject<Key, mostAccurate> >(that);  
+  assert(thatV_p);
+
+  // if this object is already full
+  if(isFullV(pedge)) return false;
+
+  // If that object is full set this object to full
+  if(thatV_p->isFullV(pedge)) {
+    n_FullV++;
+    setVToFull();
+    return true;
+  }
+
+  // Both objects are not full
+  const map<Key, ValueObjectPtr> thatVMap = thatV_p->getValuesMap();
+  
+  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
+  typename map<Key, ValueObjectPtr>::const_iterator s_it;   // search iterator for thatVMap
+
+  bool modified = false;
+  while(it != valuesMap.end()) {
+    s_it = thatVMap.find(it->first);
+    // If two objects have the same key then discharge meetUpdate to the corresponding keyed Value objects
+    if(s_it != thatVMap.end()) {
+      modified = (it->second)->meetUpdateV(s_it->second, pedge) || modified;
+    }
+
+    // Remove the current Value object (current iterator it) from the map if the mapepd object is full.
+    // Two cases under which the current Value object can be full.
+    // (1) If current key is not found in thatVMap then the mapped object
+    // in thatVMap is full and the meetUpdate of the current V with that is also full.
+    // (2) meetUpdateV above of the two keyed objects resulted in this mapped object being full.
+    // Under both cases remove the mapped ml from this map
+    if(s_it == thatVMap.end() || (it->second)->isFullV(pedge)) {
+      // Current mapped Value object has become full as a result of (1) or (2).
+      // Remove the item from the map.
+      // Note that post-increment which increments the iterator and returns the old value for deletion.
+      valuesMap.erase(it++);
+      n_FullV++;
+      modified = true;
+
+      // If union then set this entire object to full and return
+      if(union_) {
+        setVToFull();
+        return true;
+      }
+    }
+    else ++it;
+  }
+  return modified;
+}
+
+//! Method that sets this mapped object to full
+template<class Key, bool mostAccurate>
+void MappedValueObject<Key, mostAccurate>::setVToFull() {
+  assert(n_FullV > 0);
+  if(valuesMap.size() > 0) valuesMap.clear();
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isFullV() {
+  if(n_FullV > 0 && valuesMap.size() == 0) return true;
+  return false;
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isFullV(PartEdgePtr pedge) {
+  return isFullV();
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isEmptyV() {
+  if(n_FullV == 0 && valuesMap.size() == 0) return true;
+  return false;
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isEmptyV(PartEdgePtr pedge) {
+  return isEmptyV();
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::isConcrete() {
+
+  if(isFullV()) return false;
+  if(isEmptyV()) return false;
+  if(union_ && n_FullV > 0) return false;
+  
+  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
+  for( ; it != valuesMap.end(); ++it) {
+    bool isConc = it->second->isConcrete();
+    // we have atleast one that is not concrete under union
+    if(union_ && !isConc) return false;
+    // we have atleast one that is concrete under intersection
+    else if(intersect_ && isConc) return true;
+  }
+
+  // All the objects are concrete (return true above) union
+  if(union_) return true;
+  // All the objects not concrete (return false above) under intersection
+  else if(intersect_) return false;
+  else assert(0);
+}
+
+template<class Key, bool mostAccurate>
+SgType* MappedValueObject<Key, mostAccurate>::getConcreteType() {
+  assert(isConcrete());
+  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
+  SgType* c_type = it->second->getConcreteType();
+  // assert that all other objects have the same type
+  for( ++it; it != valuesMap.end(); ++it) {
+    SgType* votype = it->second->getConcreteType();
+    assert(c_type == votype);
+  }
+  return c_type;
+}
+
+template<class Key, bool mostAccurate>
+bool MappedValueObject<Key, mostAccurate>::find(boost::shared_ptr<SgValueExp> item,
+                                                const set<boost::shared_ptr<SgValueExp> >& valueSet) {
+  set<boost::shared_ptr<SgValueExp> >::const_iterator c_it = valueSet.begin();
+  for( ; c_it != valueSet.end(); ++c_it) {
+    // if found return immediately
+    if(ValueObject::equalValueExp(c_it->get(), item.get())) return true;
+  }
+  // item not found
+  return false;
+}
+
+
+template<class Key, bool mostAccurate>
+set<boost::shared_ptr<SgValueExp> > MappedValueObject<Key, mostAccurate>::getConcreteValue() {
+  assert(isConcrete());
+  set<boost::shared_ptr<SgValueExp> > concValues;
+  // Iterate through value objects in the map.
+  // Get the set of values for each value object.
+  // Iterate through the values set and build the set of concrete values (concValues).
+  // Not very efficient as the objects to be compared are pointers.
+  typename map<Key, ValueObjectPtr>::iterator v_it = valuesMap.begin();
+  for( ; v_it != valuesMap.end(); ++v_it) {
+    set<boost::shared_ptr<SgValueExp> > c_valueSet = v_it->second->getConcreteValue();
+    set<boost::shared_ptr<SgValueExp> >::iterator s_it = c_valueSet.begin();
+    for( ; s_it != c_valueSet.end(); ++s_it) {
+      // if item not found add it to concValues
+      if(!find(*s_it, concValues)) concValues.insert(*s_it);
+    }
+  }
+  return concValues;
+}
+
+template<class Key, bool mostAccurate>
+ValueObjectPtr MappedValueObject<Key, mostAccurate>::copyV() const {
+  return boost::make_shared<MappedValueObject<Key, mostAccurate> >(*this);
+}
+
+template<class Key, bool mostAccurate>
+string MappedValueObject<Key, mostAccurate>::str(string indent) const {
+  return "MappedValueObject";
+}
+
 
 /* ###########################
    ##### MemRegionObject ##### 
@@ -2812,6 +3264,8 @@ template class CombinedMemRegionObject<false>;
 
 template class MappedCodeLocObject<Analysis*, true>;
 template class MappedCodeLocObject<Analysis*, false>;
+template class MappedValueObject<Analysis*, true>;
+template class MappedValueObject<Analysis*, false>;
 template class MappedMemLocObject<Analysis*, true>;
 template class MappedMemLocObject<Analysis*, false>;
 

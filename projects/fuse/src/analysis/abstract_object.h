@@ -671,6 +671,93 @@ extern template class CombinedValueObject<true>;
 extern template class CombinedValueObject<false>;
 
 /* ###########################
+   #### MappedValueObject ####
+   ########################### */
+
+
+template<class Key, bool mostAccurate>
+class MappedValueObject : public ValueObject
+{
+  std::map<Key, ValueObjectPtr> valuesMap;
+  int n_FullV; 
+  //! Value for boolean variables is determined by the boolean template parameter
+  //! mostAccurate=false then union_=true, intersect_=false
+  //! mostAccurate=true then intersect_=true, union_=false
+  bool union_, intersect_;
+
+public:
+  MappedValueObject() : ValueObject(NULL), n_FullV(0), union_(!mostAccurate), intersect_(mostAccurate) { }
+  MappedValueObject(const MappedValueObject& that) : 
+    ValueObject(that), 
+    valuesMap(that.valuesMap), 
+    n_FullV(that.n_FullV), 
+    union_(that.union_),
+    intersect_(that.intersect_) { }
+
+  void add(Key key, ValueObjectPtr clo_p, PartEdgePtr pedge);
+  const std::map<Key, ValueObjectPtr>& getValuesMap() const { return valuesMap; }
+  
+private:
+  //! Helper methods.
+  bool mayEqualVWithKey(Key key, const std::map<Key, ValueObjectPtr>& thatVMap, PartEdgePtr pedge);
+  bool mustEqualVWithKey(Key key, const std::map<Key, ValueObjectPtr>& thatVMap, PartEdgePtr pedge);
+  bool equalSetVWithKey(Key key,const std::map<Key, ValueObjectPtr>& thatVMap, PartEdgePtr pedge);
+  bool subSetVWithKey(Key key,const std::map<Key, ValueObjectPtr>& thatVMap, PartEdgePtr pedge);
+  //! Actual implementation of full and emptiness checking
+  //! These methods don't depend on PartEdgePtr
+  bool isFullV();
+  bool isEmptyV();
+  //! Lookup for the item one by one in the given set
+  //! Not efficient but such a comparison is needed as the stored objects are pointers
+  bool find(boost::shared_ptr<SgValueExp> item, const std::set<boost::shared_ptr<SgValueExp> >& valueSet);
+
+public:  
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveV(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge);
+
+  void setVToFull();
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullV(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyV(PartEdgePtr pedge);
+
+  // Is this object enumerable?
+  bool isConcrete();
+
+  // Type of concrete value
+  SgType* getConcreteType();
+
+  // set of values that are enumerable
+  std::set<boost::shared_ptr<SgValueExp> > getConcreteValue();
+  
+  
+  // Allocates a copy of this object and returns a pointer to it
+  ValueObjectPtr copyV() const;
+  
+  std::string str(std::string indent="") const;
+};
+
+extern template class MappedValueObject<Analysis*, true>;
+extern template class MappedValueObject<Analysis*, false>;
+
+/* ###########################
    ##### MemRegionObject ##### 
    ###########################
 
