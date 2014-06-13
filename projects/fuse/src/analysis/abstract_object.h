@@ -1024,6 +1024,76 @@ typedef boost::shared_ptr<IntersectMemRegionObject> IntersectMemRegionObjectPtr;
 typedef CombinedMemRegionObject<true> UnionMemRegionObject;
 typedef boost::shared_ptr<UnionMemRegionObject> UnionMemRegionObjectPtr;
 
+/* ###############################
+   #### MappedMemRegionObject ####
+   ############################### */
+
+template<class Key, bool mostAccurate>
+class MappedMemRegionObject : public MemRegionObject
+{
+  std::map<Key, MemRegionObjectPtr> memRegionsMap;
+  int n_FullMR; 
+  //! Value for boolean variables is determined by the boolean template parameter
+  //! mostAccurate=false then union_=true, intersect_=false
+  //! mostAccurate=true then intersect_=true, union_=false
+  bool union_, intersect_;
+
+public:
+  MappedMemRegionObject() : MemRegionObject(NULL), n_FullMR(0), union_(!mostAccurate), intersect_(mostAccurate) { }
+  MappedMemRegionObject(const MappedMemRegionObject& that) : 
+    MemRegionObject(that), 
+    memRegionsMap(that.memRegionsMap), 
+    n_FullMR(that.n_FullMR), 
+    union_(that.union_),
+    intersect_(that.intersect_) { }
+
+  void add(Key key, MemRegionObjectPtr clo_p, PartEdgePtr pedge);
+  const std::map<Key, MemRegionObjectPtr>& getMemRegionsMap() const { return memRegionsMap; }
+  
+private:
+  //! Helper methods.
+  bool mayEqualMRWithKey(Key key, const std::map<Key, MemRegionObjectPtr>& thatMRMap, PartEdgePtr pedge);
+  bool mustEqualMRWithKey(Key key, const std::map<Key, MemRegionObjectPtr>& thatMRMap, PartEdgePtr pedge);
+  bool equalSetMRWithKey(Key key,const std::map<Key, MemRegionObjectPtr>& thatMRMap, PartEdgePtr pedge);
+  bool subSetMRWithKey(Key key,const std::map<Key, MemRegionObjectPtr>& thatMRMap, PartEdgePtr pedge);
+
+public:  
+  // Returns whether this object may/must be equal to o within the given Part p
+  // These methods are private to prevent analyses from calling them directly.
+  bool mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether the two abstract objects denote the same set of concrete objects
+  bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns whether this abstract object denotes a non-strict subset (the sets may be equal) of the set denoted
+  // by the given abstract object.
+  bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  
+  // Returns true if this object is live at the given part and false otherwise
+  bool isLiveMR(PartEdgePtr pedge);
+  
+  // Computes the meet of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+
+  void setMRToFull();
+  
+  // Returns whether this AbstractObject denotes the set of all possible execution prefixes.
+  bool isFullMR(PartEdgePtr pedge);
+  // Returns whether this AbstractObject denotes the empty set.
+  bool isEmptyMR(PartEdgePtr pedge);
+
+  ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
+  
+  // Allocates a copy of this object and returns a pointer to it
+  MemRegionObjectPtr copyMR() const;
+  
+  std::string str(std::string indent="") const;
+};
+
+extern template class MappedMemRegionObject<Analysis*, true>;
+extern template class MappedMemRegionObject<Analysis*, false>;
 
 // Sriram: gcc 4.1.2 complains of undefined references to unused to template functions
 // fix: explicit template instantiation

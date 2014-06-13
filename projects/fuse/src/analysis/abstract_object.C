@@ -2362,6 +2362,388 @@ std::string CombinedMemRegionObject<defaultMayEq>::str(std::string indent) const
   return oss.str();
 }
 
+/* #################################
+   ##### MappedMemRegionObject #####
+   ################################# */
+
+//! Method to add mrs to the map.
+//! MRs that are full are never added to the map.
+//! If mr_p is FullMR or mr_p->isFullMR=true then mapped MR is set to full only if mostAccurate=false.
+template<class Key, bool mostAccurate>
+void MappedMemRegionObject<Key, mostAccurate>::add(Key key, MemRegionObjectPtr mr_p, PartEdgePtr pedge) {
+  // If the object is already full don't add anything
+  if(isFullMR(pedge)) return;
+
+  // If the mr_p is not full add/update the map
+  if(!mr_p->isFullMR(pedge)) {
+    memRegionsMap[key] = mr_p;
+  }
+  else {
+    n_FullMR++;
+    if(union_) setMRToFull();
+  }
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::mayEqualMRWithKey(Key key,
+                                                              const map<Key, MemRegionObjectPtr>& thatMRMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, MemRegionObjectPtr>::const_iterator s_it;
+  s_it = thatMRMap.find(key);
+  if(s_it == thatMRMap.end()) return true;
+  return memRegionsMap[key]->mayEqualMR(s_it->second, pedge);
+}
+
+//! Two MR objects are may equals if there is atleast one execution or sub-exectuion
+//! in which they represent the same memory location.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise, the conservative answer for mayEqualMR is true.
+//! Mapped MRs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed MR object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MayEquality check on mapped MR is performed on intersection of sub-executions
+//! or union of sub-executions over the keyed MR objects. 
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::mayEqualMR(MemRegionObjectPtr thatMR, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemRegionObject<Key, mostAccurate> > thatMR_p = 
+    boost::dynamic_pointer_cast<MappedMemRegionObject<Key, mostAccurate> >(thatMR);
+  assert(thatMR_p);
+
+  // This object denotes full set of MR (full set of executions)
+  if(isFullMR(pedge)) return true;
+
+  // denotes empty set
+  if(isEmptyMR(pedge)) return false;
+
+  // presence of one more full objects will result in full set over union
+  if(union_ && n_FullMR > 0) return true;
+
+  // Two cases reach here [1] union_=true && nFull_MR=0 [2] intersect=true && nFullMR=0 or nFull_MR!=0.
+  // For both cases iterate on the MR map and discharge the mayEqualMR query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
+  const map<Key, MemRegionObjectPtr> thatMRMap = thatMR_p->getMemRegionsMap();
+  typename map<Key, MemRegionObjectPtr>::iterator it;
+  for(it = memRegionsMap.begin(); it != memRegionsMap.end(); ++it) {
+    // discharge query
+    bool isMayEq = mayEqualMRWithKey(it->first, thatMRMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects.
+    // If the discharged query comes back as true for this case then we have found atleast one execution
+    // under which the two objects are same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If false we iterate further as any MR can add more executions under which the objects are may equals.
+    if(union_ && isMayEq==true) return true;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullMR != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns false then return false.
+    // We did not find one execution in which the two objects are may equals. 
+    // Note that set of executions are contained over keyed objects (analyses are conservative).
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns true iterate further as some executions corresponding to true may be dropped.
+    else if(intersect_ && isMayEq==false) return false;
+  }
+
+
+  // All the keyed objects returned false for the discharged query under union.
+  // We haven't found a single execution under which the two objects are may equals.
+  if(union_) return false;
+  // All the keyed objects returned true for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are may equals.
+  else if(intersect_) return true;
+  else assert(0);
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::mustEqualMRWithKey(Key key,
+                                                               const map<Key, MemRegionObjectPtr>& thatMRMap, 
+                                                               PartEdgePtr pedge) {
+  typename map<Key, MemRegionObjectPtr>::const_iterator s_it;
+  s_it = thatMRMap.find(key);
+  if(s_it == thatMRMap.end()) return false;
+  return memRegionsMap[key]->mustEqualMR(s_it->second, pedge);
+}
+
+//! Two MR objects are must equals if they represent the same single memory 
+//! location on all executions.
+//! Analyses are conservative as they start with full set of executions.
+//! Dataflow facts (predicates) shrink the set of sub-executions.
+//! We do not explicity store set of sub-executions and they are described 
+//! by the abstract objects computed from dataflow fact exported by the analysis.
+//! Unless the analyses discover otherwise conservative answer for mustEqualMR is false.
+//! Mapped MRs are keyed using either ComposedAnalysis* or PartEdgePtr.
+//! Each keyed MR object correspond to some dataflow facts computed by Key=Analysis* or 
+//! computed at Key=PartEdgePtrthat describes some sets of executions.
+//! MustEquality check on mapped MR is performed on intersection (mostAccurate=true) of sub-executions
+//! or union (mostAccurate=false) of sub-executions over the keyed MR objects. 
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::mustEqualMR(MemRegionObjectPtr thatMR, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemRegionObject<Key, mostAccurate> > thatMR_p = 
+    boost::dynamic_pointer_cast<MappedMemRegionObject<Key, mostAccurate> >(thatMR);
+  assert(thatMR_p);
+
+  // This object denotes full set of MR (full set of executions)
+  if(isFullMR(pedge)) return false;
+
+  // denotes empty set
+  if(isEmptyMR(pedge)) return false;
+
+  // presence of one more full objects will result in full set over union
+  if(union_ && n_FullMR > 0) return true;
+
+  // Two cases reach here [1] union_=true && nFull_MR=0 [2] intersect=true && nFullMR=0 or nFull_MR!=0.
+  // For both cases iterate on the MR map and discharge the mayEqualMR query to individual objects 
+  // which are answered based on its set of sub-executions (or its dataflow facts) computed by the corresponding analysis.
+  const map<Key, MemRegionObjectPtr> thatMRMap = thatMR_p->getMemRegionsMap();
+  typename map<Key, MemRegionObjectPtr>::iterator it;
+  for(it = memRegionsMap.begin(); it != memRegionsMap.end(); ++it) {
+    // discharge query
+    bool isMustEq = mustEqualMRWithKey(it->first, thatMRMap, pedge);
+
+    // 1. Union of sub-executions and the object does not contain any full objects
+    // If the discharged query comes back as false for this case then we have found atleast one execution
+    // under which the two objects are not same and the set can only grow and the result of this query is not going
+    // to change due to union.
+    // If it returns true we iterate further as any MR can add more executions under which the objects are not must equals.
+    if(union_ && isMustEq==false) return false;
+
+    // 2. Intersection of sub-executions and the object may contain full objects (n_FullMR != 0).
+    // The sub-executions are intersected and therefore it does not matter if we have full objects.
+    // If the discharged query returns true then return true. 
+    // Under all sub-executions (corresponding to the MR) the two objects must equal.
+    // Note that set of executions are contained over keyed objects as the analyses are conservative.
+    // This set only shrinks during intersection and it is not going to affect the result of this query.
+    // If it returns false iterate further as some executions corresponding to false may be dropped.
+    else if(intersect_ && isMustEq==true) return true;
+  }
+
+  // All the keyed objects returned true for the discharged query under union.
+  // We haven't found a single execution under which the two objects are not equal.
+  if(union_) return true;
+  // All the keyed objects returned false for the discharged query under intersection.
+  // We have atleast one execution in common in which the two objects are not equal.
+  else if(intersect_) return false;
+  else assert(0);
+}
+
+//! Discharge the query to the corresponding MR
+//! If key not found in thatMRMap return false
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::equalSetMRWithKey(Key key,
+                                                              const map<Key, MemRegionObjectPtr>& thatMRMap, 
+                                                              PartEdgePtr pedge) {
+  typename map<Key, MemRegionObjectPtr>::const_iterator s_it;
+  s_it = thatMRMap.find(key);
+  if(s_it == thatMRMap.end()) return false;
+  return memRegionsMap[key]->equalSetMR(s_it->second, pedge);
+}
+
+//! Two objects are equal sets if they denote the same set of memory locations
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed MemRegion objects
+//! If all the discharged queries come back equal then the two objects are equal otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::equalSetMR(MemRegionObjectPtr thatMR, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemRegionObject<Key, mostAccurate> > thatMR_p = 
+    boost::dynamic_pointer_cast<MappedMemRegionObject<Key, mostAccurate> >(thatMR);  
+  assert(thatMR_p);
+
+  // This object denotes full set of MR (full set of executions)
+  if(isFullMR(pedge)) return thatMR_p->isFullMR(pedge);
+
+  // denotes empty set
+  if(isEmptyMR(pedge)) return thatMR_p->isEmptyMR(pedge);
+
+  const map<Key, MemRegionObjectPtr> thatMRMap = thatMR_p->getMemRegionsMap();
+  typename map<Key, MemRegionObjectPtr>::iterator it;
+  for(it = memRegionsMap.begin(); it != memRegionsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(equalSetMRWithKey(it->first, thatMRMap, pedge) == false) return false;
+  }
+
+  return true;
+}
+
+//! Discharge the query to the corresponding MR
+//! If key not found in thatMRMap return true as the
+//! keyed object on thatMRMap denotes full set
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::subSetMRWithKey(Key key,
+                                                            const map<Key, MemRegionObjectPtr>& thatMRMap, 
+                                                            PartEdgePtr pedge) {
+  typename map<Key, MemRegionObjectPtr>::const_iterator s_it;
+  s_it = thatMRMap.find(key);
+  if(s_it == thatMRMap.end()) return true;
+  return memRegionsMap[key]->subSetMR(s_it->second, pedge);
+}
+
+//! This object is a non-strict subset of the other if the set of memory locations denoted by this
+//! is a subset of the set of memory locations denoted by that.
+//! The boolean parameter mostAccurate is not releveant as this query is not
+//! answered based on union or intersection of sub-executions.
+//! Simply discharge the queries to all keyed MemRegion objects
+//! If all the discharged queries come back true then this is a subset of that otherwise not.
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::subSetMR(MemRegionObjectPtr thatMR, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemRegionObject<Key, mostAccurate> > thatMR_p = 
+    boost::dynamic_pointer_cast<MappedMemRegionObject<Key, mostAccurate> >(thatMR);  
+  assert(thatMR_p);
+
+  // This object denotes full set of MR (full set of executions)
+  if(isFullMR(pedge)) return thatMR_p->isFullMR(pedge);
+
+  // denotes empty set
+  // thatMR could be empty or non-empty eitherway this will be a non-strict subset of that.
+  if(isEmptyMR(pedge)) return true;
+
+  // If both objects have the same keys discharge
+  // If this object has a key and that does not then 
+  // the keyed object is subset of that (return true) implemented by subsetMRWithKey
+  // If any of the discharged query return false then return false.
+  const map<Key, MemRegionObjectPtr> thatMRMap = thatMR_p->getMemRegionsMap();
+  typename map<Key, MemRegionObjectPtr>::iterator it;
+  for(it = memRegionsMap.begin(); it != memRegionsMap.end(); ++it) {
+    // discharge query
+    // break even if one of them returns false
+    if(subSetMRWithKey(it->first, thatMRMap, pedge) == false) return false;
+  }
+
+  // If this object doesn't have the key and that object has the key then 
+  // return false as this object has full object mapped to the key
+  typename map<Key, MemRegionObjectPtr>::const_iterator c_it;
+  for(c_it = thatMRMap.begin(); c_it != thatMRMap.end() && (n_FullMR != 0); ++c_it) {
+    if(memRegionsMap.find(c_it->first) == memRegionsMap.end()) return false;
+  }
+
+  return true;
+}
+
+//! Mapped object liveness is determined based on finding executions
+//! in which it may be live.
+//! It can be answered based on union (mostAccurate=false) or intersection
+//! (mostAccurate=true) of executions
+//! The conservative answer is to assume that the object is live
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::isLiveMR(PartEdgePtr pedge) {
+  // If this object is full return the conservative answer
+  if(isFullMR(pedge)) return true;
+
+  // If it has one or more full objects added to it
+  // and if the object has mostAccurate=false then return true (weakest answer)
+  if(n_FullMR > 0 && union_) return true;
+
+  // 1. This object may have have one or more full objects under intersection
+  // 2. This object doesnt have any full objects added to it under union
+  // Under both cases the answer is based on how individual analysis respond to the query
+  typename map<Key, MemRegionObjectPtr>::iterator it = memRegionsMap.begin();
+  for( ; it != memRegionsMap.end(); ++it) {
+    bool isLive = it->second->isLiveMR(pedge);
+    if(union_ && isLive==true) return true;
+    else if(intersect_ && isLive==false) return false;
+  }
+  
+  // leftover cases
+  if(union_) return false;
+  else if(intersect_) return true;
+  else assert(0);
+}
+
+//! meetUpdateMR performs the join operation of abstractions of two mls
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<MappedMemRegionObject<Key, mostAccurate> > thatMR_p =
+    boost::dynamic_pointer_cast<MappedMemRegionObject<Key, mostAccurate> >(that);  
+  assert(thatMR_p);
+
+  // if this object is already full
+  if(isFullMR(pedge)) return false;
+
+  // If that object is full set this object to full
+  if(thatMR_p->isFullMR(pedge)) {
+    n_FullMR++;
+    setMRToFull();
+    return true;
+  }
+
+  // Both objects are not full
+  const map<Key, MemRegionObjectPtr> thatMRMap = thatMR_p->getMemRegionsMap();
+  
+  typename map<Key, MemRegionObjectPtr>::iterator it = memRegionsMap.begin();
+  typename map<Key, MemRegionObjectPtr>::const_iterator s_it;   // search iterator for thatMRMap
+
+  bool modified = false;
+  while(it != memRegionsMap.end()) {
+    s_it = thatMRMap.find(it->first);
+    // If two objects have the same key then discharge meetUpdate to the corresponding keyed MR objects
+    if(s_it != thatMRMap.end()) {
+      modified = (it->second)->meetUpdateMR(s_it->second, pedge) || modified;
+    }
+
+    // Remove the current MR object (current iterator it) from the map if the mapepd object is full.
+    // Two cases under which the current MR object can be full.
+    // (1) If current key is not found in thatMRMap then the mapped object
+    // in thatMRMap is full and the meetUpdate of the current MR with that is also full.
+    // (2) meetUpdateMR above of the two keyed objects resulted in this mapped object being full.
+    // Under both cases remove the mapped ml from this map
+    if(s_it == thatMRMap.end() || (it->second)->isFullMR(pedge)) {
+      // Current mapped MR has become full as a result of (1) or (2).
+      // Remove the item from the map.
+      // Note that post-increment which increments the iterator and returns the old value for deletion.
+      memRegionsMap.erase(it++);
+      n_FullMR++;
+      modified = true;
+
+      // If union then set this entire object to full and return
+      if(union_) {
+        setMRToFull();
+        return true;
+      }
+    }
+    else ++it;
+  }
+  return modified;
+}
+
+//! Method that sets this mapped object to full
+template<class Key, bool mostAccurate>
+void MappedMemRegionObject<Key, mostAccurate>::setMRToFull() {
+  assert(n_FullMR > 0);
+  if(memRegionsMap.size() > 0) memRegionsMap.clear();
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::isFullMR(PartEdgePtr pedge) {
+  if(n_FullMR > 0 && memRegionsMap.size() == 0) return true;
+  return false;
+}
+
+template<class Key, bool mostAccurate>
+bool MappedMemRegionObject<Key, mostAccurate>::isEmptyMR(PartEdgePtr pedge) {
+  if(n_FullMR == 0 && memRegionsMap.size() == 0) return true;
+  return false;
+}
+
+template<class Key, bool mostAccurate>
+ValueObjectPtr MappedMemRegionObject<Key, mostAccurate>::getRegionSize(PartEdgePtr pedge) const {
+  return boost::make_shared<FullValueObject>();
+}
+
+template<class Key, bool mostAccurate>
+MemRegionObjectPtr MappedMemRegionObject<Key, mostAccurate>::copyMR() const {
+  return boost::make_shared<MappedMemRegionObject<Key, mostAccurate> >(*this);
+}
+
+template<class Key, bool mostAccurate>
+string MappedMemRegionObject<Key, mostAccurate>::str(string indent) const {
+  return "MappedMemRegionObject";
+}
+
+
 /* ########################
    ##### MemLocObject ##### 
    ######################## */
@@ -3266,7 +3648,8 @@ template class MappedCodeLocObject<Analysis*, true>;
 template class MappedCodeLocObject<Analysis*, false>;
 template class MappedValueObject<Analysis*, true>;
 template class MappedValueObject<Analysis*, false>;
+template class MappedMemRegionObject<Analysis*, true>;
+template class MappedMemRegionObject<Analysis*, false>;
 template class MappedMemLocObject<Analysis*, true>;
 template class MappedMemLocObject<Analysis*, false>;
-
 } //namespace fuse
