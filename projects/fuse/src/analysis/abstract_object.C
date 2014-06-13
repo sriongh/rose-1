@@ -2340,6 +2340,7 @@ ValueObjectPtr CombinedMemRegionObject<defaultMayEq>::getRegionSize(PartEdgePtr 
       // !!! GB 2012-09-16 : this is not quite right. We should be calling meetUpdate() to make sure
       //        the call gets routed through the generic ValueObject machinery, if any, before being 
       //        forwarded to the meetUpdateV() method.
+      // SA 2014/6/13: This will probably break if the ValueObjects stored in this collection are different
       res->meetUpdateV((*mr)->getRegionSize(pedge), pedge);
   }
   return res;
@@ -2728,9 +2729,27 @@ bool MappedMemRegionObject<Key, mostAccurate>::isEmptyMR(PartEdgePtr pedge) {
   return false;
 }
 
+//! Size of the memory region denoted by this memory object represented by a ValueObject
+//! Useful only if the object is not full
 template<class Key, bool mostAccurate>
 ValueObjectPtr MappedMemRegionObject<Key, mostAccurate>::getRegionSize(PartEdgePtr pedge) const {
-  return boost::make_shared<FullValueObject>();
+  
+  // Assert for atleast one element in the map
+  // Should we handle full MR by returning FullValueObject?
+  assert(memRegionsMap.size() > 0);
+
+  // getRegionSize on each object returns different ValueObject for each key
+  // We cannot do meetUpdate as the objects are from different analysis
+  // Return a MappedValueObject based on those objects and the corresponding key
+  boost::shared_ptr<MappedValueObject<Key, mostAccurate> > mvo_p = boost::make_shared<MappedValueObject<Key, mostAccurate> >();
+  typename map<Key, MemRegionObjectPtr>::const_iterator it = memRegionsMap.begin();
+  for( ; it != memRegionsMap.end(); ++it) {
+    ValueObjectPtr vo_p = it->second->getRegionSize(pedge);
+    Key k = it->first;    
+    mvo_p->add(k, vo_p, pedge);
+  }
+
+  return mvo_p;
 }
 
 template<class Key, bool mostAccurate>

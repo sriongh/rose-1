@@ -694,7 +694,7 @@ public:
     union_(that.union_),
     intersect_(that.intersect_) { }
 
-  void add(Key key, ValueObjectPtr clo_p, PartEdgePtr pedge);
+  void add(Key key, ValueObjectPtr vo_p, PartEdgePtr pedge);
   const std::map<Key, ValueObjectPtr>& getValuesMap() const { return valuesMap; }
   
 private:
