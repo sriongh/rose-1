@@ -35,33 +35,60 @@ namespace fuse {
   //! Maintaining state for query is useful cycles and return Full abstract objects.
   //! The init state of the query denotes that query has not been forwarded to any analysis.
   //! Query remains in analysis state when it is being forwarded to analysis by the TightComposer.
-  //! Variable analysis tracks the last analysis that the composer forwarded the query.
   //! Receiving the same query from already queried analysis indicates cycle 
-  //! at which point TightComposer returns Full (univeral) abstract objects.
-  //! Query is retired to finished state when there are no more analyses for forwarding.
+  //! at which point TightComposer returns Full abstract objects.
+  //! Query is retired to finished state when there are no more analyses to query.
   class Expr2AnyState {
-  public:
-    typedef enum {init=0, analysis=1, finished=2} StateT;
-    StateT state;
+  private:
+    //! Store the last analysis the query was forwarded
     ComposedAnalysis* currAnalysis;
-    Expr2AnyState() : state(init), currAnalysis(NULL) { }
+    //! Cache the result of the query
+    AbstractObjectPtr ao_p;
+  public:
+    typedef enum {init=0, anal=1, finished=2} StateT;
+
+    //! State of the current query determind by stateT
+    StateT state;
+
+    Expr2AnyState() : currAnalysis(NULL), state(init) { }
+    ComposedAnalysis* getLastAnalysisQueried() {
+      assert(state == anal);
+      return currAnalysis;
+    }
+
+    void setAnalysis(ComposedAnalysis* analysis_) {
+      assert(state == init || state == anal);
+      state = anal;
+      currAnalysis = analysis_;    
+    }
+
+    void setFinished(AbstractObjectPtr thatAO_p) {
+      assert(state == anal);
+      state = finished;
+      ao_p = thatAO_p;
+    }
+
+    AbstractObjectPtr getCachedAO() {
+      assert(state == finished);
+      return ao_p;
+    }
+
   };
 
-  /*************************
-   * TightCompositionCache *
-   *************************/
+  /********************************
+   * TightCompositionQueryManager *
+   ********************************/
  
-  class TightCompositionCache {
-    typedef std::pair<Expr2AnyState, AbstractObjectPtr> QueryInfo;
-    std::map<Expr2AnyKey, QueryInfo> tccache;
+  class TightCompositionQueryManager {
+    std::map<Expr2AnyKey, Expr2AnyState> queryStateMap;
   public:
-    TightCompositionCache() { }
+    TightCompositionQueryManager() { }
     void initializeQuery(Expr2AnyKey key);
     bool isQueryCached(Expr2AnyKey key);
     AbstractObjectPtr getCachedAO(Expr2AnyKey key);
     bool isRecurringQuery(Expr2AnyKey key, ComposedAnalysis* analysis);
-    void updateQueryState(Expr2AnyKey key, ComposedAnalysis* analysis);
-    void retireQueryUpdateCache(Expr2AnyKey key, AbstractObjectPtr ao);
+    void transToAnalState(Expr2AnyKey key, ComposedAnalysis* analysis);
+    void transToFinishedState(Expr2AnyKey key, AbstractObjectPtr ao);
   };
 
   /*****************
@@ -73,7 +100,7 @@ namespace fuse {
     std::list<ComposedAnalysis*> allAnalyses;
     direction dir;
 
-    TightCompositionCache tccache;
+    TightCompositionQueryManager tcqm;
     
   public:
     TightComposer(const std::list<ComposedAnalysis*>& analyses);

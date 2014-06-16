@@ -45,71 +45,63 @@ namespace fuse {
     return oss.str();
   }
 
-  /*************************
-   * TightCompositionCache *
-   *************************/
 
-  void TightCompositionCache::initializeQuery(Expr2AnyKey key) {
-    // there is no prior entry in the map
-    assert(tccache.find(key) == tccache.end());
-    QueryInfo elemInfo = make_pair(Expr2AnyState(), AbstractObjectPtr());
-    pair<Expr2AnyKey, QueryInfo> elem = make_pair(key, elemInfo);
-    tccache.insert(elem);
+  /********************************
+   * TightCompositionQueryManager *
+   ********************************/
+
+  void TightCompositionQueryManager::initializeQuery(Expr2AnyKey key) {
+    // There is no prior entry in the map
+    assert(queryStateMap.find(key) == queryStateMap.end());
+    pair<Expr2AnyKey, Expr2AnyState> elem = make_pair(key, Expr2AnyState());
+    queryStateMap.insert(elem);
   }
 
-  bool TightCompositionCache::isQueryCached(Expr2AnyKey key) {
-    if(tccache.find(key) == tccache.end())
+  bool TightCompositionQueryManager::isQueryCached(Expr2AnyKey key) {
+    if(queryStateMap.find(key) == queryStateMap.end())
       return false;
-    QueryInfo& qinfo = tccache.find(key)->second;
-    Expr2AnyState& qstate = qinfo.first;
-    if(qstate.state == Expr2AnyState::finished)
-      return true;
-    
+
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;
+    if(qstate.state == Expr2AnyState::finished) return true;   
+
     return false;
   }
 
-  AbstractObjectPtr TightCompositionCache::getCachedAO(Expr2AnyKey key) {
-    assert(tccache.find(key) != tccache.end());
-    QueryInfo& qinfo = tccache.find(key)->second;
-    Expr2AnyState& qstate = qinfo.first;
-    assert(qstate.state == Expr2AnyState::finished);
-    assert(qinfo.second);
-    return qinfo.second;
+  AbstractObjectPtr TightCompositionQueryManager::getCachedAO(Expr2AnyKey key) {
+    assert(queryStateMap.find(key) != queryStateMap.end());
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;
+    AbstractObjectPtr ao_p = qstate.getCachedAO();
+    assert(ao_p);
+    return ao_p;
   }
 
-  bool TightCompositionCache::isRecurringQuery(Expr2AnyKey key, ComposedAnalysis* thatanalysis) {
-    if(tccache.find(key) == tccache.end())
+  bool TightCompositionQueryManager::isRecurringQuery(Expr2AnyKey key, ComposedAnalysis* analysis_) {
+    if(queryStateMap.find(key) == queryStateMap.end())
       return false;
 
-    QueryInfo& qinfo = tccache.find(key)->second;
-    Expr2AnyState& qstate = qinfo.first;
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;
 
-    if(qstate.state != Expr2AnyState::analysis)
-      return false;
+    // query is not in the analysis state
+    if(qstate.state != Expr2AnyState::anal) return false;
 
-    assert(qstate.currAnalysis == thatanalysis);
-    return true;
+    // query is in the analysis state
+    if(qstate.getLastAnalysisQueried() == analysis_) return true;
+
+    return false;
   }
 
-  void TightCompositionCache::updateQueryState(Expr2AnyKey key, ComposedAnalysis* thatanalysis) {
+  void TightCompositionQueryManager::transToAnalState(Expr2AnyKey key, ComposedAnalysis* analysis_) {
     // key is already in the map
-    assert(tccache.find(key) != tccache.end());
-    QueryInfo& qinfo = tccache.find(key)->second;
-    Expr2AnyState& qstate = qinfo.first;
-    assert(qstate.state == Expr2AnyState::init || qstate.state == Expr2AnyState::analysis);
-    qstate.state = Expr2AnyState::analysis;
-    qstate.currAnalysis = thatanalysis;    
+    assert(queryStateMap.find(key) != queryStateMap.end());
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;
+    qstate.setAnalysis(analysis_);
   }
 
-  void TightCompositionCache::retireQueryUpdateCache(Expr2AnyKey key, AbstractObjectPtr ao) {
+  void TightCompositionQueryManager::transToFinishedState(Expr2AnyKey key, AbstractObjectPtr ao) {
     // key is already in the map
-    assert(tccache.find(key) != tccache.end());
-    QueryInfo& qinfo = tccache.find(key)->second;
-    Expr2AnyState& qstate = qinfo.first;
-    assert(qstate.state == Expr2AnyState::analysis);
-    qstate.state = Expr2AnyState::finished;
-    assert(ao);
-    qinfo.second = ao;
+    assert(queryStateMap.find(key) != queryStateMap.end());
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;
+    qstate.setFinished(ao);
   }
 
   /******************************
@@ -146,34 +138,39 @@ namespace fuse {
     Expr2AnyKey key(n, pedge, reqtype);
     if(tightComposerDebugLevel() >=2) dbg << "[key=" << key.str() << "]\n";
 
-    if(tccache.isQueryCached(key)) {
-      AbstractObjectPtr ao = tccache.getCachedAO(key);
-      assert(boost::dynamic_pointer_cast<IntersectAOType>(ao));
-      return boost::dynamic_pointer_cast<IntersectAOType>(ao);
+    if(tcqm.isQueryCached(key)) {
+      IntersectAOType iao_p =  boost::dynamic_pointer_cast<IntersectAOType>(tcqm.getCachedAO(key));
+      assert(iao_p);
+      return iao_p;
     }
 
-    if(tccache.isRecurringQuery(key, client))
+    if(tcqm.isRecurringQuery(key, client))
       return boost::make_shared<FullAOType>();
 
-    tccache.initializeQuery(key);
+    tcqm.initializeQuery(key);
 
-    // list of abstract objects to return
-    list<boost::shared_ptr<AOType> > aolist;
     list<ComposedAnalysis*>::iterator a = allAnalyses.begin();
-    // query all the client for Expr2Any and add them the list
+
+    // Intersect abstract object to return
+    IntersectAOType iao_p;
+    // temporary shared_ptr for results from analysis
+    boost::shared_ptr<AOType> ao_p;
+
+    // Query all the client for Expr2Any and add them the Intersect object
     for( ; a != allAnalyses.end(); ++a) {
       if(implementsExpr2AnyOp(*a)) {
-        tccache.updateQueryState(key, *a);
-        boost::shared_ptr<AOType> ao_p = Expr2AnyOp(*a, n, pedge);
+        tcqm.transToAnalState(key, *a);
+        ao_p = Expr2AnyOp(*a, n, pedge);
         assert(ao_p);
-        aolist.push_back(ao_p);
+        iao_p->add(*a, ao_p, pedge);
       }
     }
 
-    aolist.push_front(parentComposerExpr2AnyOp(n, pedge));
+    ao_p = parentComposerExpr2AnyOp(n, pedge);
+    assert(ao_p);
+    iao_p->add(getComposer(), ao_p, pedge);
 
-    boost::shared_ptr<IntersectAOType> iao_p = boost::make_shared<IntersectAOType>(aolist);
-    tccache.retireQueryUpdateCache(key, iao_p);
+    tcqm.transToFinishedState(key, iao_p);
 
     if(tightComposerDebugLevel() >= 2)
       dbg << iao_p->str() << endl;
@@ -193,33 +190,6 @@ namespace fuse {
                                                            Composer::reqType reqtype,
                                                            function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
                                                            function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp) {
-    scope reg(txt()<<"TightComposer::Operand"<<opName, 
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
-    if(tightComposerDebugLevel()>=2) 
-      dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;
-  
-    // Get the parts of the execution prefixes that terminate at the operand before continuing directly 
-    // to SgNode n in the given part
-    list<PartEdgePtr> opPartEdges = pedge->getOperandPartEdge(n, operand);
-    if(tightComposerDebugLevel()>=2) {
-      dbg << "opPartEdges(#"<<opPartEdges.size()<<")="<<endl;
-      for(list<PartEdgePtr>::iterator opE = opPartEdges.begin(); opE != opPartEdges.end(); ++opE) {
-        indent ind;
-        dbg << (*opE)->str()<<endl;
-      }
-    }
-
-    // create empty intersect object
-    // populated in the loop below
-    list<boost::shared_ptr<AOType> > aolist;
-    boost::shared_ptr<IntersectAOType> iao_p = boost::make_shared<IntersectAOType>(aolist);
-
-    for(list<PartEdgePtr>::iterator opE=opPartEdges.begin(); opE != opPartEdges.end(); ++opE) {
-      // list<RetTypePtr> aoListForPedge = Expr2Any<RetTypePtr> (opName, operand, *opE, client, reqtype, implementsExpr2AnyOp, Expr2AnyOp);
-      // aoList.insert(aoList.end(), aoListForPedge.begin(), aoListForPedge.end());
-    }
-
-    return iao_p;
   }
 
 
@@ -246,67 +216,28 @@ namespace fuse {
   // represent the outcome of the given SgExpression. 
   // The objects returned by these functions are expected to be deallocated by their callers.
   ValueObjectPtr TightComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt() << "TightComposer::Expr2Val",
-          scope::medium, attrGE("tightComposerDebugLevel", 2));
-
-    // Call the generic Expr2Any method to get the list of ValueObjectPtr from clients
-    function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2Val, _1));
-    function<ValueObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2Val, _1, _2, _3));
-    list<ValueObjectPtr> voplist;
-    IntersectValueObjectPtr ivo_p = boost::make_shared<IntersectValueObject>(voplist);
-    return ivo_p;
+    assert(0);
+    return NULLValueObject;
   }
-  
-  // ValueObjectPtr TightComposer::Expr2Val_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-  //   assert(0);
-  //   return NULLValueObject;
-  // }
   
   // Variant of Expr2Val that inquires about the value of the memory location denoted by the operand of the 
   // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
   ValueObjectPtr TightComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
-    // Call the generic OperandExpr2Any method to get the list of ValueObjectPtr from clients
-    function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2Val, _1));
-    function<ValueObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2Val, _1, _2, _3));
-    list<ValueObjectPtr> voplist;
-    IntersectValueObjectPtr ivo_p = boost::make_shared<IntersectValueObject>(voplist);
-    return ivo_p;  
+    assert(0);
+    return NULLValueObject;
   }
     
   MemRegionObjectPtr TightComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt() << "TightComposer::Expr2MemRegion",
-          scope::medium, attrGE("tightComposerDebugLevel", 2));
-
-    // Call the generic Expr2Any method to get the list of MemRegionObjectPtr from clients
-    function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemRegion, _1));
-    function<MemRegionObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2MemRegion, _1, _2, _3));
-    assert(getComposer() != this);
-    function<MemRegionObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemRegion, getComposer(), _1, _2, this));
-
-    MemRegionObjectPtr iml_p = Expr2Any<MemRegionObject, FullMemRegionObject, IntersectMemRegionObject>("Expr2MemRegion", 
-                                                                                                        n, 
-                                                                                                        pedge, 
-                                                                                                        client, Composer::memregion, 
-                                                                                                        implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                                        ComposerExpr2AnyOp);
-    return iml_p;
+    assert(0);
+    return NULLMemRegionObject;
   }
   
-
-  // MemRegionObjectPtr TightComposer::Expr2MemRegion_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-  //   assert(0);
-  //   return NULLMemRegionObject;
-  // }
   
   // Variant of Expr2MemRegion that inquires about the memory location denoted by the operand of the given node n, where
   // the part denotes the set of prefixes that terminate at SgNode n.
   MemRegionObjectPtr TightComposer::OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
-    // Call the generic OperandExpr2Any method to get the list of MemRegionObjectPtr from clients
-    function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemRegion, _1));
-    function<MemRegionObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2MemRegion, _1, _2, _3));
-    list<MemRegionObjectPtr> mrplist;
-    IntersectMemRegionObjectPtr imr_p = boost::make_shared<IntersectMemRegionObject>(mrplist);
-    return imr_p;
+    assert(0);
+    return NULLMemRegionObject;
   }
 
   MemLocObjectPtr TightComposer::Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
@@ -314,37 +245,38 @@ namespace fuse {
               scope::medium, attrGE("tightComposerDebugLevel", 2));
 
     // Call the generic Expr2Any method to get the list of MemLocObjectPtr from clients
-    function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemLoc, _1));
-    function<MemLocObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2MemLoc, _1, _2, _3));
+    // function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemLoc, _1));
+    // function<MemLocObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2MemLoc, _1, _2, _3));
 
-    assert(getComposer() != this);
-    function<MemLocObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemLoc, getComposer(), _1, _2, this));
+    // assert(getComposer() != this);
+    // function<MemLocObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemLoc, getComposer(), _1, _2, this));
 
-    MemLocObjectPtr iml_p = Expr2Any<MemLocObject, FullMemLocObject, IntersectMemLocObject>("Expr2MemLoc", 
-                                                                                                     n, 
-                                                                                                     pedge, 
-                                                                                                     client, Composer::memloc, 
-                                                                                                     implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                                     ComposerExpr2AnyOp);
-    return iml_p;
+    // MemLocObjectPtr iml_p = Expr2Any<MemLocObject, FullMemLocObject, IntersectMemLocObject>("Expr2MemLoc", 
+    //                                                                                                  n, 
+    //                                                                                                  pedge, 
+    //                                                                                                  client, Composer::memloc, 
+    //                                                                                                  implementsExpr2AnyOp, Expr2AnyOp,
+    //                                                                                                  ComposerExpr2AnyOp);
+    // return iml_p;
+    return NULLMemLocObject;
   }
   
   //! Any client of the TightComposer invokes this interface function
   //! TightComposer queries all the client analyses implementing Expr2MemLoc
   //! Returns IntersectMemLocObjectPtr
   MemLocObjectPtr TightComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
-    return Expr2MemLoc_ex(n, pedge, client);
+    return NULLMemLocObject;  
   }
   
   // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
   // the part denotes the set of prefixes that terminate at SgNode n.
   MemLocObjectPtr TightComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
     assert(0);
+    return NULLMemLocObject;
   }
   
   // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
   bool TightComposer::mayEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
     return false;
   }
 
