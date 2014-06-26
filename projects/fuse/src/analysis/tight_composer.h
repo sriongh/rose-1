@@ -15,12 +15,14 @@ namespace fuse {
 
   //! Key value used to identify any query.
   class Expr2AnyKey : public sight::printable {
+  public:
     SgNode* sgn;
     PartEdgePtr pedge;
     Composer::reqType reqtype;
-  public:
     Expr2AnyKey(SgNode* _sgn, PartEdgePtr _pedge, Composer::reqType _reqtype)
       :  sgn(_sgn), pedge(_pedge), reqtype(_reqtype) { }
+
+    Expr2AnyKey(const Expr2AnyKey& that) : sgn(that.sgn), pedge(that.pedge), reqtype(that.reqtype) { }
 
     bool operator<(const Expr2AnyKey& that) const;
 
@@ -42,8 +44,6 @@ namespace fuse {
   private:
     //! Store the last analysis the query was forwarded
     ComposedAnalysis* currAnalysis;
-    //! Cache the result of the query
-    AbstractObjectPtr ao_p;
   public:
     typedef enum {init=0, anal=1, finished=2} StateT;
 
@@ -62,17 +62,10 @@ namespace fuse {
       currAnalysis = analysis_;    
     }
 
-    void setFinished(AbstractObjectPtr thatAO_p) {
+    void setFinished() {
       assert(state == anal);
       state = finished;
-      ao_p = thatAO_p;
     }
-
-    AbstractObjectPtr getCachedAO() {
-      assert(state == finished);
-      return ao_p;
-    }
-
   };
 
   /********************************
@@ -85,10 +78,9 @@ namespace fuse {
     TightCompositionQueryManager() { }
     void initializeQuery(Expr2AnyKey key);
     bool isQueryCached(Expr2AnyKey key);
-    AbstractObjectPtr getCachedAO(Expr2AnyKey key);
-    bool isRecurringQuery(Expr2AnyKey key, ComposedAnalysis* analysis);
+    bool isLoopingQuery(Expr2AnyKey key, ComposedAnalysis* analysis);
     void transToAnalState(Expr2AnyKey key, ComposedAnalysis* analysis);
-    void transToFinishedState(Expr2AnyKey key, AbstractObjectPtr ao);
+    void transToFinishedState(Expr2AnyKey key);
   };
 
   /*****************
@@ -111,9 +103,9 @@ namespace fuse {
       return boost::make_shared<TightComposer>(*this); 
     }
 
-    // -------------------------
-    // - Methods from Composer -
-    // -------------------------
+    void initializeQueryList(std::list<Expr2AnyKey>& queryList);
+    bool recursiveQueries(std::list<Expr2AnyKey>& queryList, ComposedAnalysis* client);
+    void finalizeQueryList(std::list<Expr2AnyKey>& queryList);
 
     //! Generic method for answering Expr2* queries.
     //! Consider two analysis A, B composed by TightComposer.
@@ -159,39 +151,27 @@ namespace fuse {
     //! The full abstract objects are returned to the analysis which may wrap its 
     //! own abstract object around it and return the wrapped abstract object back to the composer.
     //! On constructing intersect abstract objects, full abstract objects are dropped from it as \f$ True \cap dfinfo = dfinfo \f$.
-
-    //! \tparam AOType AbstractObject type that can be MemLocObject, ValueObject, MemRegionObject or CodeLocObject.
-    //! \tparam FullAOType Full or universal version of AOType which can be FullMemLocObject, FullValueObject, FullMemRegionObject, FullCodeLocObject.
-    //! \tparam IntersectAOType The result of TightComposer is represented as an intersection of AbstractObject.
-    //! \result Returns a boost::shared_ptr of AOType 
     //!
-    template<class AOType, class FullAOType, class IntersectAOType>
+    template<class AOType, class FullAOType, class CombinedAOType, class AnalysisMapAOType>
     boost::shared_ptr<AOType> Expr2Any(std::string opName,
-                                       SgNode* n,
+                                       std::list<Expr2AnyKey> queryList,
                                        PartEdgePtr pedge,
                                        ComposedAnalysis* client,
-                                       Composer::reqType reqtype,
                                        boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
                                        boost::function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp,
                                        boost::function<boost::shared_ptr<AOType> (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp);
+    // -------------------------
+    // - Methods from Composer -
+    // -------------------------
 
-    template<class AOType, class FullAOType, class IntersectAOType>
-    boost::shared_ptr<AOType> OperandExpr2Any(std::string opName,
-                                          SgNode* n,
-                                          SgNode* operand,
-                                          PartEdgePtr pedge,
-                                          ComposedAnalysis* client,
-                                          Composer::reqType reqtype,
-                                          boost::function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
-                                          boost::function<boost::shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp);
 
   public:
     CodeLocObjectPtr Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // private:
-    //   CodeLocObjectPtr Expr2CodeLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+  private:
+    CodeLocObjectPtr Expr2CodeLoc_ex(std::list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // public:
+  public:
     // Variant of Expr2CodeLoc that inquires about the code location denoted by the operand of the 
     // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
     CodeLocObjectPtr OperandExpr2CodeLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
@@ -201,10 +181,10 @@ namespace fuse {
     // The objects returned by these functions are expected to be deallocated by their callers.
     ValueObjectPtr Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // private:
-    //   ValueObjectPtr Expr2Val_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+  private:
+    ValueObjectPtr Expr2Val_ex(std::list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // public:
+  public:
     // Variant of Expr2Value that runs the query on the analysis that called the method rather than 
     // some prior server analysis
     //  ValueObjectPtr Expr2ValSelf(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* self);
@@ -215,10 +195,10 @@ namespace fuse {
     
     MemRegionObjectPtr Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // private:
-    //   MemRegionObjectPtr Expr2MemRegion_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+  private:
+    MemRegionObjectPtr Expr2MemRegion_ex(std::list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client);
   
-    // public:
+  public:
     // Variant of Expr2MemRegion that inquires about the memory location denoted by the operand of the given node n, where
     // the part denotes the set of prefixes that terminate at SgNode n.
     MemRegionObjectPtr OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
@@ -226,7 +206,7 @@ namespace fuse {
     MemLocObjectPtr Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
   
     private:
-    MemLocObjectPtr Expr2MemLoc_ex(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client);
+    MemLocObjectPtr Expr2MemLoc_ex(std::list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client);
   
     // public:
     // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
