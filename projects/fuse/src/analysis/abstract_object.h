@@ -435,6 +435,11 @@ public:
   std::string str(std::string indent="") const;
 };
 
+typedef MappedCodeLocObject<Analysis*, false> UnionAnalMapCodeLocObject;
+typedef boost::shared_ptr<MappedCodeLocObject<Analysis*, false> > UnionAnalMapCodeLocObjectPtr;
+typedef MappedCodeLocObject<Analysis*, true> IntersectAnalMapCodeLocObject;
+typedef boost::shared_ptr<MappedCodeLocObject<Analysis*, true> > IntersectAnalMapCodeLocObjectPtr;
+
 extern template class MappedCodeLocObject<Analysis*, true>;
 extern template class MappedCodeLocObject<Analysis*, false>;
 
@@ -754,6 +759,11 @@ public:
   std::string str(std::string indent="") const;
 };
 
+typedef MappedValueObject<Analysis*, false> UnionAnalMapValueObject;
+typedef boost::shared_ptr<MappedValueObject<Analysis*, false> > UnionAnalMapValueObjectPtr;
+typedef MappedValueObject<Analysis*, true> IntersectAnalMapValueObject;
+typedef boost::shared_ptr<MappedValueObject<Analysis*, true> > IntersectAnalMapValueObjectPtr;
+
 extern template class MappedValueObject<Analysis*, true>;
 extern template class MappedValueObject<Analysis*, false>;
 
@@ -1024,6 +1034,11 @@ typedef boost::shared_ptr<IntersectMemRegionObject> IntersectMemRegionObjectPtr;
 typedef CombinedMemRegionObject<true> UnionMemRegionObject;
 typedef boost::shared_ptr<UnionMemRegionObject> UnionMemRegionObjectPtr;
 
+// Sriram: gcc 4.1.2 complains of undefined references to unused to template functions
+// fix: explicit template instantiation
+extern template class CombinedMemRegionObject<true>;
+extern template class CombinedMemRegionObject<false>; // not sure if this is needed as there were no errors
+
 /* ###############################
    #### MappedMemRegionObject ####
    ############################### */
@@ -1092,13 +1107,15 @@ public:
   std::string str(std::string indent="") const;
 };
 
+
+typedef MappedMemRegionObject<Analysis*, false> UnionAnalMapMemRegionObject;
+typedef boost::shared_ptr<MappedMemRegionObject<Analysis*, false> > UnionAnalMapMemRegionObjectPtr;
+typedef MappedMemRegionObject<Analysis*, true> IntersectAnalMapMemRegionObject;
+typedef boost::shared_ptr<MappedMemRegionObject<Analysis*, true> > IntersectAnalMapMemRegionObjectPtr;
+
 extern template class MappedMemRegionObject<Analysis*, true>;
 extern template class MappedMemRegionObject<Analysis*, false>;
 
-// Sriram: gcc 4.1.2 complains of undefined references to unused to template functions
-// fix: explicit template instantiation
-extern template class CombinedMemRegionObject<true>;
-extern template class CombinedMemRegionObject<false>; // not sure if this is needed as there were no errors
 
 /* ########################
    ##### MemLocObject ##### 
@@ -1480,8 +1497,21 @@ public:
   std::string str(std::string indent="") const;
 };
 
+typedef MappedMemLocObject<Analysis*, false> UnionAnalMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<Analysis*, false> > UnionAnalMapMemLocObjectPtr;
+typedef MappedMemLocObject<Analysis*, true> IntersectAnalMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<Analysis*, true> > IntersectAnalMapMemLocObjectPtr;
+
+typedef MappedMemLocObject<PartEdgePtr, false> UnionPEMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<PartEdgePtr, false> > UnionPEMapMemLocObjectPtr;
+typedef MappedMemLocObject<PartEdgePtr, true> IntersectPEMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<PartEdgePtr, true> > IntersectPEMapMemLocObjectPtr;
+
+
 extern template class MappedMemLocObject<Analysis*, true>;
 extern template class MappedMemLocObject<Analysis*, false>;
+extern template class MappedMemLocObject<PartEdgePtr, true>;
+extern template class MappedMemLocObject<PartEdgePtr, false>;
 
 /* ###########################################
    ##### Specific Types of MemLocObjects ##### 
