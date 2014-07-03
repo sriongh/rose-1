@@ -1502,16 +1502,36 @@ typedef boost::shared_ptr<MappedMemLocObject<Analysis*, false> > UnionAnalMapMem
 typedef MappedMemLocObject<Analysis*, true> IntersectAnalMapMemLocObject;
 typedef boost::shared_ptr<MappedMemLocObject<Analysis*, true> > IntersectAnalMapMemLocObjectPtr;
 
-typedef MappedMemLocObject<PartEdgePtr, false> UnionPEMapMemLocObject;
-typedef boost::shared_ptr<MappedMemLocObject<PartEdgePtr, false> > UnionPEMapMemLocObjectPtr;
-typedef MappedMemLocObject<PartEdgePtr, true> IntersectPEMapMemLocObject;
-typedef boost::shared_ptr<MappedMemLocObject<PartEdgePtr, true> > IntersectPEMapMemLocObjectPtr;
-
-
 extern template class MappedMemLocObject<Analysis*, true>;
 extern template class MappedMemLocObject<Analysis*, false>;
-extern template class MappedMemLocObject<PartEdgePtr, true>;
-extern template class MappedMemLocObject<PartEdgePtr, false>;
+
+/* #######################
+   # UnionPEMemLocObject #
+   ####################### */
+
+//! Special MemLocObject to union MemLocObject from different PartEdges.
+//! MemLocObjects should be of same type i.e., from the same analysis.
+class UnionPEMemLocObject : public MemLocObject {
+  MemLocObjectPtr unionML_p;
+public:
+  UnionPEMemLocObject(MemLocObjectPtr ml_p, PartEdgePtr pedge);
+  UnionPEMemLocObject(const UnionPEMemLocObject& that);
+  void add(MemLocObjectPtr ml_p, PartEdgePtr pedge);
+  MemLocObjectPtr getUnionML() { return unionML_p; }
+
+  bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool equalSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool subSetML(MemLocObjectPtr o, PartEdgePtr pedge);
+  bool isLiveML(PartEdgePtr pedge);
+  bool meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge);
+  bool isFullML(PartEdgePtr pedge);
+  bool isEmptyML(PartEdgePtr pedge);
+  MemLocObjectPtr copyML() const;
+  std::string str(std::string indent="") const;
+};
+
+
 
 /* ###########################################
    ##### Specific Types of MemLocObjects ##### 

@@ -3587,7 +3587,74 @@ string MappedMemLocObject<Key, mostAccurate>::str(string indent) const {
   return "MappedMemLocObject";
 }
 
+/* #######################
+   # UnionPEMemLocObject #
+   ####################### */
 
+UnionPEMemLocObject::UnionPEMemLocObject(MemLocObjectPtr ml_p, PartEdgePtr pedge) : 
+  MemLocObject(NULL) {
+  if(ml_p->isFullML(pedge)) {
+    unionML_p = boost::make_shared<FullMemLocObject>();
+  }
+  else unionML_p = ml_p->copyML();
+}
+
+UnionPEMemLocObject::UnionPEMemLocObject(const UnionPEMemLocObject& thatML) :
+  MemLocObject(thatML), unionML_p(thatML.copyML()) {
+}
+
+void UnionPEMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  if(isFullML(pedge)) return;
+
+  if(ml_p->isFullML(pedge)) unionML_p = boost::make_shared<FullMemLocObject>();
+  else unionML_p->meetUpdateML(ml_p, pedge);
+}
+
+bool UnionPEMemLocObject::mayEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<UnionPEMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<UnionPEMemLocObject>(that);
+  if(isFullML(pedge)) return true;
+  if(thatML_p->isFullML(pedge)) return true;
+  else return unionML_p->mayEqualML(thatML_p->getUnionML(), pedge);
+}
+
+bool UnionPEMemLocObject::mustEqualML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  return false;
+}
+
+bool UnionPEMemLocObject::equalSetML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  return false;
+}
+
+bool UnionPEMemLocObject::subSetML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  return false;
+}
+
+bool UnionPEMemLocObject::meetUpdateML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  return false;
+}
+  
+bool UnionPEMemLocObject::isLiveML(PartEdgePtr pedge) {
+  return false;
+}
+
+bool UnionPEMemLocObject::isFullML(PartEdgePtr pedge) {
+  return unionML_p->isFullML(pedge);
+}
+
+bool UnionPEMemLocObject::isEmptyML(PartEdgePtr pedge) {
+  return unionML_p->isEmptyML(pedge);
+}
+
+MemLocObjectPtr UnionPEMemLocObject::copyML() const {
+  return boost::make_shared<UnionPEMemLocObject>(*this);
+}
+
+string UnionPEMemLocObject::str(string indent) const {
+  ostringstream oss;
+  oss << "[UnionML=" << unionML_p->str(indent) << "]";
+  return oss.str();
+}
 
 /* #######################
    ##### IndexVector ##### 
