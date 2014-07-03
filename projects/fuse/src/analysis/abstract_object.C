@@ -3613,16 +3613,26 @@ void UnionPEMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
 bool UnionPEMemLocObject::mayEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
   boost::shared_ptr<UnionPEMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<UnionPEMemLocObject>(that);
-  if(isFullML(pedge)) return true;
-  if(thatML_p->isFullML(pedge)) return true;
+
+  // One of the two has unionML_p=FullMemLocObject
+  if(isFullML(pedge) || thatML_p->isFullML(pedge)) return true;
+  // Both unionML_p != FullMemLocObject
+  // Invoke analysis analysis implementation for comparing the two.
   else return unionML_p->mayEqualML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::mustEqualML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  return false;
+bool UnionPEMemLocObject::mustEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<UnionPEMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<UnionPEMemLocObject>(that);
+
+  // One of the two has unionML_p=FullMemLocObject
+  if(isFullML(pedge) || thatML_p->isFullML(pedge)) return false;
+  // Both unionML_p != FullMemLocObject
+  // Invoke analysis analysis implementation for comparing the two.
+  else return unionML_p->mustEqualML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::equalSetML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+bool UnionPEMemLocObject::equalSetML(MemLocObjectPtr that, PartEdgePtr pedge) {
   return false;
 }
 
