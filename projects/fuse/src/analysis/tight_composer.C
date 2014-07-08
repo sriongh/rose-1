@@ -175,42 +175,32 @@ namespace fuse {
     boost::shared_ptr<AnalysisMapAOType> amAO_p = boost::make_shared<AnalysisMapAOType>();
     list<ComposedAnalysis*>::iterator a = allAnalyses.begin();
     list<Expr2AnyKey>::iterator qIt;
-    list<boost::shared_ptr<AOType> > aopList;
+    boost::shared_ptr<CombinedAOType> cAO_p = boost::make_shared<CombinedAOType>();
     
     // Dispatch queries to each analysis
     for( ; a != allAnalyses.end(); ++a) {
       if(implementsExpr2AnyOp(*a)) {
-        aopList.clear();
         for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
           Expr2AnyKey query = *qIt;
           // Transition this query to analysis state corresponding to *a
           tcqm.transToAnalState(query, *a);
           // dispatch the query to the analysis
           boost::shared_ptr<AOType> ao_p = Expr2AnyOp(*a, query.sgn, query.pedge);
-          // Add it to the list
-          // Currently not allowing Full objects 
-          // Fix it by modifying Union/Intersect abstract objects 
-          assert(!ao_p->isFull(query.pedge, NULL, NULL));
-          aopList.push_back(ao_p);
-        }
-        boost::shared_ptr<CombinedAOType> cAO_p = boost::make_shared<CombinedAOType>(aopList);
+          cAO_p->add(ao_p, query.pedge);
+        }        
         amAO_p->add(*a, cAO_p, pedge);
       }
     }
 
     // Query the parent composer
-    aopList.clear();
+    boost::shared_ptr<CombinedAOType> compAO_p = boost::make_shared<CombinedAOType>();
     for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
       Expr2AnyKey query = *qIt;
       boost::shared_ptr<AOType> ao_p = ComposerExpr2AnyOp(query.sgn, query.pedge);
-      // Add it to the list
-      // Currently not allowing Full objects 
-      // Fix it by modifying Union/Intersect abstract objects 
-      assert(!ao_p->isFull(query.pedge, NULL, NULL));
-      aopList.push_back(ao_p);
+      compAO_p->add(ao_p, query.pedge);
     }
-    boost::shared_ptr<CombinedAOType> cAO_p = boost::make_shared<CombinedAOType>(aopList);
-    amAO_p->add(dynamic_cast<ComposedAnalysis*>(getComposer()), cAO_p, pedge);
+
+    amAO_p->add(dynamic_cast<ComposedAnalysis*>(getComposer()), compAO_p, pedge);
 
     finalizeQueryList(queryList);
     
@@ -234,12 +224,12 @@ namespace fuse {
     function<CodeLocObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2CodeLoc, getComposer(), _1, _2, this));
 
     CodeLocObjectPtr cl_p = Expr2Any<CodeLocObject, FullCodeLocObject, 
-                                     UnionCodeLocObject, IntersectAnalMapCodeLocObject>("Expr2CodeLoc",
-                                                                                        queryList,
-                                                                                        pedge,
-                                                                                        client,
-                                                                                        implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                        ComposerExpr2AnyOp);
+                                     PartEdgeUnionCodeLocObject, IntersectAnalMapCodeLocObject>("Expr2CodeLoc",
+                                                                                                queryList,
+                                                                                                pedge,
+                                                                                                client,
+                                                                                                implementsExpr2AnyOp, Expr2AnyOp,
+                                                                                                ComposerExpr2AnyOp);
     return cl_p;
   }
 
@@ -279,12 +269,12 @@ namespace fuse {
     function<ValueObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2Val, getComposer(), _1, _2, this));
 
     ValueObjectPtr v_p = Expr2Any<ValueObject, FullValueObject, 
-                                  UnionValueObject, IntersectAnalMapValueObject>("Expr2Val",
-                                                                                 queryList,
-                                                                                 pedge,
-                                                                                 client,
-                                                                                 implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                 ComposerExpr2AnyOp);
+                                  PartEdgeUnionValueObject, IntersectAnalMapValueObject>("Expr2Val",
+                                                                                         queryList,
+                                                                                         pedge,
+                                                                                         client,
+                                                                                         implementsExpr2AnyOp, Expr2AnyOp,
+                                                                                         ComposerExpr2AnyOp);
     return v_p;
   }
     
@@ -326,12 +316,12 @@ namespace fuse {
     function<MemRegionObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemRegion, getComposer(), _1, _2, this));
 
     MemRegionObjectPtr mr_p = Expr2Any<MemRegionObject, FullMemRegionObject, 
-                                       UnionMemRegionObject, IntersectAnalMapMemRegionObject>("Expr2MemRegion",
-                                                                                              queryList,
-                                                                                              pedge,
-                                                                                              client,
-                                                                                              implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                     ComposerExpr2AnyOp);
+                                       PartEdgeUnionMemRegionObject, IntersectAnalMapMemRegionObject>("Expr2MemRegion",
+                                                                                                      queryList,
+                                                                                                      pedge,
+                                                                                                      client,
+                                                                                                      implementsExpr2AnyOp, Expr2AnyOp,
+                                                                                                      ComposerExpr2AnyOp);
     return mr_p;
   }
     
@@ -371,12 +361,12 @@ namespace fuse {
     function<MemLocObjectPtr (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp(bind(&Composer::Expr2MemLoc, getComposer(), _1, _2, this));
 
     MemLocObjectPtr ml_p = Expr2Any<MemLocObject, FullMemLocObject, 
-                                     UnionMemLocObject, IntersectAnalMapMemLocObject>("Expr2MemLoc",
-                                                                                      queryList,
-                                                                                      pedge,
-                                                                                      client,
-                                                                                      implementsExpr2AnyOp, Expr2AnyOp,
-                                                                                      ComposerExpr2AnyOp);
+                                     PartEdgeUnionMemLocObject, IntersectAnalMapMemLocObject>("Expr2MemLoc",
+                                                                                              queryList,
+                                                                                              pedge,
+                                                                                              client,
+                                                                                              implementsExpr2AnyOp, Expr2AnyOp,
+                                                                                              ComposerExpr2AnyOp);
     return ml_p;
   }
   
