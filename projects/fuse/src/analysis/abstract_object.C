@@ -912,6 +912,87 @@ string MappedCodeLocObject<Key, mostAccurate>::str(string indent) const {
   return "MappedCodeLocObject";
 }
 
+/* ############################
+   # PartEdgeUnionCodeLocObject #
+   ############################ */
+
+PartEdgeUnionCodeLocObject::PartEdgeUnionCodeLocObject() : 
+  CodeLocObject(NULL) {
+}
+
+PartEdgeUnionCodeLocObject::PartEdgeUnionCodeLocObject(const PartEdgeUnionCodeLocObject& thatCL) :
+  CodeLocObject(thatCL), unionCL_p(thatCL.copyCL()) {
+}
+
+void PartEdgeUnionCodeLocObject::add(CodeLocObjectPtr cl_p, PartEdgePtr pedge) {
+  if(isFullCL(pedge)) return; 
+
+  // If this is the first object
+  if(!unionCL_p) unionCL_p = cl_p->copyCL();
+  // Else meetUpdate with the existing unionCL_p
+  else unionCL_p->meetUpdateCL(cl_p, pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::mayEqualCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionCodeLocObject> thatCL_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionCodeLocObject>(that);
+  assert(thatCL_p);
+  return unionCL_p->mayEqualCL(thatCL_p->getUnionCL(), pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::mustEqualCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionCodeLocObject> thatCL_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionCodeLocObject>(that);
+  assert(thatCL_p);
+  return unionCL_p->mustEqualCL(thatCL_p->getUnionCL(), pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::equalSetCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionCodeLocObject> thatCL_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionCodeLocObject>(that);
+  assert(thatCL_p);
+  return unionCL_p->equalSetCL(thatCL_p->getUnionCL(), pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::subSetCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionCodeLocObject> thatCL_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionCodeLocObject>(that);
+  assert(thatCL_p);
+  return unionCL_p->subSetCL(thatCL_p->getUnionCL(), pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionCodeLocObject> thatCL_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionCodeLocObject>(that);
+  assert(thatCL_p);
+  return unionCL_p->meetUpdateCL(thatCL_p->getUnionCL(), pedge);
+}
+  
+bool PartEdgeUnionCodeLocObject::isLiveCL(PartEdgePtr pedge) {
+  return unionCL_p->isLiveCL(pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::isFullCL(PartEdgePtr pedge) {
+  return unionCL_p->isFullCL(pedge);
+}
+
+bool PartEdgeUnionCodeLocObject::isEmptyCL(PartEdgePtr pedge) {
+  return unionCL_p->isEmptyCL(pedge);
+}
+
+CodeLocObjectPtr PartEdgeUnionCodeLocObject::copyCL() const {
+  return boost::make_shared<PartEdgeUnionCodeLocObject>(*this);
+}
+
+void PartEdgeUnionCodeLocObject::setCLToFull() {
+  unionCL_p = boost::make_shared<FullCodeLocObject>();
+}
+
+string PartEdgeUnionCodeLocObject::str(string indent) const {
+  ostringstream oss;
+  oss << "[UnionCL=" << unionCL_p->str(indent) << "]";
+  return oss.str();
+}
 
 /* #######################
    ##### ValueObject ##### 
@@ -1858,6 +1939,99 @@ string MappedValueObject<Key, mostAccurate>::str(string indent) const {
   return "MappedValueObject";
 }
 
+/* ############################
+   # PartEdgeUnionValueObject #
+   ############################ */
+
+PartEdgeUnionValueObject::PartEdgeUnionValueObject() : 
+  ValueObject(NULL) {
+}
+
+PartEdgeUnionValueObject::PartEdgeUnionValueObject(const PartEdgeUnionValueObject& thatV) :
+  ValueObject(thatV), unionV_p(thatV.copyV()) {
+}
+
+void PartEdgeUnionValueObject::add(ValueObjectPtr v_p, PartEdgePtr pedge) {
+  if(isFullV(pedge)) return; 
+
+  // If this is the first object
+  if(!unionV_p) unionV_p = v_p->copyV();
+  // Else meetUpdate with the existing unionV_p
+  else unionV_p->meetUpdateV(v_p, pedge);
+}
+
+bool PartEdgeUnionValueObject::mayEqualV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionValueObject> thatV_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionValueObject>(that);
+  assert(thatV_p);
+  return unionV_p->mayEqualV(thatV_p->getUnionV(), pedge);
+}
+
+bool PartEdgeUnionValueObject::mustEqualV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionValueObject> thatV_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionValueObject>(that);
+  assert(thatV_p);
+  return unionV_p->mustEqualV(thatV_p->getUnionV(), pedge);
+}
+
+bool PartEdgeUnionValueObject::equalSetV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionValueObject> thatV_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionValueObject>(that);
+  assert(thatV_p);
+  return unionV_p->equalSetV(thatV_p->getUnionV(), pedge);
+}
+
+bool PartEdgeUnionValueObject::subSetV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionValueObject> thatV_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionValueObject>(that);
+  assert(thatV_p);
+  return unionV_p->subSetV(thatV_p->getUnionV(), pedge);
+}
+
+bool PartEdgeUnionValueObject::meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionValueObject> thatV_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionValueObject>(that);
+  assert(thatV_p);
+  return unionV_p->meetUpdateV(thatV_p->getUnionV(), pedge);
+}
+  
+bool PartEdgeUnionValueObject::isLiveV(PartEdgePtr pedge) {
+  return unionV_p->isLiveV(pedge);
+}
+
+bool PartEdgeUnionValueObject::isFullV(PartEdgePtr pedge) {
+  return unionV_p->isFullV(pedge);
+}
+
+bool PartEdgeUnionValueObject::isEmptyV(PartEdgePtr pedge) {
+  return unionV_p->isEmptyV(pedge);
+}
+
+ValueObjectPtr PartEdgeUnionValueObject::copyV() const {
+  return boost::make_shared<PartEdgeUnionValueObject>(*this);
+}
+
+void PartEdgeUnionValueObject::setVToFull() {
+  unionV_p = boost::make_shared<FullValueObject>();
+}
+
+bool PartEdgeUnionValueObject::isConcrete() {
+  return unionV_p->isConcrete();
+}
+
+SgType* PartEdgeUnionValueObject::getConcreteType() {
+  return unionV_p->getConcreteType();
+}
+
+set<boost::shared_ptr<SgValueExp> > PartEdgeUnionValueObject::getConcreteValue() {
+  return unionV_p->getConcreteValue();
+}
+
+string PartEdgeUnionValueObject::str(string indent) const {
+  ostringstream oss;
+  oss << "[UnionV=" << unionV_p->str(indent) << "]";
+  return oss.str();
+}
 
 /* ###########################
    ##### MemRegionObject ##### 
@@ -2762,6 +2936,91 @@ string MappedMemRegionObject<Key, mostAccurate>::str(string indent) const {
   return "MappedMemRegionObject";
 }
 
+/* ################################
+   # PartEdgeUnionMemRegionObject #
+   ################################ */
+
+PartEdgeUnionMemRegionObject::PartEdgeUnionMemRegionObject() : 
+  MemRegionObject(NULL) {
+}
+
+PartEdgeUnionMemRegionObject::PartEdgeUnionMemRegionObject(const PartEdgeUnionMemRegionObject& thatMR) :
+  MemRegionObject(thatMR), unionMR_p(thatMR.copyMR()) {
+}
+
+void PartEdgeUnionMemRegionObject::add(MemRegionObjectPtr mr_p, PartEdgePtr pedge) {
+  if(isFullMR(pedge)) return; 
+
+  // If this is the first object
+  if(!unionMR_p) unionMR_p = mr_p->copyMR();
+  // Else meetUpdate with the existing unionMR_p
+  else unionMR_p->meetUpdateMR(mr_p, pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::mayEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemRegionObject> thatMR_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemRegionObject>(that);
+  assert(thatMR_p);
+  return unionMR_p->mayEqualMR(thatMR_p->getUnionMR(), pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::mustEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemRegionObject> thatMR_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemRegionObject>(that);
+  assert(thatMR_p);
+  return unionMR_p->mustEqualMR(thatMR_p->getUnionMR(), pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::equalSetMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemRegionObject> thatMR_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemRegionObject>(that);
+  assert(thatMR_p);
+  return unionMR_p->equalSetMR(thatMR_p->getUnionMR(), pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::subSetMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemRegionObject> thatMR_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemRegionObject>(that);
+  assert(thatMR_p);
+  return unionMR_p->subSetMR(thatMR_p->getUnionMR(), pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemRegionObject> thatMR_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemRegionObject>(that);
+  assert(thatMR_p);
+  return unionMR_p->meetUpdateMR(thatMR_p->getUnionMR(), pedge);
+}
+  
+bool PartEdgeUnionMemRegionObject::isLiveMR(PartEdgePtr pedge) {
+  return unionMR_p->isLiveMR(pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::isFullMR(PartEdgePtr pedge) {
+  return unionMR_p->isFullMR(pedge);
+}
+
+bool PartEdgeUnionMemRegionObject::isEmptyMR(PartEdgePtr pedge) {
+  return unionMR_p->isEmptyMR(pedge);
+}
+
+MemRegionObjectPtr PartEdgeUnionMemRegionObject::copyMR() const {
+  return boost::make_shared<PartEdgeUnionMemRegionObject>(*this);
+}
+
+void PartEdgeUnionMemRegionObject::setMRToFull() {
+  unionMR_p = boost::make_shared<FullMemRegionObject>();
+}
+
+ValueObjectPtr PartEdgeUnionMemRegionObject::getRegionSize(PartEdgePtr pedge) const {
+  return unionMR_p->getRegionSize(pedge);
+}
+
+string PartEdgeUnionMemRegionObject::str(string indent) const {
+  ostringstream oss;
+  oss << "[UnionMR=" << unionMR_p->str(indent) << "]";
+  return oss.str();
+}
 
 /* ########################
    ##### MemLocObject ##### 
@@ -3587,80 +3846,83 @@ string MappedMemLocObject<Key, mostAccurate>::str(string indent) const {
   return "MappedMemLocObject";
 }
 
-/* #######################
-   # UnionPEMemLocObject #
-   ####################### */
+/* #############################
+   # PartEdgeUnionMemLocObject #
+   ############################# */
 
-UnionPEMemLocObject::UnionPEMemLocObject(MemLocObjectPtr ml_p, PartEdgePtr pedge) : 
+PartEdgeUnionMemLocObject::PartEdgeUnionMemLocObject() : 
   MemLocObject(NULL) {
-  if(ml_p->isFullML(pedge)) {
-    unionML_p = boost::make_shared<FullMemLocObject>();
-  }
-  else unionML_p = ml_p->copyML();
 }
 
-UnionPEMemLocObject::UnionPEMemLocObject(const UnionPEMemLocObject& thatML) :
+PartEdgeUnionMemLocObject::PartEdgeUnionMemLocObject(const PartEdgeUnionMemLocObject& thatML) :
   MemLocObject(thatML), unionML_p(thatML.copyML()) {
 }
 
-void UnionPEMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  if(isFullML(pedge)) return;
+void PartEdgeUnionMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+  if(isFullML(pedge)) return; 
 
-  if(ml_p->isFullML(pedge)) unionML_p = boost::make_shared<FullMemLocObject>();
+  // If this is the first object
+  if(!unionML_p) unionML_p = ml_p->copyML();
+  // Else meetUpdate with the existing unionML_p
   else unionML_p->meetUpdateML(ml_p, pedge);
 }
 
-bool UnionPEMemLocObject::mayEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
-  boost::shared_ptr<UnionPEMemLocObject> thatML_p = 
-    boost::dynamic_pointer_cast<UnionPEMemLocObject>(that);
-
-  // One of the two has unionML_p=FullMemLocObject
-  if(isFullML(pedge) || thatML_p->isFullML(pedge)) return true;
-  // Both unionML_p != FullMemLocObject
-  // Invoke analysis analysis implementation for comparing the two.
-  else return unionML_p->mayEqualML(thatML_p->getUnionML(), pedge);
+bool PartEdgeUnionMemLocObject::mayEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
+  assert(thatML_p);
+  return unionML_p->mayEqualML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::mustEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
-  boost::shared_ptr<UnionPEMemLocObject> thatML_p = 
-    boost::dynamic_pointer_cast<UnionPEMemLocObject>(that);
-
-  // One of the two has unionML_p=FullMemLocObject
-  if(isFullML(pedge) || thatML_p->isFullML(pedge)) return false;
-  // Both unionML_p != FullMemLocObject
-  // Invoke analysis analysis implementation for comparing the two.
-  else return unionML_p->mustEqualML(thatML_p->getUnionML(), pedge);
+bool PartEdgeUnionMemLocObject::mustEqualML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
+  assert(thatML_p);
+  return unionML_p->mustEqualML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::equalSetML(MemLocObjectPtr that, PartEdgePtr pedge) {
-  return false;
+bool PartEdgeUnionMemLocObject::equalSetML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
+  assert(thatML_p);
+  return unionML_p->equalSetML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::subSetML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  return false;
+bool PartEdgeUnionMemLocObject::subSetML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
+  assert(thatML_p);
+  return unionML_p->subSetML(thatML_p->getUnionML(), pedge);
 }
 
-bool UnionPEMemLocObject::meetUpdateML(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  return false;
+bool PartEdgeUnionMemLocObject::meetUpdateML(MemLocObjectPtr that, PartEdgePtr pedge) {
+  boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
+    boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
+  assert(thatML_p);
+  return unionML_p->meetUpdateML(thatML_p->getUnionML(), pedge);
 }
   
-bool UnionPEMemLocObject::isLiveML(PartEdgePtr pedge) {
-  return false;
+bool PartEdgeUnionMemLocObject::isLiveML(PartEdgePtr pedge) {
+  return unionML_p->isLiveML(pedge);
 }
 
-bool UnionPEMemLocObject::isFullML(PartEdgePtr pedge) {
+bool PartEdgeUnionMemLocObject::isFullML(PartEdgePtr pedge) {
   return unionML_p->isFullML(pedge);
 }
 
-bool UnionPEMemLocObject::isEmptyML(PartEdgePtr pedge) {
+bool PartEdgeUnionMemLocObject::isEmptyML(PartEdgePtr pedge) {
   return unionML_p->isEmptyML(pedge);
 }
 
-MemLocObjectPtr UnionPEMemLocObject::copyML() const {
-  return boost::make_shared<UnionPEMemLocObject>(*this);
+MemLocObjectPtr PartEdgeUnionMemLocObject::copyML() const {
+  return boost::make_shared<PartEdgeUnionMemLocObject>(*this);
 }
 
-string UnionPEMemLocObject::str(string indent) const {
+void PartEdgeUnionMemLocObject::setMLToFull() {
+  unionML_p = boost::make_shared<FullMemLocObject>();
+}
+
+string PartEdgeUnionMemLocObject::str(string indent) const {
   ostringstream oss;
   oss << "[UnionML=" << unionML_p->str(indent) << "]";
   return oss.str();

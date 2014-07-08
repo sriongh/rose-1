@@ -272,6 +272,7 @@ public:
    ##### FullCodeLocObject ##### 
    ################################ */
 
+//! NOTE:Its sufficient to create only a single instance of this object globally.
 class FullCodeLocObject : public CodeLocObject {
 public:
   FullCodeLocObject() : CodeLocObject(NULL) { }
@@ -443,6 +444,34 @@ typedef boost::shared_ptr<MappedCodeLocObject<Analysis*, true> > IntersectAnalMa
 extern template class MappedCodeLocObject<Analysis*, true>;
 extern template class MappedCodeLocObject<Analysis*, false>;
 
+/* ##############################
+   # PartEdgeUnionCodeLocObject #
+   ############################## */
+
+//! Special CodeLocObject to union CodeLocObject from different PartEdges.
+//! CodeLocObjects should be of same type i.e., from the same analysis.
+class PartEdgeUnionCodeLocObject : public CodeLocObject {
+  CodeLocObjectPtr unionCL_p;
+public:
+  PartEdgeUnionCodeLocObject();
+  PartEdgeUnionCodeLocObject(const PartEdgeUnionCodeLocObject& that);
+  void add(CodeLocObjectPtr cl_p, PartEdgePtr pedge);
+  CodeLocObjectPtr getUnionCL() { return unionCL_p; }
+
+  bool mayEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool equalSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool subSetCL(CodeLocObjectPtr o, PartEdgePtr pedge);
+  bool isLiveCL(PartEdgePtr pedge);
+  bool meetUpdateCL(CodeLocObjectPtr that, PartEdgePtr pedge);
+  bool isFullCL(PartEdgePtr pedge);
+  bool isEmptyCL(PartEdgePtr pedge);
+  CodeLocObjectPtr copyCL() const;
+  void setCLToFull();
+  std::string str(std::string indent="") const;
+};
+
+
 /* #######################
    ##### ValueObject ##### 
    ####################### */
@@ -567,6 +596,7 @@ public:
 };
 
 // The default implementation of ValueObjects that denotes the set of all ValueObjects
+//! NOTE:Its sufficient to create only a single instance of this object globally.
 class FullValueObject : public ValueObject
 {
   public:
@@ -767,6 +797,37 @@ typedef boost::shared_ptr<MappedValueObject<Analysis*, true> > IntersectAnalMapV
 extern template class MappedValueObject<Analysis*, true>;
 extern template class MappedValueObject<Analysis*, false>;
 
+/* ############################
+   # PartEdgeUnionValueObject #
+   ############################ */
+
+//! Special ValueObject to union ValueObject from different PartEdges.
+//! ValueObjects should be of same type i.e., from the same analysis.
+class PartEdgeUnionValueObject : public ValueObject {
+  ValueObjectPtr unionV_p;
+public:
+  PartEdgeUnionValueObject();
+  PartEdgeUnionValueObject(const PartEdgeUnionValueObject& that);
+  void add(ValueObjectPtr v_p, PartEdgePtr pedge);
+  ValueObjectPtr getUnionV() { return unionV_p; }
+
+  bool mayEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool equalSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool subSetV(ValueObjectPtr o, PartEdgePtr pedge);
+  bool isLiveV(PartEdgePtr pedge);
+  bool meetUpdateV(ValueObjectPtr that, PartEdgePtr pedge);
+  bool isFullV(PartEdgePtr pedge);
+  bool isEmptyV(PartEdgePtr pedge);
+  ValueObjectPtr copyV() const;
+  void setVToFull();
+  bool isConcrete();
+  SgType* getConcreteType();
+  std::set<boost::shared_ptr<SgValueExp> > getConcreteValue();
+  std::string str(std::string indent="") const;
+};
+
+
 /* ###########################
    ##### MemRegionObject ##### 
    ###########################
@@ -932,6 +993,7 @@ typedef boost::shared_ptr<FuncResultMemRegionObject> FuncResultMemRegionObjectPt
 //! Default implementation of MemRegionObject that denotes all MemRegionObject
 //! Composers use the objects to conservatively answer queries
 //! Analyses should never see these objects
+//! NOTE:Its sufficient to create only a single instance of this object globally.
 class FullMemRegionObject : public MemRegionObject
 {
  public:
@@ -1116,6 +1178,35 @@ typedef boost::shared_ptr<MappedMemRegionObject<Analysis*, true> > IntersectAnal
 extern template class MappedMemRegionObject<Analysis*, true>;
 extern template class MappedMemRegionObject<Analysis*, false>;
 
+/* ################################
+   # PartEdgeUnionMemRegionObject #
+   ################################ */
+
+//! Special MemRegionObject to union MemRegionObject from different PartEdges.
+//! MemRegionObjects should be of same type i.e., from the same analysis.
+class PartEdgeUnionMemRegionObject : public MemRegionObject {
+  MemRegionObjectPtr unionMR_p;
+public:
+  PartEdgeUnionMemRegionObject();
+  PartEdgeUnionMemRegionObject(const PartEdgeUnionMemRegionObject& that);
+  void add(MemRegionObjectPtr mr_p, PartEdgePtr pedge);
+  MemRegionObjectPtr getUnionMR() { return unionMR_p; }
+
+  bool mayEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool mustEqualMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool equalSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool subSetMR(MemRegionObjectPtr o, PartEdgePtr pedge);
+  bool isLiveMR(PartEdgePtr pedge);
+  bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+  bool isFullMR(PartEdgePtr pedge);
+  bool isEmptyMR(PartEdgePtr pedge);
+  MemRegionObjectPtr copyMR() const;
+  void setMRToFull();
+  ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
+  std::string str(std::string indent="") const;
+};
+
+
 
 /* ########################
    ##### MemLocObject ##### 
@@ -1271,10 +1362,11 @@ class FuncResultMemLocObject : public MemLocObject
 typedef boost::shared_ptr<FuncResultMemLocObject> FuncResultMemLocObjectPtr;
 
 //! Default implementation of MemLocObject that denotes the set of all MemLocObjects
+//! NOTE:Its sufficient to create only a single instance of this object globally.
 class FullMemLocObject : public MemLocObject
 {
 public:
-  FullMemLocObject() : MemLocObject(NULL) { }
+  FullMemLocObject() : MemLocObject(NULL) { } 
 
   // Returns whether this object may/must be equal to o within the given Part p
   bool mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge);
@@ -1505,17 +1597,17 @@ typedef boost::shared_ptr<MappedMemLocObject<Analysis*, true> > IntersectAnalMap
 extern template class MappedMemLocObject<Analysis*, true>;
 extern template class MappedMemLocObject<Analysis*, false>;
 
-/* #######################
-   # UnionPEMemLocObject #
-   ####################### */
+/* #############################
+   # PartEdgeUnionMemLocObject #
+   ############################# */
 
 //! Special MemLocObject to union MemLocObject from different PartEdges.
 //! MemLocObjects should be of same type i.e., from the same analysis.
-class UnionPEMemLocObject : public MemLocObject {
+class PartEdgeUnionMemLocObject : public MemLocObject {
   MemLocObjectPtr unionML_p;
 public:
-  UnionPEMemLocObject(MemLocObjectPtr ml_p, PartEdgePtr pedge);
-  UnionPEMemLocObject(const UnionPEMemLocObject& that);
+  PartEdgeUnionMemLocObject();
+  PartEdgeUnionMemLocObject(const PartEdgeUnionMemLocObject& that);
   void add(MemLocObjectPtr ml_p, PartEdgePtr pedge);
   MemLocObjectPtr getUnionML() { return unionML_p; }
 
@@ -1528,6 +1620,7 @@ public:
   bool isFullML(PartEdgePtr pedge);
   bool isEmptyML(PartEdgePtr pedge);
   MemLocObjectPtr copyML() const;
+  void setMLToFull();
   std::string str(std::string indent="") const;
 };
 
