@@ -51,7 +51,7 @@ namespace fuse {
     StateT state;
 
     Expr2AnyState() : currAnalysis(NULL), state(init) { }
-    ComposedAnalysis* getLastAnalysisQueried() {
+    ComposedAnalysis* getLastAnalysisQueried() const {
       assert(state == anal);
       return currAnalysis;
     }
@@ -66,6 +66,18 @@ namespace fuse {
       assert(state == anal);
       state = finished;
     }
+
+    std::string str() const {
+      std::ostringstream oss;
+      oss << "[";
+      switch(state) {
+      case 0: oss << "init"; break;
+      case 1: oss << "anal"; break;
+      case 2: oss << "finished"; break;
+      }
+      oss << "]";
+      return oss.str();
+    }
   };
 
   /********************************
@@ -78,9 +90,11 @@ namespace fuse {
     TightCompositionQueryManager() { }
     void initializeQuery(Expr2AnyKey key);
     bool isQueryCached(Expr2AnyKey key);
+    const Expr2AnyState getQueryState(Expr2AnyKey key) const;
     bool isLoopingQuery(Expr2AnyKey key, ComposedAnalysis* analysis);
     void transToAnalState(Expr2AnyKey key, ComposedAnalysis* analysis);
     void transToFinishedState(Expr2AnyKey key);
+    std::string str(std::string indent="") const;
   };
 
   /*****************

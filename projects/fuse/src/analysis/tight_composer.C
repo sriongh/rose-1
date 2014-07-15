@@ -22,14 +22,26 @@ namespace fuse {
    ***************/
 
   bool Expr2AnyKey::operator<(const Expr2AnyKey& that) const {
-    return (reqtype < that.reqtype &&
-            pedge < that.pedge &&
-            sgn < that.sgn);
+    scope reg(txt()<<"Expr2AnyKey::<",
+              scope::medium, attrGE("tightComposerDebugLevel", 4));
+
+    if(tightComposerDebugLevel() >= 4) {
+      dbg << "this=" << str() << endl;
+      dbg << "that=" << that.str() << endl;
+    }
+
+    // Order by the sgn expression first
+    if(sgn < that.sgn) return true;
+    // Order by PartEdge if the expression is same
+    else if(sgn == that.sgn && pedge < that.pedge) return true;
+    // Order by reqtype if both expression and PartEdge are same
+    else if(sgn == that.sgn && pedge == that.pedge && reqtype < that.reqtype) return true;
+    else return false;
   }
 
   std::string Expr2AnyKey::str(std::string indent) const {
     std::ostringstream oss;
-    oss << "[sgn=" << SgNode2Str(sgn) <<",";
+    oss << "[sgn=" << sgn << "," << SgNode2Str(sgn) <<",";
     oss << "pedge=" << pedge->str() <<",";        
     oss << " reqtype="; 
     switch(reqtype) {
@@ -51,10 +63,23 @@ namespace fuse {
    ********************************/
 
   void TightCompositionQueryManager::initializeQuery(Expr2AnyKey key) {
+    scope reg(txt()<<"initializeQuery",
+              scope::medium, attrGE("tightComposerDebugLevel", 4)); 
+    
+    if(tightComposerDebugLevel() >= 4) {
+      dbg << "key=" << key.str() << endl;
+      dbg << this->str();
+    }
     // There is no prior entry in the map
     assert(queryStateMap.find(key) == queryStateMap.end());
     pair<Expr2AnyKey, Expr2AnyState> elem = make_pair(key, Expr2AnyState());
     queryStateMap.insert(elem);
+    if(tightComposerDebugLevel() >= 4) dbg << this->str();
+  }
+
+  const Expr2AnyState TightCompositionQueryManager::getQueryState(Expr2AnyKey key) const {
+    assert(queryStateMap.find(key) != queryStateMap.end());
+    return queryStateMap.find(key)->second;
   }
 
   bool TightCompositionQueryManager::isQueryCached(Expr2AnyKey key) {
@@ -68,10 +93,17 @@ namespace fuse {
   }
 
   bool TightCompositionQueryManager::isLoopingQuery(Expr2AnyKey key, ComposedAnalysis* analysis_) {
-    if(queryStateMap.find(key) == queryStateMap.end())
-      return false;
+    scope reg(txt()<<"isLoopingQuery",
+          scope::medium, attrGE("tightComposerDebugLevel", 4));
 
-    Expr2AnyState& qstate = queryStateMap.find(key)->second;
+    if(tightComposerDebugLevel() >= 4) {
+      dbg << "key=" << key.str() << endl;
+      dbg << this->str();
+    }
+
+    if(queryStateMap.find(key) == queryStateMap.end()) return false;
+
+    Expr2AnyState& qstate = queryStateMap.find(key)->second;    
 
     // query is not in the analysis state
     if(qstate.state != Expr2AnyState::anal) return false;
@@ -83,6 +115,14 @@ namespace fuse {
   }
 
   void TightCompositionQueryManager::transToAnalState(Expr2AnyKey key, ComposedAnalysis* analysis_) {
+    scope reg(txt()<<"transToAnalState",
+              scope::medium, attrGE("tightComposerDebugLevel", 4)); 
+
+    if(tightComposerDebugLevel() >= 4) {
+      dbg << "key=" << key.str() << endl;
+      dbg << this->str();
+    }
+
     // key is already in the map
     assert(queryStateMap.find(key) != queryStateMap.end());
     Expr2AnyState& qstate = queryStateMap.find(key)->second;
@@ -94,6 +134,20 @@ namespace fuse {
     assert(queryStateMap.find(key) != queryStateMap.end());
     Expr2AnyState& qstate = queryStateMap.find(key)->second;
     qstate.setFinished();
+    queryStateMap.erase(key);
+  }
+
+  string TightCompositionQueryManager::str(string indent) const {
+    ostringstream oss;
+    oss << "QueryStateMap=[";
+    map<Expr2AnyKey, Expr2AnyState>::const_iterator it;
+    for(it = queryStateMap.begin(); it != queryStateMap.end(); ) {
+      oss << "query=" << it->first.str() << ",state=" << it->second.str();
+      ++it;
+      if(it != queryStateMap.end()) oss << "\n";
+    }
+    oss << "]\n";
+    return oss.str();
   }
 
   /******************************
@@ -166,48 +220,74 @@ namespace fuse {
                                                     function<shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp,
                                                     function<shared_ptr<AOType> (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp) {
     scope reg(txt()<<"TightComposer::Expr2Any",
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
+              scope::medium, attrGE("tightComposerDebugLevel", 3));
 
-    if(recursiveQueries(queryList, client)) return boost::make_shared<FullAOType>();
+    list<Expr2AnyKey>::iterator qIt;
+
+    if(tightComposerDebugLevel() >= 3) {
+      dbg << "queryList=[\n";
+      for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
+        dbg << (*qIt).str() << endl;
+      }
+      dbg << "]\n";
+      // dbg << "queryMap=[" << tcqm.str() << "]\n";
+    }
+
+    if(recursiveQueries(queryList, client)) {
+      return boost::make_shared<FullAOType>();
+    }
 
     initializeQueryList(queryList);
 
-    boost::shared_ptr<AnalysisMapAOType> amAO_p = boost::make_shared<AnalysisMapAOType>();
-    list<ComposedAnalysis*>::iterator a = allAnalyses.begin();
-    list<Expr2AnyKey>::iterator qIt;
-    boost::shared_ptr<CombinedAOType> cAO_p = boost::make_shared<CombinedAOType>();
+    boost::shared_ptr<AnalysisMapAOType> amao_p = boost::make_shared<AnalysisMapAOType>();
+    list<ComposedAnalysis*>::iterator a = allAnalyses.begin();    
     
     // Dispatch queries to each analysis
     for( ; a != allAnalyses.end(); ++a) {
       if(implementsExpr2AnyOp(*a)) {
+        boost::shared_ptr<CombinedAOType> cao_p = boost::make_shared<CombinedAOType>();
         for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
           Expr2AnyKey query = *qIt;
           // Transition this query to analysis state corresponding to *a
           tcqm.transToAnalState(query, *a);
+
           // dispatch the query to the analysis
           boost::shared_ptr<AOType> ao_p = Expr2AnyOp(*a, query.sgn, query.pedge);
-          cAO_p->add(ao_p, query.pedge);
+          
+          if(tightComposerDebugLevel() >= 3) {
+            dbg << (*a)->str() << ":" << ao_p->str() << endl;
+          }
+
+          cao_p->add(ao_p, query.pedge);
         }        
-        amAO_p->add(*a, cAO_p, pedge);
+        amao_p->add(*a, cao_p, pedge);
       }
     }
 
     // Query the parent composer
-    boost::shared_ptr<CombinedAOType> compAO_p = boost::make_shared<CombinedAOType>();
+    boost::shared_ptr<CombinedAOType> cao_p = boost::make_shared<CombinedAOType>();
     for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
       Expr2AnyKey query = *qIt;
+      tcqm.transToAnalState(query, dynamic_cast<ComposedAnalysis*>(getComposer()));
+
       boost::shared_ptr<AOType> ao_p = ComposerExpr2AnyOp(query.sgn, query.pedge);
-      compAO_p->add(ao_p, query.pedge);
+
+      if(tightComposerDebugLevel() >= 3) {
+        dbg << dynamic_cast<ComposedAnalysis*>(getComposer())->str() << ":" << ao_p->str() << endl;
+      }
+
+      cao_p->add(ao_p, query.pedge);
     }
 
-    amAO_p->add(dynamic_cast<ComposedAnalysis*>(getComposer()), compAO_p, pedge);
+    amao_p->add(dynamic_cast<ComposedAnalysis*>(getComposer()), cao_p, pedge);
+
+    if(tightComposerDebugLevel() >= 3) {
+      dbg << amao_p->str() << endl;
+    }
 
     finalizeQueryList(queryList);
     
-    if(tightComposerDebugLevel() >= 2)
-      dbg << amAO_p->str() << endl;
-      
-    return amAO_p;
+    return amao_p;
   }
   
 
@@ -230,6 +310,7 @@ namespace fuse {
                                                                                                 client,
                                                                                                 implementsExpr2AnyOp, Expr2AnyOp,
                                                                                                 ComposerExpr2AnyOp);
+    if(tightComposerDebugLevel() > 1) dbg << cl_p->str() << endl;
     return cl_p;
   }
 
@@ -275,6 +356,7 @@ namespace fuse {
                                                                                          client,
                                                                                          implementsExpr2AnyOp, Expr2AnyOp,
                                                                                          ComposerExpr2AnyOp);
+    if(tightComposerDebugLevel() > 1) dbg << v_p->str() << endl;
     return v_p;
   }
     
@@ -322,6 +404,7 @@ namespace fuse {
                                                                                                       client,
                                                                                                       implementsExpr2AnyOp, Expr2AnyOp,
                                                                                                       ComposerExpr2AnyOp);
+    if(tightComposerDebugLevel() > 1) dbg << mr_p->str() << endl;
     return mr_p;
   }
     
@@ -367,6 +450,7 @@ namespace fuse {
                                                                                               client,
                                                                                               implementsExpr2AnyOp, Expr2AnyOp,
                                                                                               ComposerExpr2AnyOp);
+    if(tightComposerDebugLevel() > 1) dbg << ml_p->str() << endl;
     return ml_p;
   }
   
