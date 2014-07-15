@@ -436,13 +436,13 @@ public:
   std::string str(std::string indent="") const;
 };
 
-typedef MappedCodeLocObject<Analysis*, false> UnionAnalMapCodeLocObject;
-typedef boost::shared_ptr<MappedCodeLocObject<Analysis*, false> > UnionAnalMapCodeLocObjectPtr;
-typedef MappedCodeLocObject<Analysis*, true> IntersectAnalMapCodeLocObject;
-typedef boost::shared_ptr<MappedCodeLocObject<Analysis*, true> > IntersectAnalMapCodeLocObjectPtr;
+typedef MappedCodeLocObject<ComposedAnalysis*, false> UnionAnalMapCodeLocObject;
+typedef boost::shared_ptr<MappedCodeLocObject<ComposedAnalysis*, false> > UnionAnalMapCodeLocObjectPtr;
+typedef MappedCodeLocObject<ComposedAnalysis*, true> IntersectAnalMapCodeLocObject;
+typedef boost::shared_ptr<MappedCodeLocObject<ComposedAnalysis*, true> > IntersectAnalMapCodeLocObjectPtr;
 
-extern template class MappedCodeLocObject<Analysis*, true>;
-extern template class MappedCodeLocObject<Analysis*, false>;
+extern template class MappedCodeLocObject<ComposedAnalysis*, true>;
+extern template class MappedCodeLocObject<ComposedAnalysis*, false>;
 
 /* ##############################
    # PartEdgeUnionCodeLocObject #
@@ -789,13 +789,13 @@ public:
   std::string str(std::string indent="") const;
 };
 
-typedef MappedValueObject<Analysis*, false> UnionAnalMapValueObject;
-typedef boost::shared_ptr<MappedValueObject<Analysis*, false> > UnionAnalMapValueObjectPtr;
-typedef MappedValueObject<Analysis*, true> IntersectAnalMapValueObject;
-typedef boost::shared_ptr<MappedValueObject<Analysis*, true> > IntersectAnalMapValueObjectPtr;
+typedef MappedValueObject<ComposedAnalysis*, false> UnionAnalMapValueObject;
+typedef boost::shared_ptr<MappedValueObject<ComposedAnalysis*, false> > UnionAnalMapValueObjectPtr;
+typedef MappedValueObject<ComposedAnalysis*, true> IntersectAnalMapValueObject;
+typedef boost::shared_ptr<MappedValueObject<ComposedAnalysis*, true> > IntersectAnalMapValueObjectPtr;
 
-extern template class MappedValueObject<Analysis*, true>;
-extern template class MappedValueObject<Analysis*, false>;
+extern template class MappedValueObject<ComposedAnalysis*, true>;
+extern template class MappedValueObject<ComposedAnalysis*, false>;
 
 /* ############################
    # PartEdgeUnionValueObject #
@@ -1170,13 +1170,13 @@ public:
 };
 
 
-typedef MappedMemRegionObject<Analysis*, false> UnionAnalMapMemRegionObject;
-typedef boost::shared_ptr<MappedMemRegionObject<Analysis*, false> > UnionAnalMapMemRegionObjectPtr;
-typedef MappedMemRegionObject<Analysis*, true> IntersectAnalMapMemRegionObject;
-typedef boost::shared_ptr<MappedMemRegionObject<Analysis*, true> > IntersectAnalMapMemRegionObjectPtr;
+typedef MappedMemRegionObject<ComposedAnalysis*, false> UnionAnalMapMemRegionObject;
+typedef boost::shared_ptr<MappedMemRegionObject<ComposedAnalysis*, false> > UnionAnalMapMemRegionObjectPtr;
+typedef MappedMemRegionObject<ComposedAnalysis*, true> IntersectAnalMapMemRegionObject;
+typedef boost::shared_ptr<MappedMemRegionObject<ComposedAnalysis*, true> > IntersectAnalMapMemRegionObjectPtr;
 
-extern template class MappedMemRegionObject<Analysis*, true>;
-extern template class MappedMemRegionObject<Analysis*, false>;
+extern template class MappedMemRegionObject<ComposedAnalysis*, true>;
+extern template class MappedMemRegionObject<ComposedAnalysis*, false>;
 
 /* ################################
    # PartEdgeUnionMemRegionObject #
@@ -1589,13 +1589,13 @@ public:
   std::string str(std::string indent="") const;
 };
 
-typedef MappedMemLocObject<Analysis*, false> UnionAnalMapMemLocObject;
-typedef boost::shared_ptr<MappedMemLocObject<Analysis*, false> > UnionAnalMapMemLocObjectPtr;
-typedef MappedMemLocObject<Analysis*, true> IntersectAnalMapMemLocObject;
-typedef boost::shared_ptr<MappedMemLocObject<Analysis*, true> > IntersectAnalMapMemLocObjectPtr;
+typedef MappedMemLocObject<ComposedAnalysis*, false> UnionAnalMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<ComposedAnalysis*, false> > UnionAnalMapMemLocObjectPtr;
+typedef MappedMemLocObject<ComposedAnalysis*, true> IntersectAnalMapMemLocObject;
+typedef boost::shared_ptr<MappedMemLocObject<ComposedAnalysis*, true> > IntersectAnalMapMemLocObjectPtr;
 
-extern template class MappedMemLocObject<Analysis*, true>;
-extern template class MappedMemLocObject<Analysis*, false>;
+extern template class MappedMemLocObject<ComposedAnalysis*, true>;
+extern template class MappedMemLocObject<ComposedAnalysis*, false>;
 
 /* #############################
    # PartEdgeUnionMemLocObject #

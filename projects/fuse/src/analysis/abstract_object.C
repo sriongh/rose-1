@@ -545,7 +545,7 @@ static void exampleCombinedCodeLocObjects2(CodeLocObjectPtr cl, std::list<CodeLo
 template<class Key, bool mostAccurate>
 void MappedCodeLocObject<Key, mostAccurate>::add(Key key, CodeLocObjectPtr cl_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything
-  if(isFullCL(pedge)) return;
+  if(union_ && isFullCL(pedge)) return;
 
   // If the cl_p is not full add/update the map
   if(!cl_p->isFullCL(pedge)) {
@@ -909,7 +909,19 @@ CodeLocObjectPtr MappedCodeLocObject<Key, mostAccurate>::copyCL() const {
 
 template<class Key, bool mostAccurate>
 string MappedCodeLocObject<Key, mostAccurate>::str(string indent) const {
-  return "MappedCodeLocObject";
+  ostringstream oss;
+  oss << "<span style=\"color:green\">[</span>" << (union_? "UnionMappedCodeLocObject:": "IntersectMappedCodeLocObject:") << "\n";
+  if(n_FullCL > 0 && codeLocsMap.size() == 0) oss << "Full]\n";
+  else if(n_FullCL == 0 && codeLocsMap.size() == 0) oss << "Empty]\n";
+  else {
+    typename map<Key, CodeLocObjectPtr>::const_iterator it = codeLocsMap.begin();
+    for( ; it != codeLocsMap.end(); ++it) {
+      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
+      oss << "\n";
+    }
+    oss <<"<span style=\"color:green\">]</span>";
+  }
+  return oss.str();
 }
 
 /* ############################
@@ -925,10 +937,10 @@ PartEdgeUnionCodeLocObject::PartEdgeUnionCodeLocObject(const PartEdgeUnionCodeLo
 }
 
 void PartEdgeUnionCodeLocObject::add(CodeLocObjectPtr cl_p, PartEdgePtr pedge) {
-  if(isFullCL(pedge)) return; 
-
-  // If this is the first object
-  if(!unionCL_p) unionCL_p = cl_p->copyCL();
+  // If this is the very first object
+  if(!unionCL_p) unionCL_p = cl_p->copyCL();  
+  // If Full return without adding
+  else if(isFullCL(pedge)) return; 
   // Else meetUpdate with the existing unionCL_p
   else unionCL_p->meetUpdateCL(cl_p, pedge);
 }
@@ -1498,7 +1510,7 @@ static void exampleCombinedValueObjects2(ValueObjectPtr val, std::list<ValueObje
 template<class Key, bool mostAccurate>
 void MappedValueObject<Key, mostAccurate>::add(Key key, ValueObjectPtr v_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything
-  if(isFullV(pedge)) return;
+  if(union_ && isFullV(pedge)) return;
 
   // If the v_p is not full add/update the map
   if(!v_p->isFullV(pedge)) {
@@ -1936,7 +1948,19 @@ ValueObjectPtr MappedValueObject<Key, mostAccurate>::copyV() const {
 
 template<class Key, bool mostAccurate>
 string MappedValueObject<Key, mostAccurate>::str(string indent) const {
-  return "MappedValueObject";
+  ostringstream oss;
+  oss << "[" << (union_? "UnionMappedValueObject:": "IntersectMappedValueObject:") << "\n";
+  if(n_FullV > 0 && valuesMap.size() == 0) oss << "Full]\n";
+  else if(n_FullV == 0 && valuesMap.size() == 0) oss << "Empty]\n";
+  else {
+    typename map<Key, ValueObjectPtr>::const_iterator it = valuesMap.begin();
+    for( ; it != valuesMap.end(); ++it) {
+      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
+      oss << "\n";
+    }
+    oss << "]\n";
+  }
+  return oss.str();
 }
 
 /* ############################
@@ -1952,10 +1976,10 @@ PartEdgeUnionValueObject::PartEdgeUnionValueObject(const PartEdgeUnionValueObjec
 }
 
 void PartEdgeUnionValueObject::add(ValueObjectPtr v_p, PartEdgePtr pedge) {
-  if(isFullV(pedge)) return; 
-
-  // If this is the first object
-  if(!unionV_p) unionV_p = v_p->copyV();
+  // If this is the very first object
+  if(!unionV_p) unionV_p = v_p->copyV();  
+  // If Full return without adding
+  else if(isFullV(pedge)) return; 
   // Else meetUpdate with the existing unionV_p
   else unionV_p->meetUpdateV(v_p, pedge);
 }
@@ -2547,7 +2571,7 @@ std::string CombinedMemRegionObject<defaultMayEq>::str(std::string indent) const
 template<class Key, bool mostAccurate>
 void MappedMemRegionObject<Key, mostAccurate>::add(Key key, MemRegionObjectPtr mr_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything
-  if(isFullMR(pedge)) return;
+  if(union_ && isFullMR(pedge)) return;
 
   // If the mr_p is not full add/update the map
   if(!mr_p->isFullMR(pedge)) {
@@ -2933,7 +2957,20 @@ MemRegionObjectPtr MappedMemRegionObject<Key, mostAccurate>::copyMR() const {
 
 template<class Key, bool mostAccurate>
 string MappedMemRegionObject<Key, mostAccurate>::str(string indent) const {
-  return "MappedMemRegionObject";
+   ostringstream oss;
+   oss << "<span style=\"color:darkgreen\">[</span>" << (union_? "UnionMappedMemRegionObject:": "IntersectMappedMemRegionObject:") << "\n";
+  if(n_FullMR > 0 && memRegionsMap.size() == 0) oss << "Full]\n";
+  else if(n_FullMR == 0 && memRegionsMap.size() == 0) oss << "Empty]\n";
+  else {
+    typename map<Key, MemRegionObjectPtr>::const_iterator it = memRegionsMap.begin();
+    for( ; it != memRegionsMap.end(); ) {
+      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
+      ++it;
+      if(it != memRegionsMap.end()) oss << "\n";
+    }
+    oss << "<span style=\"color:darkgreen\">]</span>";
+  }
+  return oss.str();
 }
 
 /* ################################
@@ -2949,10 +2986,10 @@ PartEdgeUnionMemRegionObject::PartEdgeUnionMemRegionObject(const PartEdgeUnionMe
 }
 
 void PartEdgeUnionMemRegionObject::add(MemRegionObjectPtr mr_p, PartEdgePtr pedge) {
-  if(isFullMR(pedge)) return; 
-
-  // If this is the first object
-  if(!unionMR_p) unionMR_p = mr_p->copyMR();
+  // If this is the very first object
+  if(!unionMR_p) unionMR_p = mr_p->copyMR();  
+  // If Full return without adding
+  else if(isFullMR(pedge)) return; 
   // Else meetUpdate with the existing unionMR_p
   else unionMR_p->meetUpdateMR(mr_p, pedge);
 }
@@ -3018,7 +3055,7 @@ ValueObjectPtr PartEdgeUnionMemRegionObject::getRegionSize(PartEdgePtr pedge) co
 
 string PartEdgeUnionMemRegionObject::str(string indent) const {
   ostringstream oss;
-  oss << "[UnionMR=" << unionMR_p->str(indent) << "]";
+  oss << "[UnionMR=" << unionMR_p.get() << ", " << unionMR_p->str(indent) << "]";
   return oss.str();
 }
 
@@ -3479,7 +3516,7 @@ std::string CombinedMemLocObject<defaultMayEq>::str(std::string indent) const
 template<class Key, bool mostAccurate>
 void MappedMemLocObject<Key, mostAccurate>::add(Key key, MemLocObjectPtr ml_p, PartEdgePtr pedge) {
   // If the object is already full don't add anything
-  if(isFullML(pedge)) return;
+  if(union_ && isFullML(pedge)) return;
 
   // If the ml_p is not full add/update the map
   if(!ml_p->isFullML(pedge)) {
@@ -3843,7 +3880,20 @@ MemLocObjectPtr MappedMemLocObject<Key, mostAccurate>::copyML() const {
 
 template<class Key, bool mostAccurate>
 string MappedMemLocObject<Key, mostAccurate>::str(string indent) const {
-  return "MappedMemLocObject";
+  ostringstream oss;
+  oss << "<span style=\"color:blue\">[</span>" << (union_? "UnionMappedML:": "IntersectMappedML:") << "\n";
+  if(n_FullML > 0 && memLocsMap.size() == 0) oss << "Full]\n";
+  else if(n_FullML == 0 && memLocsMap.size() == 0) oss << "Empty]\n";
+  else {
+    typename map<Key, MemLocObjectPtr>::const_iterator it = memLocsMap.begin();
+    for( ; it != memLocsMap.end(); ) {
+      oss << (it->first)->str(indent) << ": " << (it->second)->str(indent);
+      ++it;
+      if(it != memLocsMap.end()) oss << "\n";
+    }
+    oss << "<span style=\"color:blue\">]</span>";
+  }
+  return oss.str();
 }
 
 /* #############################
@@ -3859,10 +3909,10 @@ PartEdgeUnionMemLocObject::PartEdgeUnionMemLocObject(const PartEdgeUnionMemLocOb
 }
 
 void PartEdgeUnionMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
-  if(isFullML(pedge)) return; 
-
-  // If this is the first object
-  if(!unionML_p) unionML_p = ml_p->copyML();
+  // If this is the very first object
+  if(!unionML_p) unionML_p = ml_p->copyML();  
+  // If Full return without adding
+  else if(isFullML(pedge)) return; 
   // Else meetUpdate with the existing unionML_p
   else unionML_p->meetUpdateML(ml_p, pedge);
 }
@@ -3871,6 +3921,8 @@ bool PartEdgeUnionMemLocObject::mayEqualML(MemLocObjectPtr that, PartEdgePtr ped
   boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
   assert(thatML_p);
+
+  assert(unionML_p);
   return unionML_p->mayEqualML(thatML_p->getUnionML(), pedge);
 }
 
@@ -3878,6 +3930,8 @@ bool PartEdgeUnionMemLocObject::mustEqualML(MemLocObjectPtr that, PartEdgePtr pe
   boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
   assert(thatML_p);
+
+  assert(unionML_p);
   return unionML_p->mustEqualML(thatML_p->getUnionML(), pedge);
 }
 
@@ -3885,6 +3939,8 @@ bool PartEdgeUnionMemLocObject::equalSetML(MemLocObjectPtr that, PartEdgePtr ped
   boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
   assert(thatML_p);
+
+  assert(unionML_p);
   return unionML_p->equalSetML(thatML_p->getUnionML(), pedge);
 }
 
@@ -3892,6 +3948,8 @@ bool PartEdgeUnionMemLocObject::subSetML(MemLocObjectPtr that, PartEdgePtr pedge
   boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
   assert(thatML_p);
+
+  assert(unionML_p);
   return unionML_p->subSetML(thatML_p->getUnionML(), pedge);
 }
 
@@ -3899,18 +3957,23 @@ bool PartEdgeUnionMemLocObject::meetUpdateML(MemLocObjectPtr that, PartEdgePtr p
   boost::shared_ptr<PartEdgeUnionMemLocObject> thatML_p = 
     boost::dynamic_pointer_cast<PartEdgeUnionMemLocObject>(that);
   assert(thatML_p);
+
+  assert(unionML_p);
   return unionML_p->meetUpdateML(thatML_p->getUnionML(), pedge);
 }
   
 bool PartEdgeUnionMemLocObject::isLiveML(PartEdgePtr pedge) {
+  assert(unionML_p);
   return unionML_p->isLiveML(pedge);
 }
 
 bool PartEdgeUnionMemLocObject::isFullML(PartEdgePtr pedge) {
+  assert(unionML_p);
   return unionML_p->isFullML(pedge);
 }
 
 bool PartEdgeUnionMemLocObject::isEmptyML(PartEdgePtr pedge) {
+  assert(unionML_p);
   return unionML_p->isEmptyML(pedge);
 }
 
@@ -3924,6 +3987,7 @@ void PartEdgeUnionMemLocObject::setMLToFull() {
 
 string PartEdgeUnionMemLocObject::str(string indent) const {
   ostringstream oss;
+  assert(unionML_p);
   oss << "[UnionML=" << unionML_p->str(indent) << "]";
   return oss.str();
 }
@@ -4002,12 +4066,12 @@ template class CombinedMemLocObject<false>;
 template class CombinedMemRegionObject<true>;
 template class CombinedMemRegionObject<false>;
 
-template class MappedCodeLocObject<Analysis*, true>;
-template class MappedCodeLocObject<Analysis*, false>;
-template class MappedValueObject<Analysis*, true>;
-template class MappedValueObject<Analysis*, false>;
-template class MappedMemRegionObject<Analysis*, true>;
-template class MappedMemRegionObject<Analysis*, false>;
-template class MappedMemLocObject<Analysis*, true>;
-template class MappedMemLocObject<Analysis*, false>;
+template class MappedCodeLocObject<ComposedAnalysis*, true>;
+template class MappedCodeLocObject<ComposedAnalysis*, false>;
+template class MappedValueObject<ComposedAnalysis*, true>;
+template class MappedValueObject<ComposedAnalysis*, false>;
+template class MappedMemRegionObject<ComposedAnalysis*, true>;
+template class MappedMemRegionObject<ComposedAnalysis*, false>;
+template class MappedMemLocObject<ComposedAnalysis*, true>;
+template class MappedMemLocObject<ComposedAnalysis*, false>;
 } //namespace fuse
