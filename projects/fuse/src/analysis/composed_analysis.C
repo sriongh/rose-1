@@ -293,6 +293,8 @@ void ComposedAnalysis::runAnalysis()
                             reg.getAnchor(), worklistGraph, toAnchors, fromAnchors);
     (*curNodeIt)++;
 
+    dbg << "curNodeIt++=" << curNodeIt->str() << endl;
+
   } // end worklist iteration    
 }
 
