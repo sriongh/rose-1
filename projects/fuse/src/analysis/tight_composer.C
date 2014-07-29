@@ -15,7 +15,7 @@ using namespace sight;
 
 namespace fuse {
 
-  DEBUG_LEVEL(tightComposerDebugLevel, 2);
+  DEBUG_LEVEL(tightComposerDebugLevel, 3);
 
   /***************
    * Expr2AnyKey *
@@ -31,12 +31,24 @@ namespace fuse {
     }
 
     // Order by the sgn expression first
-    if(sgn < that.sgn) return true;
+    if(sgn < that.sgn) {
+      // if(tightComposerDebugLevel() >= 4) dbg << "this < that=" << "true";
+      return true;
+    }
     // Order by PartEdge if the expression is same
-    else if(sgn == that.sgn && pedge < that.pedge) return true;
+    else if(sgn == that.sgn && pedge < that.pedge) {
+      // if(tightComposerDebugLevel() >= 4) dbg << "this < that=" << "true";
+      return true;
+    }
     // Order by reqtype if both expression and PartEdge are same
-    else if(sgn == that.sgn && pedge == that.pedge && reqtype < that.reqtype) return true;
-    else return false;
+    else if(sgn == that.sgn && pedge == that.pedge && reqtype < that.reqtype) {
+      // if(tightComposerDebugLevel() >= 4) dbg << "this < that=" << "true";     
+      return true;
+    }
+    else {
+      // if(tightComposerDebugLevel() >= 4) dbg << "this < that=" << "false";
+      return false;
+    }
   }
 
   std::string Expr2AnyKey::str(std::string indent) const {
@@ -105,8 +117,18 @@ namespace fuse {
 
     Expr2AnyState& qstate = queryStateMap.find(key)->second;    
 
+    // if(tightComposerDebugLevel() >= 4) {
+    //   dbg << "key=" << key.str() << " found\n";
+    //   dbg << "state=" << qstate.str() << "\n";
+    // }
+
     // query is not in the analysis state
     if(qstate.state != Expr2AnyState::anal) return false;
+
+    // if(tightComposerDebugLevel() >= 4) {
+    //   dbg << "LastAnalysis=" << qstate.getLastAnalysisQueried() << endl;
+    //   dbg << "client=" << analysis_ << endl;
+    // }
 
     // query is in the analysis state
     if(qstate.getLastAnalysisQueried() == analysis_) return true;
@@ -218,7 +240,7 @@ namespace fuse {
                                                     ComposedAnalysis* client,
                                                     function<bool (ComposedAnalysis*)> implementsExpr2AnyOp,
                                                     function<shared_ptr<AOType> (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp,
-                                                    function<shared_ptr<AOType> (SgNode*, PartEdgePtr)> ComposerExpr2AnyOp) {
+                                                    function<shared_ptr<AOType> (SgNode*, PartEdgePtr)> parentComposerExpr2AnyOp) {
     scope reg(txt()<<"TightComposer::Expr2Any",
               scope::medium, attrGE("tightComposerDebugLevel", 3));
 
@@ -234,7 +256,20 @@ namespace fuse {
     }
 
     if(recursiveQueries(queryList, client)) {
-      return boost::make_shared<FullAOType>();
+      // return boost::make_shared<FullAOType>();
+      boost::shared_ptr<AnalysisMapAOType> amao_p = boost::make_shared<AnalysisMapAOType>();
+      // Query the parent composer
+      boost::shared_ptr<CombinedAOType> cao_p = boost::make_shared<CombinedAOType>();
+      for(qIt = queryList.begin(); qIt != queryList.end(); ++qIt) {
+        Expr2AnyKey query = *qIt;     
+        boost::shared_ptr<AOType> ao_p = parentComposerExpr2AnyOp(query.sgn, query.pedge);
+        if(tightComposerDebugLevel() >= 3) {
+          dbg << dynamic_cast<ComposedAnalysis*>(getComposer())->str() << ":" << ao_p->str() << endl;
+        }
+        cao_p->add(ao_p, query.pedge);
+      }
+      amao_p->add(dynamic_cast<ComposedAnalysis*>(getComposer()), cao_p, pedge);
+      return amao_p;
     }
 
     initializeQueryList(queryList);
@@ -270,7 +305,7 @@ namespace fuse {
       Expr2AnyKey query = *qIt;
       tcqm.transToAnalState(query, dynamic_cast<ComposedAnalysis*>(getComposer()));
 
-      boost::shared_ptr<AOType> ao_p = ComposerExpr2AnyOp(query.sgn, query.pedge);
+      boost::shared_ptr<AOType> ao_p = parentComposerExpr2AnyOp(query.sgn, query.pedge);
 
       if(tightComposerDebugLevel() >= 3) {
         dbg << dynamic_cast<ComposedAnalysis*>(getComposer())->str() << ":" << ao_p->str() << endl;
