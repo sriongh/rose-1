@@ -910,17 +910,22 @@ CodeLocObjectPtr MappedCodeLocObject<Key, mostAccurate>::copyCL() const {
 template<class Key, bool mostAccurate>
 string MappedCodeLocObject<Key, mostAccurate>::str(string indent) const {
   ostringstream oss;
-  oss << "<span style=\"color:green\">[</span>" << (union_? "UnionMappedCodeLocObject:": "IntersectMappedCodeLocObject:") << "\n";
-  if(n_FullCL > 0 && codeLocsMap.size() == 0) oss << "Full]\n";
-  else if(n_FullCL == 0 && codeLocsMap.size() == 0) oss << "Empty]\n";
+  oss << "<table border=\"1\">";
+  oss << "<tr>";
+  oss << "<th>" << (union_? "UnionMappedCodeLocObject:": "IntersectMappedCodeLocObject:") << "</th>";
+  if(n_FullCL > 0 && codeLocsMap.size() == 0) oss << "<th> Full </th> </tr>";
+  else if(n_FullCL == 0 && codeLocsMap.size() == 0) oss << "<th> Empty </th> </tr>";
   else {
+    oss << "</tr>";
     typename map<Key, CodeLocObjectPtr>::const_iterator it = codeLocsMap.begin();
     for( ; it != codeLocsMap.end(); ++it) {
-      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
-      oss << "\n";
-    }
-    oss <<"<span style=\"color:green\">]</span>";
+      oss << "<tr>";
+      oss << "<td>" << (it->first)->str(indent) << "</td>";
+      oss << "<td>" << (it->second)->str(indent) << "</td>";
+      oss << "</tr>";
+    }    
   }
+  oss << "</table>";
   return oss.str();
 }
 
@@ -1949,17 +1954,22 @@ ValueObjectPtr MappedValueObject<Key, mostAccurate>::copyV() const {
 template<class Key, bool mostAccurate>
 string MappedValueObject<Key, mostAccurate>::str(string indent) const {
   ostringstream oss;
-  oss << "[" << (union_? "UnionMappedValueObject:": "IntersectMappedValueObject:") << "\n";
-  if(n_FullV > 0 && valuesMap.size() == 0) oss << "Full]\n";
-  else if(n_FullV == 0 && valuesMap.size() == 0) oss << "Empty]\n";
+  oss << "<table border=\"1\">";
+  oss << "<tr>";
+  oss << "<th>" << (union_? "UnionMappedValueObject:": "IntersectMappedValueObject:") << "</th>";
+  if(n_FullV > 0 && valuesMap.size() == 0) oss << "<th> Full </th> </tr>";
+  else if(n_FullV == 0 && valuesMap.size() == 0) oss << "<th> Empty </th> </tr>";
   else {
+    oss << "</tr>";
     typename map<Key, ValueObjectPtr>::const_iterator it = valuesMap.begin();
     for( ; it != valuesMap.end(); ++it) {
-      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
-      oss << "\n";
+      oss << "<tr>";
+      oss << "<td>" << (it->first)->str(indent) << "</td>";
+      oss << "<td>" << (it->second)->str(indent) << "</td>";
+      oss << "</tr>";
     }
-    oss << "]\n";
   }
+  oss << "</table>";
   return oss.str();
 }
 
@@ -2957,19 +2967,23 @@ MemRegionObjectPtr MappedMemRegionObject<Key, mostAccurate>::copyMR() const {
 
 template<class Key, bool mostAccurate>
 string MappedMemRegionObject<Key, mostAccurate>::str(string indent) const {
-   ostringstream oss;
-   oss << "<span style=\"color:darkgreen\">[</span>" << (union_? "UnionMappedMemRegionObject:": "IntersectMappedMemRegionObject:") << "\n";
-  if(n_FullMR > 0 && memRegionsMap.size() == 0) oss << "Full]\n";
-  else if(n_FullMR == 0 && memRegionsMap.size() == 0) oss << "Empty]\n";
+  ostringstream oss;
+  oss << "<table border=\"1\">";
+  oss << "<tr>";
+  oss << "<th>" << (union_? "UnionMappedMemRegionObject:": "IntersectMappedMemRegionObject:") << "</th>";
+  if(n_FullMR > 0 && memRegionsMap.size() == 0) oss << "<th> Full </th> </tr>";
+  else if(n_FullMR == 0 && memRegionsMap.size() == 0) oss << "<th> Empty </th> </tr>";
   else {
+    oss << "</tr>";
     typename map<Key, MemRegionObjectPtr>::const_iterator it = memRegionsMap.begin();
-    for( ; it != memRegionsMap.end(); ) {
-      oss << "  " << (it->first)->str(indent) << ":" << (it->second)->str(indent);
-      ++it;
-      if(it != memRegionsMap.end()) oss << "\n";
+    for( ; it != memRegionsMap.end(); ++it) {
+      oss << "<tr>";
+      oss << "<td>" << (it->first)->str(indent) << "</td>";
+      oss << "<td>" << (it->second)->str(indent) << "</td>";
+      oss << "</tr>";
     }
-    oss << "<span style=\"color:darkgreen\">]</span>";
   }
+  oss << "</table>";
   return oss.str();
 }
 
@@ -3881,18 +3895,22 @@ MemLocObjectPtr MappedMemLocObject<Key, mostAccurate>::copyML() const {
 template<class Key, bool mostAccurate>
 string MappedMemLocObject<Key, mostAccurate>::str(string indent) const {
   ostringstream oss;
-  oss << "<span style=\"color:blue\">[</span>" << (union_? "UnionMappedML:": "IntersectMappedML:") << "\n";
-  if(n_FullML > 0 && memLocsMap.size() == 0) oss << "Full]\n";
-  else if(n_FullML == 0 && memLocsMap.size() == 0) oss << "Empty]\n";
+  oss << "<table border=\"1\">";
+  oss << "<tr>";
+  oss << "<th>" << (union_? "UnionMappedML:": "IntersectMappedML:") << "</th>";
+  if(n_FullML > 0 && memLocsMap.size() == 0) oss << "<th> Full </th> </tr>";
+  else if(n_FullML == 0 && memLocsMap.size() == 0) oss << "<th> Empty </th> </tr>";
   else {
+    oss << "</tr>";
     typename map<Key, MemLocObjectPtr>::const_iterator it = memLocsMap.begin();
-    for( ; it != memLocsMap.end(); ) {
-      oss << (it->first)->str(indent) << ": " << (it->second)->str(indent);
-      ++it;
-      if(it != memLocsMap.end()) oss << "\n";
+    for( ; it != memLocsMap.end(); ++it) {
+      oss << "<tr>";
+      oss << "<td>" << (it->first)->str(indent) << "</td>";
+      oss << "<td>" << (it->second)->str(indent) << "</td>";
+      oss << "</tr>";
     }
-    oss << "<span style=\"color:blue\">]</span>";
   }
+  oss << "</table>";
   return oss.str();
 }
 
