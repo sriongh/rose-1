@@ -15,7 +15,7 @@ using namespace sight;
 
 namespace fuse {
 
-  DEBUG_LEVEL(tightComposerDebugLevel, 3);
+  DEBUG_LEVEL(tightComposerDebugLevel, 2);
 
   /***************
    * Expr2AnyKey *
@@ -327,9 +327,6 @@ namespace fuse {
   
 
   CodeLocObjectPtr TightComposer::Expr2CodeLoc_ex(list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt()<<"TightComposer::Expr2CodeLoc_ex",
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
-
 
     // Call the generic Expr2Any method to get the list of CodeLocObjectPtr from clients
     function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2CodeLoc, _1));
@@ -345,22 +342,27 @@ namespace fuse {
                                                                                                 client,
                                                                                                 implementsExpr2AnyOp, Expr2AnyOp,
                                                                                                 ComposerExpr2AnyOp);
-    if(tightComposerDebugLevel() > 1) dbg << cl_p->str() << endl;
     return cl_p;
   }
 
   CodeLocObjectPtr TightComposer::Expr2CodeLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::Expr2CodeLoc(n="<<SgNode2Str(n)<<", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     Expr2AnyKey key(n, pedge, Composer::codeloc);
     list<Expr2AnyKey> queryList;
 
     queryList.push_back(key);
-    return Expr2CodeLoc_ex(queryList, pedge, client);
+    CodeLocObjectPtr rcl_p = Expr2CodeLoc_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "CL=" << rcl_p->str() << endl;
+    return rcl_p;
   }
  
   
   // Variant of Expr2CodeLoc that inquires about the code location denoted by the operand of the 
   // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
   CodeLocObjectPtr TightComposer::OperandExpr2CodeLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::OperandExpr2CodeLoc(n="<<SgNode2Str(n)<< ", op="<< SgNode2Str(operand) << ", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     list<PartEdgePtr> pedgeList = pedge->getOperandPartEdge(n, operand);
     list<Expr2AnyKey> queryList;
 
@@ -369,14 +371,12 @@ namespace fuse {
       Expr2AnyKey key(operand, *peIt, Composer::codeloc);
       queryList.push_back(key);
     }
-    return Expr2CodeLoc_ex(queryList, pedge, client);
+    CodeLocObjectPtr rcl_p = Expr2CodeLoc_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "CL=" << rcl_p->str() << endl;
+    return rcl_p;
   }
 
   ValueObjectPtr TightComposer::Expr2Val_ex(list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt()<<"TightComposer::Expr2Value_ex",
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
-
-
     // Call the generic Expr2Any method to get the list of ValueObjectPtr from clients
     function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2Val, _1));
     function<ValueObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2Val, _1, _2, _3));
@@ -391,7 +391,6 @@ namespace fuse {
                                                                                          client,
                                                                                          implementsExpr2AnyOp, Expr2AnyOp,
                                                                                          ComposerExpr2AnyOp);
-    if(tightComposerDebugLevel() > 1) dbg << v_p->str() << endl;
     return v_p;
   }
     
@@ -399,16 +398,22 @@ namespace fuse {
   // represent the outcome of the given SgExpression. 
   // The objects returned by these functions are expected to be deallocated by their callers.
   ValueObjectPtr TightComposer::Expr2Val(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::Expr2Val(n="<<SgNode2Str(n)<<", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     Expr2AnyKey key(n, pedge, Composer::val);
     list<Expr2AnyKey> queryList;
 
     queryList.push_back(key);
-    return Expr2Val_ex(queryList, pedge, client);
+    ValueObjectPtr rv_p = Expr2Val_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "Val=" << rv_p->str() << endl;
+    return rv_p;
   }
   
   // Variant of Expr2Val that inquires about the value of the memory location denoted by the operand of the 
   // given node n, where the part denotes the set of prefixes that terminate at SgNode n.
   ValueObjectPtr TightComposer::OperandExpr2Val(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::OperandExpr2Val(n="<<SgNode2Str(n)<< ", op="<< SgNode2Str(operand) << ", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     list<PartEdgePtr> pedgeList = pedge->getOperandPartEdge(n, operand);
     list<Expr2AnyKey> queryList;
 
@@ -417,13 +422,12 @@ namespace fuse {
       Expr2AnyKey key(operand, *peIt, Composer::val);
       queryList.push_back(key);
     }
-    return Expr2Val_ex(queryList, pedge, client);
+    ValueObjectPtr rv_p = Expr2Val_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "Val=" << rv_p->str() << endl;
+    return rv_p;
   }
 
   MemRegionObjectPtr TightComposer::Expr2MemRegion_ex(list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt()<<"TightComposer::Expr2MemRegion_ex",
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
-
 
     // Call the generic Expr2Any method to get the list of MemRegionObjectPtr from clients
     function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemRegion, _1));
@@ -439,22 +443,27 @@ namespace fuse {
                                                                                                       client,
                                                                                                       implementsExpr2AnyOp, Expr2AnyOp,
                                                                                                       ComposerExpr2AnyOp);
-    if(tightComposerDebugLevel() > 1) dbg << mr_p->str() << endl;
     return mr_p;
   }
     
   MemRegionObjectPtr TightComposer::Expr2MemRegion(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::Expr2MemRegion(n="<<SgNode2Str(n)<<", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     Expr2AnyKey key(n, pedge, Composer::memregion);
     list<Expr2AnyKey> queryList;
 
     queryList.push_back(key);
-    return Expr2MemRegion_ex(queryList, pedge, client);
+    MemRegionObjectPtr rmr_p = Expr2MemRegion_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "MR=" << rmr_p->str() << endl;
+    return rmr_p;
   }
   
   
   // Variant of Expr2MemRegion that inquires about the memory location denoted by the operand of the given node n, where
   // the part denotes the set of prefixes that terminate at SgNode n.
   MemRegionObjectPtr TightComposer::OperandExpr2MemRegion(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::OperandExpr2MemRegion(n="<<SgNode2Str(n)<< ", op="<< SgNode2Str(operand) << ", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     list<PartEdgePtr> pedgeList = pedge->getOperandPartEdge(n, operand);
     list<Expr2AnyKey> queryList;
 
@@ -463,14 +472,12 @@ namespace fuse {
       Expr2AnyKey key(operand, *peIt, Composer::memregion);
       queryList.push_back(key);
     }
-    return Expr2MemRegion_ex(queryList, pedge, client);
+    MemRegionObjectPtr rmr_p = Expr2MemRegion_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >= 2) dbg << "MR=" << rmr_p->str() << endl;
+    return rmr_p;
   }
 
   MemLocObjectPtr TightComposer::Expr2MemLoc_ex(list<Expr2AnyKey>& queryList, PartEdgePtr pedge, ComposedAnalysis* client) {
-    scope reg(txt()<<"TightComposer::Expr2MemLoc_ex",
-              scope::medium, attrGE("tightComposerDebugLevel", 2));
-
-
     // Call the generic Expr2Any method to get the list of MemLocObjectPtr from clients
     function<bool (ComposedAnalysis*)> implementsExpr2AnyOp(bind(&ComposedAnalysis::implementsExpr2MemLoc, _1));
     function<MemLocObjectPtr (ComposedAnalysis*, SgNode*, PartEdgePtr)> Expr2AnyOp(bind(&ComposedAnalysis::Expr2MemLoc, _1, _2, _3));
@@ -485,7 +492,6 @@ namespace fuse {
                                                                                               client,
                                                                                               implementsExpr2AnyOp, Expr2AnyOp,
                                                                                               ComposerExpr2AnyOp);
-    if(tightComposerDebugLevel() > 1) dbg << ml_p->str() << endl;
     return ml_p;
   }
   
@@ -493,16 +499,23 @@ namespace fuse {
   //! TightComposer queries all the client analyses implementing Expr2MemLoc
   //! Returns IntersectMemLocObjectPtr
   MemLocObjectPtr TightComposer::Expr2MemLoc(SgNode* n, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::Expr2MemLoc(n="<<SgNode2Str(n)<<", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     Expr2AnyKey key(n, pedge, Composer::memloc);
     list<Expr2AnyKey> queryList;
 
     queryList.push_back(key);
-    return Expr2MemLoc_ex(queryList, pedge, client);
+
+    MemLocObjectPtr rml_p = Expr2MemLoc_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >=2) dbg << "ML=" << rml_p->str() << endl;
+    return rml_p;
   }
   
   // Variant of Expr2MemLoc that inquires about the memory location denoted by the operand of the given node n, where
   // the part denotes the set of prefixes that terminate at SgNode n.
-  MemLocObjectPtr TightComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {    
+  MemLocObjectPtr TightComposer::OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client) {
+    scope reg(txt()<<"TightComposer::OperandExpr2MemLoc(n="<<SgNode2Str(n)<< ", op="<< SgNode2Str(operand) << ", pedge=" << pedge->str(),
+              scope::medium, attrGE("tightComposerDebugLevel", 2));
     list<PartEdgePtr> pedgeList = pedge->getOperandPartEdge(n, operand);
     list<Expr2AnyKey> queryList;
 
@@ -511,7 +524,10 @@ namespace fuse {
       Expr2AnyKey key(operand, *peIt, Composer::memloc);
       queryList.push_back(key);
     }
-    return Expr2MemLoc_ex(queryList, pedge, client);
+
+    MemLocObjectPtr rml_p = Expr2MemLoc_ex(queryList, pedge, client);
+    if(tightComposerDebugLevel() >=2) dbg << "ML=" << rml_p->str() << endl;
+    return rml_p;
   }
   
   // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
