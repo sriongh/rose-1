@@ -4,7 +4,7 @@
 #include <iostream>
 
 using namespace std;
-
+using namespace sight;
 
 namespace fuse
 {
@@ -3566,9 +3566,13 @@ bool MappedMemLocObject<Key, mostAccurate>::mayEqualMLWithKey(Key key,
 //! or union of sub-executions over the keyed ML objects. 
 template<class Key, bool mostAccurate>
 bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, PartEdgePtr pedge) {
+  // scope s(txt()<<"MappedMemLocObject::mayEqualML", scope::medium);
   boost::shared_ptr<MappedMemLocObject<Key, mostAccurate> > thatML_p = 
     boost::dynamic_pointer_cast<MappedMemLocObject<Key, mostAccurate> >(thatML);
   assert(thatML_p);
+
+  // dbg << "thisML=" << str() << endl;
+  // dbg << "thatML=" << thatML_p->str() << endl;
 
   // This object denotes full set of ML (full set of executions)
   if(isFullML(pedge)) return true;
@@ -3587,6 +3591,8 @@ bool MappedMemLocObject<Key, mostAccurate>::mayEqualML(MemLocObjectPtr thatML, P
   for(it = memLocsMap.begin(); it != memLocsMap.end(); ++it) {
     // discharge query
     bool isMayEq = mayEqualMLWithKey(it->first, thatMLMap, pedge);
+    
+    // dbg << "key=" << (it->first)->str() << ", isMayEq=" << isMayEq << endl;
 
     // 1. Union of sub-executions and the object does not contain any full objects.
     // If the discharged query comes back as true for this case then we have found atleast one execution
