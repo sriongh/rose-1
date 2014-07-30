@@ -1603,7 +1603,7 @@ StxExprMemRegionTypePtr NULLStxExprMemRegionType;
 // StxExprMemRegionType that represents it. Otherwise, returns NULL.
 StxExprMemRegionTypePtr StxExprMemRegionType::getInstance(SgNode* n) {
   if(SgExpression* expr = isSgExpression(n)) {
-    if(!isSgVarRefExp(n) && !isSgDotExp(n) && !isSgPntrArrRefExp(n))
+    if(!isSgVarRefExp(n) && !isSgDotExp(n) && !isSgPntrArrRefExp(n) && !isSgPointerDerefExp(n))
       return boost::make_shared<StxExprMemRegionType>(expr);
   }
 
