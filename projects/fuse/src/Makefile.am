@@ -1,11 +1,15 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
 include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 
-bin_PROGRAMS = fuse fuseLayout
+bin_PROGRAMS = fuse fuseTight fuseLayout
 
 fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
 fuse_LDADD = -lrose
 fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
+
+fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseTight_LDADD = -lrose
+fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
 INCLUDES = \
 	$(ROSE_INCLUDES) \
@@ -47,6 +51,38 @@ fuse_SOURCES = \
 	simpleAnalyses/taintAnalysis.C \
 	state/nodeState.C \
 	compositionalTestAnalysis.C
+
+fuseTight_DEPENDENCIES=fuseLayout
+
+fuseTight_SOURCES = \
+	analysis/abstract_object.C \
+	analysis/abstract_object_map.C \
+	analysis/abstract_object_set.C \
+	analysis/analysis.C \
+	analysis/analysis_tester.C \
+	analysis/compose.C \
+	analysis/composed_analysis.C \
+	analysis/factor_trans_system.C \
+	analysis/graphIterator.C \
+	analysis/partitions.C \
+	analysis/stx_analysis.C \
+	analysis/tight_composer.C \
+	cfgUtils/CallGraphTraverse.C \
+	cfgUtils/cfgUtils.C \
+	cfgUtils/DataflowCFG.C \
+	cfgUtils/VirtualCFGIterator.C \
+	sight/widgets/ats_graph_structure.C \
+	lattice/lattice.C \
+	simpleAnalyses/call_context_sensitivity_analysis.C \
+	simpleAnalyses/const_prop_analysis.C \
+	simpleAnalyses/dead_path_elim_analysis.C \
+	simpleAnalyses/live_dead_analysis.C \
+	simpleAnalyses/pointsToAnalysis.C \
+	simpleAnalyses/printAnalysisStates.C \
+	simpleAnalyses/saveDotAnalysis.C \
+	simpleAnalyses/taintAnalysis.C \
+	state/nodeState.C \
+	tightCompositionTest.C
 
 fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
 fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINKFLAGS)
