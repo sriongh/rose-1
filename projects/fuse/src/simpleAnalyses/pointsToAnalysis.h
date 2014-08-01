@@ -113,6 +113,7 @@ namespace fuse
     void add(MemLocObjectPtr ml_p, PartEdgePtr pedge);
     void add(boost::shared_ptr<AbstractObjectSet> thataos_p, PartEdgePtr pedge);
     const AbstractObjectSet& getMLSet() const;
+    boost::shared_ptr<AbstractObjectSet> getMLSetPtr() const;
     Lattice* getMLSetLatticePtr() const;
     virtual bool mayEqualML(MemLocObjectPtr ml_p, PartEdgePtr pedge);
     virtual bool mustEqualML(MemLocObjectPtr ml_p, PartEdgePtr pedge);

@@ -303,6 +303,10 @@ namespace fuse
     return *(aos_p.get());
   }
 
+  boost::shared_ptr<AbstractObjectSet> PTMemLocObject::getMLSetPtr() const {
+    return aos_p;
+  }
+
   Lattice* PTMemLocObject::getMLSetLatticePtr() const {
     return static_cast<Lattice*>(aos_p.get());
   }
@@ -327,7 +331,7 @@ namespace fuse
     // Check if any ML from that set mayEquals any element in this set
     AbstractObjectSet::const_iterator cIt = thatMLSet.begin();
     for( ; cIt != thatMLSet.end(); ++cIt) {
-      if(aos_p->containsMay(*cIt)) return true;
+      if(aos_p->containsMay(boost::static_pointer_cast<AbstractObject>(*cIt))) return true;
     }
     return false;
   }
@@ -348,18 +352,70 @@ namespace fuse
     assert(aos_p->size() == thatMLSet.size() == 1);
 
     // The object in the set should also mustEqual each other
-    const AbstractObjectPtr thatAO_p = *thatMLSet.begin();
+    const AbstractObjectPtr thatAO_p = boost::static_pointer_cast<AbstractObject>(*thatMLSet.begin());
+
     return aos_p->containsMust(thatAO_p);
   }
 
   bool PTMemLocObject::equalSetML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
-    assert(0);
-    return false;
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    // If this full then thatML should also be full for the two to be equalSet
+    if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+
+    // If the sets are not of same size then they are not equalSets
+    if(aos_p->size() != thatMLSet.size()) return false;
+
+    // Two sets are of same size
+    AbstractObjectSet::const_iterator cIt = thatMLSet.begin();
+    for( ; cIt != thatMLSet.end(); ++cIt) {
+      // If a single element in that set not equals any element in this set
+      // then the two MLs are not equalSets.
+      if(!aos_p->containsEqualSet(*cIt)) return false;
+    }
+    
+    // Two sets have identical elements.
+    return true;
   }
 
   bool PTMemLocObject::subSetML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
-    assert(0);
-    return false;
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    // If this full then thatML should also be full for the two to be equalSet
+    if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+    AbstractObjectSet::const_iterator cbegin, cend, cIt;
+
+    // Larger set of the two.
+    boost::shared_ptr<AbstractObjectSet> laos_p;
+
+    if(aos_p->size() <= thatMLSet.size()) {
+      // aos_p is the smaller set.
+      cbegin = aos_p->begin();
+      cend = aos_p->end();
+      laos_p = thatPTML_p->getMLSetPtr();
+    }
+    else {
+      // thatMLSet is the smaller set
+      cbegin = thatMLSet.begin();
+      cend = thatMLSet.end();
+      laos_p = aos_p;
+    }
+    assert(laos_p);
+
+    // Iterate on the smaller set.
+    // Check if the element equals any element in the larger set.
+    for( cIt = cbegin; cIt != cend; ++cIt) {
+      // If a single element in the smaller set not equals any element in the larger set
+      // then the subSet relation does not hold.
+      if(!laos_p->containsEqualSet(*cIt)) return false;
+    }
+    return true;
   }
 
   bool PTMemLocObject::isLiveML(PartEdgePtr pedge) {
