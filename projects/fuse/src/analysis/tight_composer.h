@@ -228,61 +228,44 @@ namespace fuse {
     MemLocObjectPtr OperandExpr2MemLoc(SgNode* n, SgNode* operand, PartEdgePtr pedge, ComposedAnalysis* client);
   
     // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
-    bool mayEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool mayEqualCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
+    bool mayEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client);    
     bool mayEqualMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool mayEqualML(MemLocObjectPtr    ml1,  MemLocObjectPtr    ml2,  PartEdgePtr pedge, ComposedAnalysis* client);
   
     // Returns whether the given pai   of AbstractObjects are must-equal at the given PartEdge
     bool mustEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool mustEqualCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
     bool mustEqualMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool mustEqualML(MemLocObjectPtr    ml1,  MemLocObjectPtr    ml2,  PartEdgePtr pedge, ComposedAnalysis* client);
+ 
   
     // Returns whether the two abstract objects denote the same set of concrete objects
     bool equalSetV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool equalSetCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
     bool equalSetMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool equalSetML(MemLocObjectPtr    ml1,  MemLocObjectPtr    ml2,  PartEdgePtr pedge, ComposedAnalysis* client);
   
     // Returns whether abstract object ao1 denotes a non-strict subset (the sets may be equal) of the set denoted
     // by the abstract object ao2.
     bool subSetV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool subSetCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
     bool subSetMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool subSetML(MemLocObjectPtr    ml1,  MemLocObjectPtr    ml2,  PartEdgePtr pedge, ComposedAnalysis* client);
     
     // Returns whether the given AbstractObject is live at the given PartEdge
     bool isLiveV (ValueObjectPtr val,    PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool isLiveCL(CodeLocObjectPtr cl,   PartEdgePtr pedge, ComposedAnalysis* client);
     bool isLiveMR(MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool isLiveML(MemLocObjectPtr ml,    PartEdgePtr pedge, ComposedAnalysis* client);
   
     // Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
     // the context of its own PartEdges and returns true if it may be live within any of them
     bool OperandIsLiveV (SgNode* n, SgNode* operand, ValueObjectPtr val,    PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool OperandIsLiveCL(SgNode* n, SgNode* operand, CodeLocObjectPtr cl,   PartEdgePtr pedge, ComposedAnalysis* client);
     bool OperandIsLiveMR(SgNode* n, SgNode* operand, MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client);
-    //bool OperandIsLiveML(SgNode* n, SgNode* operand, MemLocObjectPtr ml,    PartEdgePtr pedge, ComposedAnalysis* client);
   
     // Computes the meet of from and to and saves the result in to.
     // Returns true if this causes this to change and false otherwise.
     bool meetUpdateV (ValueObjectPtr     to, ValueObjectPtr     from, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool meetUpdateCL(CodeLocObjectPtr   to, CodeLocObjectPtr   from, PartEdgePtr pedge, ComposedAnalysis* analysis);
     bool meetUpdateMR(MemRegionObjectPtr to, MemRegionObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool meetUpdateML(MemLocObjectPtr    to, MemLocObjectPtr    from, PartEdgePtr pedge, ComposedAnalysis* analysis);
   
     // Returns whether the given AbstractObject corresponds to the set of all sub-executions or the empty set
     bool isFullV (ValueObjectPtr     ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool isFullCL(CodeLocObjectPtr   ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
     bool isFullMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool isFullML(MemLocObjectPtr    ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
   
     // Returns whether the given AbstractObject corresponds to the empty set
     bool isEmptyV (ValueObjectPtr     ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool isEmptyCL(CodeLocObjectPtr   ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
     bool isEmptyMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
-    //bool isEmptyML(MemLocObjectPtr    ao, PartEdgePtr pedge, ComposedAnalysis* analysis);
   
     // Return the anchor Parts of an application
     std::set<PartPtr> GetStartAStates(ComposedAnalysis* client);

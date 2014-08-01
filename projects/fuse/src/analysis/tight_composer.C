@@ -530,58 +530,48 @@ namespace fuse {
     return rml_p;
   }
   
+  // MayEquals
   // Returns whether the given pair of AbstractObjects are may-equal at the given PartEdge
-  bool TightComposer::mayEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-    return false;
+  bool TightComposer::mayEqualV (ValueObjectPtr val1, ValueObjectPtr val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+    return val1->mayEqualV(val2, pedge);
   }
 
-  //bool mayEqualCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
-  bool TightComposer::mayEqualMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
+  bool TightComposer::mayEqualMR(MemRegionObjectPtr mr1, MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
     return mr1->mayEqualMR(mr2, pedge);
   }
-  
-  // Returns whether the given pai   of AbstractObjects are must-equal at the given PartEdge
-  bool TightComposer::mustEqualV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+
+  // MustEquals
+  bool TightComposer::mustEqualV (ValueObjectPtr val1, ValueObjectPtr val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+    return val1->mustEqualV(val2, pedge);
   }
-  //bool mustEqualCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
-  bool TightComposer::mustEqualMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
+
+  bool TightComposer::mustEqualMR(MemRegionObjectPtr mr1, MemRegionObjectPtr mr2, PartEdgePtr pedge, ComposedAnalysis* client) {
     return mr1->mustEqualMR(mr2, pedge);
   }
   
   // Returns whether the two abstract objects denote the same set of concrete objects
-  bool TightComposer::equalSetV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+  bool TightComposer::equalSetV (ValueObjectPtr val1, ValueObjectPtr val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+    return val1->equalSetV(val2, pedge);
   }
 
-  //bool equalSetCL(CodeLocObjectPtr   cl1,  CodeLocObjectPtr   cl2,  PartEdgePtr pedge, ComposedAnalysis* client);
-  bool TightComposer::equalSetMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
-    return false;
+  bool TightComposer::equalSetMR(MemRegionObjectPtr mr1, MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
+    return mr1->equalSetMR(mr2, pedge);
   }
   
-  // Returns whether abstract object ao1 denotes a non-strict subset (the sets may be equal) of the set denoted
-  // by the abstract object ao2.
-  bool TightComposer::subSetV (ValueObjectPtr     val1, ValueObjectPtr     val2, PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+  bool TightComposer::subSetV(ValueObjectPtr val1, ValueObjectPtr val2, PartEdgePtr pedge, ComposedAnalysis* client) {
+    return val1->subSetV(val2, pedge);
   }
 
-  bool TightComposer::subSetMR(MemRegionObjectPtr mr1,  MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+  bool TightComposer::subSetMR(MemRegionObjectPtr mr1, MemRegionObjectPtr mr2,  PartEdgePtr pedge, ComposedAnalysis* client) {
+    return mr1->subSetMR(mr2, pedge);
   }
     
-  // Returns whether the given AbstractObject is live at the given PartEdge
-  bool TightComposer::isLiveV (ValueObjectPtr val,    PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+  bool TightComposer::isLiveV (ValueObjectPtr val, PartEdgePtr pedge, ComposedAnalysis* client) {
+    return val->isLiveV(pedge);
   }
 
   bool TightComposer::isLiveMR(MemRegionObjectPtr mr, PartEdgePtr pedge, ComposedAnalysis* client) {
-    assert(0);
-    return false;
+    return mr->isLiveMR(pedge);
   }
   
   // Calls the isLive() method of the given AbstractObject that denotes an operand of the given SgNode n within
@@ -595,34 +585,29 @@ namespace fuse {
     assert(0);
     return false;
   }
-
   
   // Computes the meet of from and to and saves the result in to.
   // Returns true if this causes this to change and false otherwise.
-  bool TightComposer::meetUpdateV (ValueObjectPtr     to, ValueObjectPtr     from, PartEdgePtr pedge, ComposedAnalysis* analysis) {
-    assert(0);
-    return false;
+  bool TightComposer::meetUpdateV (ValueObjectPtr to, ValueObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* analysis) {
+    to->meetUpdateV(from, pedge);
   }
 
   bool TightComposer::meetUpdateMR(MemRegionObjectPtr to, MemRegionObjectPtr from, PartEdgePtr pedge, ComposedAnalysis* analysis) {
-    assert(0);
-    return false;
+    to->meetUpdateMR(from, pedge);
   }
   
   // Returns whether the given AbstractObject corresponds to the set of all sub-executions or the empty set
-  bool TightComposer::isFullV (ValueObjectPtr     ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
-    assert(0);
-    return false;
+  bool TightComposer::isFullV (ValueObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
+    ao->isFullV(pedge);
   }
 
   bool TightComposer::isFullMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
-    return false;
+    ao->isFullMR(pedge);
   }
   
   // Returns whether the given AbstractObject corresponds to the empty set
-  bool TightComposer::isEmptyV (ValueObjectPtr     ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
-    assert(0);
-    return false;
+  bool TightComposer::isEmptyV (ValueObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
+    return ao->isEmptyV(pedge);
   }
 
   bool TightComposer::isEmptyMR(MemRegionObjectPtr ao, PartEdgePtr pedge, ComposedAnalysis* analysis) {
