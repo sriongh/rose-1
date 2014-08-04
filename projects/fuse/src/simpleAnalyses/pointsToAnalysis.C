@@ -141,11 +141,15 @@ namespace fuse
   }
 
   void PointsToAnalysisTransfer::visit(SgPointerDerefExp* sgn) {
-    scope reg(txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
-    MemLocObjectPtr ml_p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
-    if(pointsToAnalysisDebugLevel() >= 2) {
-      dbg << "ML(sgn)=" << ml_p->str() << endl;
-    }
+    // scope reg(txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    // AbstractObjectSetPtr operandLat = getLatticeOperand(sgn, sgn->get_operand());
+    // MemLocObjectPtr opML_p = composer->OperandExpr2MemLoc(sgn, sgn->get_operand(), part->inEdgeFromAny(), analysis);
+    // // MemLocObjectPtr ml_p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
+    // if(pointsToAnalysisDebugLevel() >= 2) {
+    //   dbg << "ML(op)=" << opML_p->str() << endl;
+    //   dbg << "operandLat=" << operandLat->str() << endl;
+    // }
+    // setLattice(sgn, operandLat);
   }
 
   /********************
@@ -179,46 +183,6 @@ namespace fuse
     return "PointsToAnalysis"; 
   }
 
-  // void PointsToAnalysis::copyAbstractObjectSet(const AbstractObjectSet& aos, std::list<MemLocObjectPtr>& list)
-  // {
-  //   for(AbstractObjectSet::const_iterator it = aos.begin(); it != aos.end(); it++)
-  //   {
-  //     list.push_back(boost::dynamic_pointer_cast<MemLocObject> (*it));
-  //   }
-  // }
-
-  // boost::shared_ptr<AbstractObjectSet> 
-  // PointsToAnalysis::getPointsToSet(SgNode* sgn, PartEdgePtr pedge, AbstractObjectMap* aom)
-  // {
-  //   // use the visitor pattern to get pointsToSet for arbitrary sgn
-  //   Expr2MemLocTraversal e2mlt(composer, this, pedge, aom);
-  //   sgn->accept(e2mlt);
-  //   boost::shared_ptr<AbstractObjectSet> aos = e2mlt.getPointsToSet();
-  //   return aos;
-  // }
-
-  // PointsToMLPtr PointsToAnalysis::Expr2PointsToMLPtr(SgNode* sgn, PartEdgePtr pedge, boost::shared_ptr<AbstractObjectSet> aos)
-  // {
-  //   // we have points to set for the current MemLocObject
-  //   // wrap it up by PointsToML
-  //   std::list<MemLocObjectPtr> pointsToSet;
-  //   //NOTE: It can be empty if no entry was found in AbstractObjectMap
-  //   if(aos.get())
-  //   {
-  //     // copy the elements of aos into pointsToSet which will be wrapped by PoinsToML
-  //     copyAbstractObjectSet(*aos, pointsToSet);
-  //   }
-  //   else
-  //   {
-  //     // wrap other memory objects that don't point to any memory object
-  //     // push the ml for sgn itself into the pointsToSet as it does not points to any other object
-  //     MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, this);
-  //     pointsToSet.push_back(ml);
-  //   }
-  //   PointsToMLPtr ptmlp = boost::make_shared<PointsToML> (pointsToSet);
-  //   return ptmlp;
-  // }
-
   MemLocObjectPtr PointsToAnalysis::Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge)
   {
     scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
@@ -246,20 +210,37 @@ namespace fuse
       dbg << "PointsToMap=" << aom_p->str() << endl;
     }
 
+    // Return value
     boost::shared_ptr<PTMemLocObject> ptML_p = boost::make_shared<PTMemLocObject>(pedge, getComposer(), this);
-
-    if(isSgPointerDerefExp(sgn)) {
-      SgPointerDerefExp* expr = isSgPointerDerefExp(sgn);
-      SgVarRefExp* operand = isSgVarRefExp(expr->get_operand());
-      MemLocObjectPtr opML_p = getComposer()->OperandExpr2MemLoc(expr, operand, pedge, this);
+    MemLocObjectPtr ml_p = getComposer()->Expr2MemLoc(sgn, pedge, this);
+    switch(sgn->variantT()) {
+    case V_SgPointerDerefExp: {
+      MemLocObjectPtr opML_p = getComposer()->OperandExpr2MemLoc(sgn, isSgPointerDerefExp(sgn)->get_operand(), pedge, this);
       boost::shared_ptr<AbstractObjectSet> aos_p = boost::dynamic_pointer_cast<AbstractObjectSet>(aom_p->get(opML_p));
-      assert(aos_p);
+      assert(!aos_p->isEmptyLat());
+      if(pointsToAnalysisDebugLevel() >= 2) dbg << "MLSet=" << aos_p->str() << endl;
       ptML_p->add(aos_p, pedge);
+      break;
     }
-    else {
-      MemLocObjectPtr ml_p = getComposer()->Expr2MemLoc(sgn, pedge, this);
+    case V_SgVarRefExp:
+    case V_SgInitializedName:
+    default:
       ptML_p->add(ml_p, pedge);
-    }
+      break;      
+    };
+     
+    // if(isSgPointerDerefExp(sgn)) {
+    //   SgPointerDerefExp* expr = isSgPointerDerefExp(sgn);
+    //   SgVarRefExp* operand = isSgVarRefExp(expr->get_operand());
+    //   MemLocObjectPtr opML_p = getComposer()->OperandExpr2MemLoc(expr, operand, pedge, this);
+    //   boost::shared_ptr<AbstractObjectSet> aos_p = boost::dynamic_pointer_cast<AbstractObjectSet>(aom_p->get(opML_p));
+    //   assert(aos_p);
+    //   ptML_p->add(aos_p, pedge);
+    // }
+    // else {
+    //   MemLocObjectPtr ml_p = getComposer()->Expr2MemLoc(sgn, pedge, this);
+    //   ptML_p->add(ml_p, pedge);
+    // }
 
     return ptML_p;
   }
@@ -465,38 +446,38 @@ namespace fuse
    * Expr2MemLocTraversal *
    ************************/
 
-  void Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)
-  {
-    scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
-    SgExpression* operand = sgn->get_operand();
-    operand->accept(*this);
-    boost::shared_ptr<AbstractObjectSet> new_p_aos = 
-            boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
-    for(AbstractObjectSet::const_iterator i=p_aos->begin(); i!=p_aos->end(); i++) {
-      boost::shared_ptr<AbstractObjectSet> ao = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(*i));
-      assert(ao);
-      new_p_aos->meetUpdate(ao.get());
-    }
-    p_aos = new_p_aos;
-  }
+  // void Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)
+  // {
+  //   scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
+  //   SgExpression* operand = sgn->get_operand();
+  //   operand->accept(*this);
+  //   boost::shared_ptr<AbstractObjectSet> new_p_aos = 
+  //           boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
+  //   for(AbstractObjectSet::const_iterator i=p_aos->begin(); i!=p_aos->end(); i++) {
+  //     boost::shared_ptr<AbstractObjectSet> ao = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(*i));
+  //     assert(ao);
+  //     new_p_aos->meetUpdate(ao.get());
+  //   }
+  //   p_aos = new_p_aos;
+  // }
 
-  void Expr2MemLocTraversal::visit(SgVarRefExp* sgn)
-  {
-    scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
-    dbg << "isSgPointerType(sgn->get_type())="<<isSgPointerType(sgn->get_type())<<endl;
-    // return points to set only for pointer types
-    /*if(isSgPointerType(sgn->get_type()))
-    {
-      MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, analysis);
-      p_aos = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(ml));
-    }*/
-    p_aos = boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
-    p_aos->insert(composer->Expr2MemLoc(sgn, pedge, analysis));
-    if(pointsToAnalysisDebugLevel()>=1) dbg << "p_aos="<<p_aos->str()<<endl;
-  }
+  // void Expr2MemLocTraversal::visit(SgVarRefExp* sgn)
+  // {
+  //   scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
+  //   dbg << "isSgPointerType(sgn->get_type())="<<isSgPointerType(sgn->get_type())<<endl;
+  //   // return points to set only for pointer types
+  //   /*if(isSgPointerType(sgn->get_type()))
+  //   {
+  //     MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, analysis);
+  //     p_aos = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(ml));
+  //   }*/
+  //   p_aos = boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
+  //   p_aos->insert(composer->Expr2MemLoc(sgn, pedge, analysis));
+  //   if(pointsToAnalysisDebugLevel()>=1) dbg << "p_aos="<<p_aos->str()<<endl;
+  // }
 
-  void Expr2MemLocTraversal::visit(SgAssignOp* sgn)
-  {
-    // handle p = q where p, q are pointer types    
-  }
+  // void Expr2MemLocTraversal::visit(SgAssignOp* sgn)
+  // {
+  //   // handle p = q where p, q are pointer types    
+  // }
 };

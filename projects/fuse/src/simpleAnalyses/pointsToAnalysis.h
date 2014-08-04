@@ -132,28 +132,28 @@ namespace fuse
 
   // used to handle Expr2MemLoc queries by the composer
   // for various SgNode
-  class Expr2MemLocTraversal : public ROSE_VisitorPatternDefaultBase
-  {
-    Composer* composer;
-    PointsToAnalysis* analysis;
-    PartEdgePtr pedge;
-    AbstractObjectMap* aom;
-    // returned by this class for a given SgNode*
-    boost::shared_ptr<AbstractObjectSet> p_aos;
-  public:
-    Expr2MemLocTraversal(Composer* _composer, 
-                         PointsToAnalysis* _analysis,
-                         PartEdgePtr _pedge, 
-                         AbstractObjectMap* _aom) : 
-    composer(_composer), 
-    analysis(_analysis), 
-    pedge(_pedge), aom(_aom), 
-    p_aos(boost::shared_ptr<AbstractObjectSet>()) { }
-    void visit(SgPointerDerefExp* sgn);
-    void visit(SgVarRefExp* sgn);
-    void visit(SgAssignOp* sgn);
-    boost::shared_ptr<AbstractObjectSet> getPointsToSet() { return p_aos; }
-  };
+  // class Expr2MemLocTraversal : public ROSE_VisitorPatternDefaultBase
+  // {
+  //   Composer* composer;
+  //   PointsToAnalysis* analysis;
+  //   PartEdgePtr pedge;
+  //   AbstractObjectMap* aom;
+  //   // returned by this class for a given SgNode*
+  //   boost::shared_ptr<AbstractObjectSet> p_aos;
+  // public:
+  //   Expr2MemLocTraversal(Composer* _composer, 
+  //                        PointsToAnalysis* _analysis,
+  //                        PartEdgePtr _pedge, 
+  //                        AbstractObjectMap* _aom) : 
+  //   composer(_composer), 
+  //   analysis(_analysis), 
+  //   pedge(_pedge), aom(_aom), 
+  //   p_aos(boost::shared_ptr<AbstractObjectSet>()) { }
+  //   void visit(SgPointerDerefExp* sgn);
+  //   void visit(SgVarRefExp* sgn);
+  //   void visit(SgAssignOp* sgn);
+  //   boost::shared_ptr<AbstractObjectSet> getPointsToSet() { return p_aos; }
+  // };
 };
 
 #endif
