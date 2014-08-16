@@ -156,9 +156,22 @@ FUSE_CPP_TESTS = \
 	simplePtrTest.cpp \
 	sas13Fig1Example.cpp
 
+#SA 8/15/2014
+# Adding checks for testing tight composition
+# Tests are simple pointer manipulations
+# Sequential composition requires multiple iterations
+# Tight composition requires only single iteration
+FUSETIGHT_CP_AND_PT_TESTS=\
+	simplePtrTestTight1.cpp \
+	simplePtrTestTight2.cpp \
+	simplePtrTestTight3.cpp \
+	simplePtrTestTight4.cpp \
+	simplePtrTestTight5.cpp
+
 FUSE_C_CHECKS = $(addprefix fuse_C_, $(addsuffix .passed, $(FUSE_C_TESTS)))
 FUSE_C_EXPENSIVE_CHECKS = $(addprefix fuse_C_EXP_, $(addsuffix .passed, $(FUSE_C_EXPENSIVE_TESTS)))
 FUSE_CPP_CHECKS = $(addprefix fuse_cpp_, $(addsuffix .passed, $(FUSE_CPP_TESTS)))
+FUSETIGHT_CP_AND_PT_CHECKS = $(addprefix fusetight_, $(addsuffix .passed, $(FUSETIGHT_CP_AND_PT_TESTS)))
 
 TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
 FUSE_FLAGS = 
@@ -174,10 +187,14 @@ $(FUSE_C_EXPENSIVE_CHECKS): fuse_C_EXP_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT
 $(FUSE_CPP_CHECKS): fuse_cpp_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
 	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
 
+$(FUSETIGHT_CP_AND_PT_CHECKS): fusetight_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuseTight  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
 
-.PHONY: check-fuse check-fuse-expensive
+
+.PHONY: check-fuse check-fuse-expensive check-fusetight
 check-fuse: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
 check-fuse-expensive: $(FUSE_C_EXPENSIVE_CHECKS)
+check-fusetight: $(FUSETIGHT_CP_AND_PT_CHECKS)
 
 CXX_TESTDIR = $(top_srcdir)/tests/CompileTests/Cxx_tests
 
