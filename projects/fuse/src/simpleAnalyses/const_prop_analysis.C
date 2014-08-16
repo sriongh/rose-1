@@ -403,7 +403,7 @@ struct plain_return_type_2<arithmetic_action<Act>, long double, wchar_t> {
 }
 
 namespace fuse {
-DEBUG_LEVEL(constantPropagationAnalysisDebugLevel, 2);
+DEBUG_LEVEL(constantPropagationAnalysisDebugLevel, 0);
 
 // ************************
 // **** CPValueObject *****

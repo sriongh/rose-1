@@ -21,7 +21,7 @@ using namespace std;
 
 namespace fuse
 {
-DEBUG_LEVEL(composedAnalysisDebugLevel, 2);
+DEBUG_LEVEL(composedAnalysisDebugLevel, 0);
   
 /****************************
  ***** ComposedAnalysis *****
