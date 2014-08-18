@@ -10,7 +10,8 @@ INCLUDES = \
 	-I$(srcdir)/sight/widgets \
 	-I$(srcdir)/lattice \
 	-I$(srcdir)/simpleAnalyses \
-	-I$(srcdir)/state
+	-I$(srcdir)/state \
+        -I${srcdir}/sparse
 
 include_HEADERS =\
 	analysis/abstract_object.h \
@@ -43,6 +44,17 @@ include_HEADERS =\
 	simpleAnalyses/saveDotAnalysis.h \
 	simpleAnalyses/taintAnalysis.h \
 	simpleAnalyses/VariableStateTransfer.h \
+	sparse/constantAnalysis.h \
+	sparse/heapDefsAndUsesTraversal.h \
+	sparse/heapReachingDef.h \
+	sparse/heapSSA.h \
+	sparse/LatticeArith.h \
+	sparse/LatticeArithInstance.h \
+	sparse/partitionGraph.h \
+	sparse/PGSSA.h \
+	sparse/pointerAnalysis.h \
+	sparse/SSAVariableStateTransfer.h \
+	sparse/valueNumbering.h \
 	state/nodeState.h
 
 # TEST VARIABLES
@@ -92,6 +104,12 @@ fuse_SOURCES = \
 	simpleAnalyses/printAnalysisStates.C \
 	simpleAnalyses/saveDotAnalysis.C \
 	simpleAnalyses/taintAnalysis.C \
+        sparse/constantAnalysis.C \
+	sparse/heapDefsAndUsesTraversal.C \
+	sparse/heapSSA.C \
+	sparse/hssaMemObject.C \
+	sparse/pointerAnalysis.C \
+	sparse/valueNumbering.C \
 	state/nodeState.C \
 	compositionalTestAnalysis.C
 
@@ -177,6 +195,12 @@ fuseTight_SOURCES = \
 	simpleAnalyses/printAnalysisStates.C \
 	simpleAnalyses/saveDotAnalysis.C \
 	simpleAnalyses/taintAnalysis.C \
+	sparse/constantAnalysis.C \
+	sparse/heapDefsAndUsesTraversal.C \
+	sparse/heapSSA.C \
+	sparse/hssaMemObject.C \
+	sparse/pointerAnalysis.C \
+	sparse/valueNumbering.C \
 	state/nodeState.C \
 	tightCompositionTest.C
 
