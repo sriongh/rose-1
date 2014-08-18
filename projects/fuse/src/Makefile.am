@@ -71,7 +71,7 @@ fuseLayout_SOURCES = \
 ########
 # FUSE #
 ########
-fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\""
 fuse_LDADD = -lrose
 fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
@@ -162,7 +162,7 @@ check-fuse-expensive: $(FUSE_C_EXPENSIVE_CHECKS)
 #############
 # FUSETIGHT #
 #############
-fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\""
 fuseTight_LDADD = -lrose
 fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
