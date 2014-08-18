@@ -888,6 +888,21 @@ namespace hssa_private {
     // 			     std::set<Function> calleesUpdated);
     void runAnalysis();
 
+    virtual void initNodeState(PartPtr part) {
+      //#SA (8/18/14) TODO: Implement support for tight composition
+      assert(false);
+    }
+
+    //! TightComposer implents the following method by calling generic version of this function on each analysis.
+    //! FWDataflow, BWDataflow which are dataflow anlayses implements this method by passing itself to the generic version.
+    virtual void transferPropagateAState(PartPtr part, std::set<PartPtr>& visited, bool firstVisit, 
+                                         std::set<PartPtr>& initialized, dataflowPartEdgeIterator* curNodeIt, anchor curPartAnchor, 
+                                         sight::structure::graph& worklistGraph, std::map<PartPtr, std::set<anchor> >& toAnchors,
+                                         std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors) {
+      //#SA (8/18/14) TODO: Implement support for tight composition
+      assert(false);
+    }
+
     virtual bool transfer(const Function& func, PartPtr part, CFGNode cn, NodeState& state,
 			  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
     virtual std::string str(std::string);
