@@ -3,14 +3,6 @@ include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 
 bin_PROGRAMS = fuse fuseTight fuseLayout
 
-fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
-fuse_LDADD = -lrose
-fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
-
-fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
-fuseTight_LDADD = -lrose
-fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
-
 INCLUDES = \
 	$(ROSE_INCLUDES) \
 	-I$(srcdir)/analysis \
@@ -19,75 +11,6 @@ INCLUDES = \
 	-I$(srcdir)/lattice \
 	-I$(srcdir)/simpleAnalyses \
 	-I$(srcdir)/state
-
-fuse_DEPENDENCIES=fuseLayout
-
-fuse_SOURCES = \
-	analysis/abstract_object.C \
-	analysis/abstract_object_map.C \
-	analysis/abstract_object_set.C \
-	analysis/analysis.C \
-	analysis/analysis_tester.C \
-	analysis/compose.C \
-	analysis/composed_analysis.C \
-	analysis/factor_trans_system.C \
-	analysis/graphIterator.C \
-	analysis/partitions.C \
-	analysis/stx_analysis.C \
-	analysis/tight_composer.C \
-	cfgUtils/CallGraphTraverse.C \
-	cfgUtils/cfgUtils.C \
-	cfgUtils/DataflowCFG.C \
-	cfgUtils/VirtualCFGIterator.C \
-	sight/widgets/ats_graph_structure.C \
-	lattice/lattice.C \
-	simpleAnalyses/call_context_sensitivity_analysis.C \
-	simpleAnalyses/const_prop_analysis.C \
-	simpleAnalyses/dead_path_elim_analysis.C \
-	simpleAnalyses/live_dead_analysis.C \
-	simpleAnalyses/pointsToAnalysis.C \
-	simpleAnalyses/printAnalysisStates.C \
-	simpleAnalyses/saveDotAnalysis.C \
-	simpleAnalyses/taintAnalysis.C \
-	state/nodeState.C \
-	compositionalTestAnalysis.C
-
-fuseTight_DEPENDENCIES=fuseLayout
-
-fuseTight_SOURCES = \
-	analysis/abstract_object.C \
-	analysis/abstract_object_map.C \
-	analysis/abstract_object_set.C \
-	analysis/analysis.C \
-	analysis/analysis_tester.C \
-	analysis/compose.C \
-	analysis/composed_analysis.C \
-	analysis/factor_trans_system.C \
-	analysis/graphIterator.C \
-	analysis/partitions.C \
-	analysis/stx_analysis.C \
-	analysis/tight_composer.C \
-	cfgUtils/CallGraphTraverse.C \
-	cfgUtils/cfgUtils.C \
-	cfgUtils/DataflowCFG.C \
-	cfgUtils/VirtualCFGIterator.C \
-	sight/widgets/ats_graph_structure.C \
-	lattice/lattice.C \
-	simpleAnalyses/call_context_sensitivity_analysis.C \
-	simpleAnalyses/const_prop_analysis.C \
-	simpleAnalyses/dead_path_elim_analysis.C \
-	simpleAnalyses/live_dead_analysis.C \
-	simpleAnalyses/pointsToAnalysis.C \
-	simpleAnalyses/printAnalysisStates.C \
-	simpleAnalyses/saveDotAnalysis.C \
-	simpleAnalyses/taintAnalysis.C \
-	state/nodeState.C \
-	tightCompositionTest.C
-
-fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
-fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINKFLAGS)
-fuseLayout_SOURCES = \
-	sight/widgets/ats_graph_layout.C
 
 include_HEADERS =\
 	analysis/abstract_object.h \
@@ -122,13 +45,55 @@ include_HEADERS =\
 	simpleAnalyses/VariableStateTransfer.h \
 	state/nodeState.h
 
-# Liao, 1/16/2014, comment out missing files to pass make dist
-#	dbglog/index.html  # used by the dbglog system
-#	src/factor_trans_systemTest.C 
-EXTRA_DIST = \
-	src/factor_trans_systemTest.C 
+# TEST VARIABLES
+TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
+TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
 
-FUSE_TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
+###############
+# FUSE LAYOUT #
+###############
+fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
+fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINKFLAGS)
+fuseLayout_SOURCES = \
+	sight/widgets/ats_graph_layout.C
+########
+# FUSE #
+########
+fuse_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuse_LDADD = -lrose
+fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
+
+fuse_DEPENDENCIES=fuseLayout
+
+fuse_SOURCES = \
+	analysis/abstract_object.C \
+	analysis/abstract_object_map.C \
+	analysis/abstract_object_set.C \
+	analysis/analysis.C \
+	analysis/analysis_tester.C \
+	analysis/compose.C \
+	analysis/composed_analysis.C \
+	analysis/factor_trans_system.C \
+	analysis/graphIterator.C \
+	analysis/partitions.C \
+	analysis/stx_analysis.C \
+	analysis/tight_composer.C \
+	cfgUtils/CallGraphTraverse.C \
+	cfgUtils/cfgUtils.C \
+	cfgUtils/DataflowCFG.C \
+	cfgUtils/VirtualCFGIterator.C \
+	sight/widgets/ats_graph_structure.C \
+	lattice/lattice.C \
+	simpleAnalyses/call_context_sensitivity_analysis.C \
+	simpleAnalyses/const_prop_analysis.C \
+	simpleAnalyses/dead_path_elim_analysis.C \
+	simpleAnalyses/live_dead_analysis.C \
+	simpleAnalyses/pointsToAnalysis.C \
+	simpleAnalyses/printAnalysisStates.C \
+	simpleAnalyses/saveDotAnalysis.C \
+	simpleAnalyses/taintAnalysis.C \
+	state/nodeState.C \
+	compositionalTestAnalysis.C
 
 # for .C files
 FUSE_C_TESTS = \
@@ -156,6 +121,65 @@ FUSE_CPP_TESTS = \
 	simplePtrTest.cpp \
 	sas13Fig1Example.cpp
 
+FUSE_C_CHECKS = $(addprefix fuse_C_, $(addsuffix .passed, $(FUSE_C_TESTS)))
+FUSE_C_EXPENSIVE_CHECKS = $(addprefix fuse_C_EXP_, $(addsuffix .passed, $(FUSE_C_EXPENSIVE_TESTS)))
+FUSE_CPP_CHECKS = $(addprefix fuse_cpp_, $(addsuffix .passed, $(FUSE_CPP_TESTS)))
+FUSE_FLAGS = 
+FUSE = ./fuse
+
+$(FUSE_C_CHECKS): fuse_C_%.passed: $(TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
+$(FUSE_C_EXPENSIVE_CHECKS): fuse_C_EXP_%.passed: $(TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
+$(FUSE_CPP_CHECKS): fuse_cpp_%.passed: $(TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
+	@$(RTH_RUN) CMD="./fuse  -I$(TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
+
+.PHONY: check-fuse check-fuse-expensive
+
+check-fuse: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
+check-fuse-expensive: $(FUSE_C_EXPENSIVE_CHECKS)
+
+#############
+# FUSETIGHT #
+#############
+fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseTight_LDADD = -lrose
+fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
+
+fuseTight_DEPENDENCIES=fuseLayout
+
+fuseTight_SOURCES = \
+	analysis/abstract_object.C \
+	analysis/abstract_object_map.C \
+	analysis/abstract_object_set.C \
+	analysis/analysis.C \
+	analysis/analysis_tester.C \
+	analysis/compose.C \
+	analysis/composed_analysis.C \
+	analysis/factor_trans_system.C \
+	analysis/graphIterator.C \
+	analysis/partitions.C \
+	analysis/stx_analysis.C \
+	analysis/tight_composer.C \
+	cfgUtils/CallGraphTraverse.C \
+	cfgUtils/cfgUtils.C \
+	cfgUtils/DataflowCFG.C \
+	cfgUtils/VirtualCFGIterator.C \
+	sight/widgets/ats_graph_structure.C \
+	lattice/lattice.C \
+	simpleAnalyses/call_context_sensitivity_analysis.C \
+	simpleAnalyses/const_prop_analysis.C \
+	simpleAnalyses/dead_path_elim_analysis.C \
+	simpleAnalyses/live_dead_analysis.C \
+	simpleAnalyses/pointsToAnalysis.C \
+	simpleAnalyses/printAnalysisStates.C \
+	simpleAnalyses/saveDotAnalysis.C \
+	simpleAnalyses/taintAnalysis.C \
+	state/nodeState.C \
+	tightCompositionTest.C
+
 #SA 8/15/2014
 # Adding checks for testing tight composition
 # Tests are simple pointer manipulations
@@ -168,33 +192,27 @@ FUSETIGHT_CP_AND_PT_TESTS=\
 	simplePtrTestTight4.cpp \
 	simplePtrTestTight5.cpp
 
-FUSE_C_CHECKS = $(addprefix fuse_C_, $(addsuffix .passed, $(FUSE_C_TESTS)))
-FUSE_C_EXPENSIVE_CHECKS = $(addprefix fuse_C_EXP_, $(addsuffix .passed, $(FUSE_C_EXPENSIVE_TESTS)))
-FUSE_CPP_CHECKS = $(addprefix fuse_cpp_, $(addsuffix .passed, $(FUSE_CPP_TESTS)))
 FUSETIGHT_CP_AND_PT_CHECKS = $(addprefix fusetight_, $(addsuffix .passed, $(FUSETIGHT_CP_AND_PT_TESTS)))
 
-TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
-FUSE_FLAGS = 
-FUSE = ./fuse
+FUSETIGHT = ./fuseTight
+
+$(FUSETIGHT_CP_AND_PT_CHECKS): fusetight_%.passed: $(TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSETIGHT)
+	@$(RTH_RUN) CMD="./fuseTight  -I$(TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
 
 
-$(FUSE_C_CHECKS): fuse_C_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
-	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
-
-$(FUSE_C_EXPENSIVE_CHECKS): fuse_C_EXP_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
-	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
-
-$(FUSE_CPP_CHECKS): fuse_cpp_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
-	@$(RTH_RUN) CMD="./fuse  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
-
-$(FUSETIGHT_CP_AND_PT_CHECKS): fusetight_%.passed: $(FUSE_TESTS_DIR)/% $(TEST_EXIT_STATUS) $(FUSE)
-	@$(RTH_RUN) CMD="./fuseTight  -I$(FUSE_TESTS_DIR) -c $<" $(TEST_EXIT_STATUS) $@
-
-
-.PHONY: check-fuse check-fuse-expensive check-fusetight
-check-fuse: $(FUSE_C_CHECKS) $(FUSE_CPP_CHECKS)
-check-fuse-expensive: $(FUSE_C_EXPENSIVE_CHECKS)
+.PHONY: check-fusetight
 check-fusetight: $(FUSETIGHT_CP_AND_PT_CHECKS)
+
+#############
+# EXTRADIST #
+#############
+EXTRA_DIST = \
+	src/factor_trans_systemTest.C 
+
+###############
+# CXX TESTING #
+###############
+# Generic cxx testing for robustness
 
 CXX_TESTDIR = $(top_srcdir)/tests/CompileTests/Cxx_tests
 
@@ -374,9 +392,16 @@ $(CXX_FUSE_EXPENSIVE_TESTS): cxx_exp_%.passed: $(CXX_TESTDIR)/% $(TEST_EXIT_STAT
 check-cxx: $(CXX_FUSE_TESTS)
 check-cxx-expensive: $(CXX_FUSE_EXPENSIVE_TESTS)
 
+###############
+# CHECK RULES #
+###############
+
 check-expensive: check-fuse-expensive check-cxx-expensive
 check-local: check-fuse check-cxx
 
+###############
+# CLEAN RULES #
+###############
 clean-debug:
 	rm -rf *.dot *.png dbg/
 
