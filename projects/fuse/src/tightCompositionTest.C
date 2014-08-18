@@ -38,7 +38,9 @@ int main(int argc, char** argv)
   cc_analyses.push_back(tc);
   ChainComposer* cc = new ChainComposer(cc_analyses, cdip, true);
   cc->runAnalysis();
-    
+
+  if(cdip->getNumErrors() > 0) cout << cdip->getNumErrors() << " Errors Reported!"<<endl;
+  else                         cout << "PASS"<<endl;
   printf("==========  E  N  D  ==========\n");
   
   return 0;
