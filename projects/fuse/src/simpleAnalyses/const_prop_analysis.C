@@ -3000,6 +3000,8 @@ bool CPMemLocObject::mayEqualML(MemLocObjectPtr o, PartEdgePtr pedge) {
   // Compare the region and index directly. We call mayEqualMR here because CP does not implement
   // MemRegions, meaning that we need to thread the logic through the composer to the real implementer.
   // However, values are implemented in CP, meaning that we can call mayEqualV directly
+  // dbg << "region->mayEqual()=" << region->mayEqual(that->getRegion(), pedge, analysis->getComposer(), analysis) << endl;
+  // dbg << "index->mayEqual()=" << ((!index && !that->index) || index->mayEqualV(that->getIndex(), pedge)) << endl;
   return region && region->mayEqual(that->getRegion(), pedge, analysis->getComposer(), analysis) && 
          ((!index && !that->index) || index->mayEqualV(that->getIndex(), pedge));
 }
@@ -3469,8 +3471,41 @@ void ConstantPropagationAnalysisTransfer::visit(SgPlusPlusOp *sgn) {
 }
 
 // Unary ops that do not update the operand
-void ConstantPropagationAnalysisTransfer::visit(SgUnaryOp *sgn) { 
-  scope s("ConstantPropagationAnalysisTransfer::visit(SgUnaryOp)", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 1));
+// void ConstantPropagationAnalysisTransfer::visit(SgUnaryOp *sgn) { 
+//   scope s("ConstantPropagationAnalysisTransfer::visit(SgUnaryOp)", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 1));
+  
+//   CPValueObjectPtr arg1Lat;//, arg2Lat;//, resLat_tmp;
+//   getLattices(sgn, arg1Lat);//, arg2Lat);//, resLat_tmp);
+//   CPValueObjectPtr resLat = arg1Lat->op(sgn);
+// //prodLat->setToEmpty();
+//   setLattice(sgn, resLat);
+// }
+
+// Unary ops that do not update the operand
+void ConstantPropagationAnalysisTransfer::visit(SgCastExp *sgn) { 
+  scope s("ConstantPropagationAnalysisTransfer::visit(SgCastExp)", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 1));
+  
+  CPValueObjectPtr arg1Lat;//, arg2Lat;//, resLat_tmp;
+  getLattices(sgn, arg1Lat);//, arg2Lat);//, resLat_tmp);
+  CPValueObjectPtr resLat = arg1Lat->op(sgn);
+//prodLat->setToEmpty();
+  setLattice(sgn, resLat);
+}
+
+// Unary ops that do not update the operand
+void ConstantPropagationAnalysisTransfer::visit(SgMinusOp *sgn) { 
+  scope s("ConstantPropagationAnalysisTransfer::visit(SgMinusOp)", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 1));
+  
+  CPValueObjectPtr arg1Lat;//, arg2Lat;//, resLat_tmp;
+  getLattices(sgn, arg1Lat);//, arg2Lat);//, resLat_tmp);
+  CPValueObjectPtr resLat = arg1Lat->op(sgn);
+//prodLat->setToEmpty();
+  setLattice(sgn, resLat);
+}
+
+// Unary ops that do not update the operand
+void ConstantPropagationAnalysisTransfer::visit(SgNotOp *sgn) { 
+  scope s("ConstantPropagationAnalysisTransfer::visit(SgNotOp)", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 1));
   
   CPValueObjectPtr arg1Lat;//, arg2Lat;//, resLat_tmp;
   getLattices(sgn, arg1Lat);//, arg2Lat);//, resLat_tmp);

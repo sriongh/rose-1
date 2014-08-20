@@ -727,7 +727,10 @@ class ConstantPropagationAnalysisTransfer : public VariableStateTransfer<CPValue
   void visit(SgMinusMinusOp *sgn);
   void visit(SgPlusPlusOp *sgn);
   // Unary ops that do not update the operand
-  void visit(SgUnaryOp *sgn);
+  // void visit(SgUnaryOp *sgn);
+  void visit(SgCastExp* sgn);
+  void visit(SgMinusOp* sgn);
+  void visit(SgNotOp* sgn);
   
   void visit(SgValueExp *val);
    

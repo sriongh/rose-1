@@ -35,11 +35,19 @@ using namespace std;
 
 namespace fuse {
 
-DEBUG_LEVEL(analysisDebugLevel, 0);
+DEBUG_LEVEL(analysisDebugLevel, 1);
 
 // Initializes Fuse
 void FuseInit(int argc, char **argv) {
+  //#SA 8/18/14
+  // Command to set up the enviroment variable to find the binary fuseLayout
+  // fuseLayout is required to run fuse
+  // fuseLayout binary is at the same level as fuse in the build tree
+  // When compiling fuse ROSE_PREFIX is defined as -DROSE_PREFIX="\"${top_builddir}\"" which
+  // is top of the build tree
+  // If fuse fails to find fuseLayout set up this environment variable appropriately. 
   setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/projects/fuse/src/fuseLayout").c_str(), 1);
+  //setenv("SIGHT_LAYOUT_EXEC", (txt()<<ROSE_PREFIX<<"/bin//fuseLayout").c_str(), 1);
   SightInit(argc, argv);
 }
 

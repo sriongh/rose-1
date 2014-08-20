@@ -22,8 +22,6 @@ include $(top_srcdir)/tests/input_codes/cxx/Makefile_variables
 EXAMPLE_TESTCODES_REQUIRED_TO_PASS = $(ROSE__CXX_TESTS)
 
 EXAMPLE_TESTCODES_REQUIRED_TO_PASS += \
-   lulesh.C \
-   luleshTALC.C \
    test2013_253.C \
    test2013_255.C \
    test2013_256.C \
@@ -63,7 +61,87 @@ EXAMPLE_TESTCODES_REQUIRED_TO_PASS += \
    test2014_03.C \
    test2014_04.C \
    test2014_05.C \
-   test2014_06.C
+   test2014_06.C \
+   test2014_07.C \
+   test2014_08.C \
+   test2014_09.C \
+   test2014_10.C \
+   test2014_11.C \
+   test2014_12.C \
+   test2014_13.C \
+   test2014_16.C \
+   test2014_17.C \
+   test2014_18.C \
+   test2014_19.C \
+   test2014_20.C \
+   test2014_21.C \
+   test2014_24.C \
+   test2014_26.C \
+   test2014_27.C \
+   test2014_28.C \
+   test2014_29.C \
+   test2014_30.C \
+   test2014_31.C \
+   test2014_32.C \
+   test2014_33.C \
+   test2014_34.C \
+   test2014_35.C \
+   test2014_36.C \
+   test2014_37.C \
+   test2014_38.C \
+   test2014_39.C \
+   test2014_40.C \
+   test2014_41.C \
+   test2014_43.C \
+   test2014_45.C \
+   test2014_47.C \
+   test2014_48.C \
+   test2014_49.C \
+   test2014_50.C \
+   test2014_53.C \
+   test2014_54.C \
+   test2014_55.C \
+   test2014_56.C \
+   test2014_57.C \
+   test2014_58.C \
+   test2014_62.C \
+   test2014_67.C \
+   test2014_68.C \
+   test2014_70.C \
+   lulesh.C \
+   luleshTALC.C
+
+# DQ (7/3/2014): This C++ language feature is only properly supported in EDG version 4.9
+if ROSE_USE_EDG_VERSION_4_9
+EXAMPLE_TESTCODES_REQUIRED_TO_PASS += \
+   test2014_65.C \
+   test2014_66.C \
+   test2014_69.C
+endif
+
+# DQ (5/19/2014): Failing tests
+#   test2014_51.C (Not clear what is wrong with this, if anything. EDG does not accept it as valid C++).
+#   test2014_52.C (__int128 is not available everywhere, so this fails on some versions of gnu before 4.8).
+#   test2014_59.C (This is a name qualification error, type hiding error needs name qualification to be properly resolved).
+#   test2014_60.C (failing test for function pointer casts (reported to rose user list).
+#   test2014_61.C (Isolated version of test2014_60.C).
+#   test2014_63.C Test from Robb one case fails for MSVC and the other for GNU g++.
+#   test2014_64.C example of new failing test code.
+
+# DQ (4/6/2014): Failing tests
+#   test2014_14.C 
+#   test2014_15.C 
+#   test2014_22.C 
+#   test2014_23.C 
+#   test2014_25.C 
+#   test2014_42.C 
+#   test2014_44.C 
+#   test2014_46.C 
+
+# DQ (4/3/2014): Failing tests in the name qualification (subject or current work).
+#   test2014_27.C 
+#   test2014_28.C 
+#   test2014_29.C
 
 # Note that these will not compile with the GNU 4.7 header files.
 # It might be a boost issue.  The error is always the same.
@@ -103,9 +181,12 @@ test2011_06.C \
 test2004_35.C 
 
 if !ROSE_USE_EDG_VERSION_4_7
+if !ROSE_USE_EDG_VERSION_4_8
+# DQ (3/23/2014): This also fails for EDG 4.8 (maybe we should have reported the problem to EDG before: need to check using GNU g++ 4.8.1 compiler).
 # DQ (6/12/2013): This fails to compile with EDG 4.7 (EDG complains: line 13: error: constructor or destructor may not have its address taken)
 # Skip this test code while we report the problem to EDG (and investigate more in internally).
 EXAMPLE_TESTCODES_REQUIRED_TO_PASS += test2012_68.C
+endif
 endif
 
 # DQ (5/26/2013): Currently faling tests:
@@ -684,9 +765,13 @@ testParser:../../testParser
 test2005_56.o: $(TEST_TRANSLATOR)
 	$(TEST_TRANSLATOR) $(ROSE_FLAGS) -DTEST_STRING_MACRO=\""Thu Apr 14 08:18:33 PDT 2005"\" -c $(srcdir)/test2005_56.C -o test2005_56.o
 
+test2014_54.o: $(TEST_TRANSLATOR)
+	@echo "Running boost specific test."
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS) $(ROSE_INCLUDES) -c $(srcdir)/test2010_01.C -o test2010_01.o
+
 test2010_01.o: $(TEST_TRANSLATOR)
 	@echo "Running boost specific test."
-	$(TEST_TRANSLATOR) $(ROSE_FLAGS) $(ROSE_INCLUDES) -c $(srcdir)/test2010_01.C -o test2010_01.o
+	$(VALGRIND) $(TEST_TRANSLATOR) $(ROSE_FLAGS) $(ROSE_INCLUDES) -c $(srcdir)/test2010_01.C -o test2010_01.o
 
 test2010_02.o: $(TEST_TRANSLATOR)
 	@echo "Running boost specific test."
