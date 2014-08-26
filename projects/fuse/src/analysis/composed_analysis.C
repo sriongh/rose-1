@@ -21,7 +21,7 @@ using namespace std;
 
 namespace fuse
 {
-DEBUG_LEVEL(composedAnalysisDebugLevel, 0);
+DEBUG_LEVEL(composedAnalysisDebugLevel, 2);
   
 /****************************
  ***** ComposedAnalysis *****
@@ -769,6 +769,7 @@ void BWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
 }
 
 void FWDataflow::initNodeState(PartPtr part) {
+  scope reg(sight::txt() << "FWDataflow::initNodeState(part=" << part->str() << ")", scope::low, attrGE("composedAnalysisDebugLevel", 2));
   // registers if not already registered
   NodeState* state = NodeState::getNodeState(this, part);
   // fill the state with Lattices
@@ -779,6 +780,7 @@ void FWDataflow::initNodeState(PartPtr part) {
 }
 
 void BWDataflow::initNodeState(PartPtr part) {
+  scope reg(sight::txt() << "BWDataflow::initNodeState(part=" << part->str() << ")", scope::low, attrGE("composedAnalysisDebugLevel", 2));
   // registers if not already registered
   NodeState* state = NodeState::getNodeState(this, part);
   // fill the state with Lattices
