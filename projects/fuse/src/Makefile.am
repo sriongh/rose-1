@@ -246,7 +246,8 @@ clean-fusetight:
 # FUSEMPI #
 ###########
 
-fuseMPI_CXXFLAGS = $(SIGHT_CFLAGS) $(ROSE_WITH_MPI_CXXFLAGS) -DROSE_PREFIX="\"${prefix}\""
+fuseMPI_SKIP_FLAGS = -DFUSE_SKIP_MPI_GLOBAL_DECLS -DFUSE_SKIP_LIB_GLOBAL_DECLS -DSKIP_ROSE_BUILTIN_DECLARATIONS -DFUSE_START_FROM_MAIN
+fuseMPI_CXXFLAGS = $(SIGHT_CFLAGS) $(ROSE_WITH_MPI_CXXFLAGS) -DROSE_PREFIX="\"${top_builddir}\"" $(fuseMPI_SKIP_FLAGS)
 fuseMPI_LDADD = -lrose
 fuseMPI_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS) $(ROSE_WITH_MPI_CXXLDFLAGS)
 
@@ -283,7 +284,7 @@ fuseMPI_SOURCES = \
 	fuseTestMPIAnalysis.C
 
 .PHONY: clean-fusempi
-clean-fusempi
+clean-fusempi:
 	rm -rf fuseMPI fuseMPI-*.o
 
 #############
