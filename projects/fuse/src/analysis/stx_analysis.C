@@ -302,6 +302,12 @@ class func2AllCallsFunctor
   
   void* operator()(SgNode* n) {
     if(SgFunctionCallExp* call=isSgFunctionCallExp(n)) {
+      // If the flag is set ignore the call sites inside MPI header files     
+#ifdef FUSE_SKIP_MPI_HEADERS
+    string mpifilename = call->get_file_info()->get_filename();
+    if(mpifilename.find("mpi.h") != string::npos ||
+       mpifilename.find("mpicxx.h") != string::npos) return NULL;
+#endif
       set<Function> callees = getAllCalleeFuncs(call);
       for(set<Function>::iterator c=callees.begin(); c!=callees.end(); c++)
         func2AllCalls[*c].insert(call);
@@ -448,7 +454,7 @@ std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
 #endif
 
     // If the flag is set omit declarations from MPI header files
-#ifdef FUSE_SKIP_MPI_GLOBAL_DECLS
+#ifdef FUSE_SKIP_MPI_HEADERS
     string mpifilename = (*d)->get_file_info()->get_filename();
     if(mpifilename.find("mpi.h") != string::npos ||
        mpifilename.find("mpicxx.h") != string::npos) continue;
