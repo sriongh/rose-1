@@ -203,35 +203,53 @@ namespace fuse {
                                          std::map<PartEdgePtr, std::vector<Lattice*> >& _dfInfo,
                                          Composer* _composer,
                                          MPIValueAnalysis* _analysis)
-    : VariableStateTransfer<MPIValueObject, MPIValueAnalysis> (_state, _dfInfo,
-                                                               boost::make_shared<MPIValueObject>(_part->inEdgeFromAny()),
-                                                               _composer, _analysis, _part, _cfgn,
-                                                               mpiValueAnalysisDebugLevel, "mpiValueAnalysisDebugLevel"),
-                                               part(_part),
-                                               cfgn(_cfgn),
-                                               state(_state),
-                                               dfInfo(_dfInfo),
-                                               modified(false),
-                                               composer(_composer) {
+    : DFTransferVisitor(_part, _cfgn, _state, _dfInfo),
+      part(_part),
+      cfgn(_cfgn),
+      state(_state),
+      dfInfo(_dfInfo),
+      analysis(_analysis),
+      modified(false),
+      composer(_composer) {
+    // Incoming dfInfo is associated with inEdgeFromAny
+    assert(dfInfo.size()==1);    
+    assert(dfInfo[part->inEdgeFromAny()].size()==1);
+    assert(*dfInfo[part->inEdgeFromAny()].begin());
+
+    Lattice *l = *dfInfo[part->inEdgeFromAny()].begin();
+    mpiValuesMap = (dynamic_cast<AbstractObjectMap*>(l));
+    assert(mpiValuesMap);
   }
 
-  SgExpression* MVATransferVisitor::stripCastExprGetOp(SgExpression* exp) {
+  bool MVATransferVisitor::setLattice(SgExpression* expr, MPIValueObjectPtr mvo_p) {
+    MemLocObjectPtr ml_p = composer->Expr2MemLoc(expr, part->inEdgeFromAny(), analysis);
+    return mpiValuesMap->insert(ml_p, boost::dynamic_pointer_cast<Lattice>(mvo_p));
+  }
+
+  SgExpression* MVATransferVisitor::getOpCastExpr(SgExpression* exp) {
     ROSE_ASSERT(isSgCastExp(exp));
     return isSgCastExp(exp)->get_operand();
   }
 
-  SgExpression* MVATransferVisitor::stripAddrOfExprGetOp(SgExpression* exp) {
+  SgExpression* MVATransferVisitor::getOpAddrOfExpr(SgExpression* exp) {
     ROSE_ASSERT(isSgAddressOfOp(exp));
     return isSgAddressOfOp(exp)->get_operand();
   }
 
+  bool MVATransferVisitor::isMPIFuncCall(const Function& func) {
+    if(func.get_name().getString().find("MPI_") == 0)
+      return true;
+    return false;
+  }
 
   void  MVATransferVisitor::visit(SgFunctionCallExp* sgn) {
     // if the function call exp is a MPI operation
     // and if the abstract state (part) denotes entry back to caller
+    // and if the call site is not inside MPI library
     // set the mpi value for the variables
     Function func(sgn);
-    if(isMPIFuncCall(func) && part->isIncomingFuncCall(cfgn)) {
+    if(isMPIFuncCall(func) && 
+       part->isIncomingFuncCall(cfgn)) {
       string func_name = func.get_name().getString();
       if(func_name == "MPI_Comm_rank") {
         transferCommRank(sgn);
@@ -253,7 +271,8 @@ namespace fuse {
     // assert it has only two arguments
     ROSE_ASSERT(args_list.size() == 2);
     // strip cast and get the comm expression
-    SgExpression* commExpr = stripCastExprGetOp(args_list[0]);
+    SgExpression* commExpr = getOpCastExpr(args_list[0]);
+
     // MPI_Comms are integer values assigned by MPI runtime
     // before issuing MPI_Comm_rank the integer value for the comm should be known
     // query the composer for the value of comm expr
@@ -280,10 +299,7 @@ namespace fuse {
     MPIValueObjectPtr pidMVO = boost::make_shared<MPIValueObject>(pidValKind,
                                                                   part->inEdgeFromAny());
     // set the lattice for the second argument
-    setLatticeOperand(args_list[1],
-                      stripAddrOfExprGetOp(args_list[1]),
-                      pidMVO);
-    modified = true;
+    modified = setLattice(getOpAddrOfExpr(args_list[1]), pidMVO);
   }
 
   void MVATransferVisitor::transferCommSize(SgFunctionCallExp* sgn) {
@@ -292,7 +308,7 @@ namespace fuse {
     // assert it has only two arguments
     ROSE_ASSERT(args_list.size() == 2);
     // strip cast and get the comm expression
-    SgExpression* commExpr = stripCastExprGetOp(args_list[0]);    
+    SgExpression* commExpr = getOpCastExpr(args_list[0]);    
     ValueObjectPtr commVO = composer->Expr2Val(commExpr, part->inEdgeFromAny());
     ROSE_ASSERT(commVO->isConcrete());
     set<boost::shared_ptr<SgValueExp> > commVals = commVO->getConcreteValue();
@@ -311,16 +327,7 @@ namespace fuse {
     MPIValueObjectPtr sizeMVO = boost::make_shared<MPIValueObject>(sizeValKind,
                                                                    part->inEdgeFromAny());
     // set the lattice for the second argument
-    setLatticeOperand(args_list[1],
-                      stripAddrOfExprGetOp(args_list[1]),
-                      sizeMVO);
-    modified = true;
-  }
-
-  bool MVATransferVisitor::isMPIFuncCall(const Function& func) {
-    if(func.get_name().getString().find("MPI_") == 0)
-      return true;
-    return false;
+    modified = setLattice(getOpAddrOfExpr(args_list[1]), sizeMVO);
   }
 
   bool MVATransferVisitor::finish() {

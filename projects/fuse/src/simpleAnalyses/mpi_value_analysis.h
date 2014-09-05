@@ -111,13 +111,16 @@ namespace fuse {
 
   class MPIValueAnalysis;
 
-  class MVATransferVisitor : public VariableStateTransfer<MPIValueObject, MPIValueAnalysis> {
+  class MVATransferVisitor : public DFTransferVisitor {
     PartPtr part;
     CFGNode cfgn;
     NodeState& state;
     std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo;
+    ComposedAnalysis* analysis;
     bool modified;
     Composer* composer;
+
+    AbstractObjectMap* mpiValuesMap;
 
   public:
     MVATransferVisitor(PartPtr _part,
@@ -129,10 +132,12 @@ namespace fuse {
 
     void visit(SgFunctionCallExp* sgn);
     void transferCommRank(SgFunctionCallExp* sgn);
-    SgExpression* stripCastExprGetOp(SgExpression* exp);
-    SgExpression* stripAddrOfExprGetOp(SgExpression* exp);
+    SgExpression* getOpCastExpr(SgExpression* exp);
+    SgExpression* getOpAddrOfExpr(SgExpression* exp);
     void transferCommSize(SgFunctionCallExp* sgn);
 
+    bool setLattice(SgExpression* expr, MPIValueObjectPtr mvo_p);
+    //! Return true if the function call is an MPI operation
     bool isMPIFuncCall(const Function& func);
     bool finish();
   };
