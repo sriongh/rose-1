@@ -27,8 +27,10 @@ int main(int argc, char* argv[])
   printf("Frontend done\n");fflush(stdout);
 
   std::list<ComposedAnalysis*> analyses;
+  analyses.push_back(new CallContextSensitivityAnalysis(1, CallContextSensitivityAnalysis::callSite));
   analyses.push_back(new MPIValueAnalysis());
   analyses.push_back(new ConstantPropagationAnalysis());
+  analyses.push_back(new DeadPathElimAnalysis());
   checkDataflowInfoPass* cdip = new checkDataflowInfoPass();
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();
