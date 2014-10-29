@@ -221,7 +221,7 @@ bool DeadPathElimPart::less(const PartPtr& o) const
 }
 
 // Pretty print for the object
-std::string DeadPathElimPart::str(std::string indent)
+std::string DeadPathElimPart::str(std::string indent) const
 {
   ostringstream oss;
   oss << "[DPEPart: "<<getParent()->str()<<"]";
@@ -503,7 +503,7 @@ bool DeadPathElimPartEdge::less(const PartEdgePtr& o)  const
 }
 
 // Pretty print for the object
-std::string DeadPathElimPartEdge::str(std::string indent)
+std::string DeadPathElimPartEdge::str(std::string indent) const
 {
   ostringstream oss;
   if(latPEdge != getParent()) {

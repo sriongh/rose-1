@@ -7,6 +7,7 @@ libbinaryMidend_la_DEPENDENCIES =
 
 if ROSE_BUILD_BINARY_ANALYSIS_SUPPORT
 libbinaryMidend_la_SOURCES =					\
+    AbstractLocation.C						\
     binary_analysis.C						\
     RoseBin_CompareAnalysis.cpp RoseBin_ControlFlowAnalysis.cpp	\
     RoseBin_printInstructions.cpp RoseBin_DataFlowAnalysis.cpp	\
@@ -17,6 +18,8 @@ libbinaryMidend_la_SOURCES =					\
     dataflowanalyses/RoseBin_Emulate.cpp			\
     dataflowanalyses/RoseBin_DataFlowAbstract.cpp		\
     instructionSemantics/BaseSemantics2.C			\
+    instructionSemantics/DataFlowSemantics2.C			\
+    instructionSemantics/DispatcherM68k.C			\
     instructionSemantics/DispatcherPowerpc.C			\
     instructionSemantics/DispatcherX86.C			\
     instructionSemantics/NullSemantics2.C			\
@@ -27,6 +30,7 @@ libbinaryMidend_la_SOURCES =					\
     instructionSemantics/InsnSemanticsExpr.C			\
     instructionSemantics/IntervalSemantics.C			\
     instructionSemantics/IntervalSemantics2.C			\
+    instructionSemantics/LlvmSemantics2.C			\
     instructionSemantics/PartialSymbolicSemantics.C		\
     instructionSemantics/TraceSemantics2.C			\
     instructionSemantics/SMTSolver.C				\
@@ -35,9 +39,12 @@ libbinaryMidend_la_SOURCES =					\
     instructionSemantics/YicesSolver.C				\
     GraphAlgorithms.C						\
     BinaryControlFlow.C						\
+    BinaryDataFlow.C						\
     BinaryDominance.C						\
     BinaryFunctionCall.C					\
     BinaryCallingConvention.C					\
+    BinaryReturnValueUsed.C					\
+    BinaryTaintedFlow.C						\
     DwarfLineMapper.C
 else
 libbinaryMidend_la_SOURCES = dummyBinaryMidend.C
@@ -50,7 +57,8 @@ libbinaryMidend_la_SOURCES +=					\
     libraryIdentification/functionIdentification.C 
 endif
 
-include_HEADERS =					\
+pkginclude_HEADERS =					\
+    AbstractLocation.h					\
     binary_analysis.h					\
     GraphAlgorithms.h					\
     RoseBin_CallGraphAnalysis.h				\
@@ -70,10 +78,13 @@ include_HEADERS =					\
     instructionSemantics/InsnSemanticsExpr.h		\
     instructionSemantics/BaseSemantics.h		\
     instructionSemantics/BaseSemantics2.h		\
+    instructionSemantics/DataFlowSemantics2.h		\
+    instructionSemantics/DispatcherM68k.h		\
     instructionSemantics/DispatcherPowerpc.h		\
     instructionSemantics/DispatcherX86.h		\
     instructionSemantics/IntervalSemantics.h		\
     instructionSemantics/IntervalSemantics2.h		\
+    instructionSemantics/LlvmSemantics2.h		\
     instructionSemantics/NullSemantics.h		\
     instructionSemantics/NullSemantics2.h		\
     instructionSemantics/MultiSemantics.h		\
@@ -87,17 +98,19 @@ include_HEADERS =					\
     instructionSemantics/TraceSemantics2.h		\
     instructionSemantics/YicesSolver.h			\
     instructionSemantics/flowEquations.h		\
-    instructionSemantics/semanticsModule.h		\
     instructionSemantics/x86InstructionSemantics.h	\
     libraryIdentification/functionIdentification.h	\
     libraryIdentification/libraryIdentification.h	\
     ether.h						\
     BinaryControlFlow.h					\
+    BinaryDataFlow.h					\
     BinaryDominance.h					\
     BinaryFunctionCall.h				\
     BinaryCallingConvention.h				\
     BinaryPointerDetection.h				\
     BinaryAnalysisUtils.h				\
+    BinaryReturnValueUsed.h				\
+    BinaryTaintedFlow.h					\
     DwarfLineMapper.h
 
 

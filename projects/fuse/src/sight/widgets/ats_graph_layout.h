@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "widgets/graph_layout.h"
+#include "widgets/graph/graph_layout.h"
 
 namespace fuse {
 
@@ -16,7 +16,7 @@ extern atsGraphLayoutHandlerInstantiator atsGraphLayoutHandlerInstan;
  **************************************/
 
 class atsGraph : public sight::layout::graph {
-  static std::list<atsGraph*> stack;
+  static std::list<atsGraph*> gStack;
   
   std::ostringstream dot;
   std::string indent;

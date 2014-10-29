@@ -132,7 +132,7 @@ bool PartPtrPartContext::operator< (const PartContextPtr& that_arg) const {
   assert(that);
   return part < that->part;
 }
-std::string PartPtrPartContext::str(std::string indent) {
+std::string PartPtrPartContext::str(std::string indent) const {
   std::ostringstream oss;
   //oss << "[PartPtrPartContext: "<<part->str(indent)<<"]";
   FactorTransStatePtr state = dynamicPtrCast<FactorTransState>(part); assert(state);
@@ -528,7 +528,7 @@ bool FactorTransState::less(const PartPtr& o)  const {
   return subGraphTransFactors < that->subGraphTransFactors;
 }
 
-std::string FactorTransState::str(std::string indent) {
+std::string FactorTransState::str(std::string indent) const {
   ostringstream oss;
   oss << "[FTState: v="<<curVal<<"="<<(curVal * baseCommonFactor * myCommonFactor) << 
                  ", baseComFac="<<list2Str(getPrimeDecomp(baseCommonFactor), ":")<<
@@ -736,7 +736,7 @@ bool FactorTransEdge::less(const PartEdgePtr& o)  const {
 }
 
 // Pretty print for the object
-std::string FactorTransEdge::str(std::string indent) {
+std::string FactorTransEdge::str(std::string indent) const {
   ostringstream oss;
   int fullSrcCommonFactor = 1, fullTgtCommonFactor = 1;
   if(getParent()) {

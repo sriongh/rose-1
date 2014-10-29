@@ -258,12 +258,12 @@ bool HierEdge<EdgeTypePtr>::end() const {
 }
 
 template <class EdgeTypePtr>  
-std::string HierEdge<EdgeTypePtr>::str(std::string indent) {
+std::string HierEdge<EdgeTypePtr>::str(std::string indent) const {
   ostringstream oss;
   oss << "[HierEdge: "<<endl;
   oss << indent << "    " << l->str(indent+"    ") << endl;
   
-  for(typename map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > >::iterator i=m.begin(); i!=m.end(); i++) {
+  for(typename map<EdgeTypePtr, CompSharedPtr<HierEdge<EdgeTypePtr> > >::const_iterator i=m.begin(); i!=m.end(); i++) {
     oss << indent << (i->first? i->first.get()->str(indent+"  "): "NULL") << " =&gt; " << endl;
     oss << indent << "    " << i->second->str(indent+"    ") << endl;
   }
@@ -359,7 +359,7 @@ bool HierEdge_Leaf<EdgeTypePtr>::end() const {
 }
 
 template <class EdgeTypePtr>  
-std::string HierEdge_Leaf<EdgeTypePtr>::str(std::string indent) {
+std::string HierEdge_Leaf<EdgeTypePtr>::str(std::string indent) const {
   ostringstream oss;
   oss << "[HierEdge_Leaf: s=";
   for(typename set<EdgeTypePtr>::iterator i=s.begin(); i!=s.end(); i++) {
@@ -464,11 +464,11 @@ class IntProgressEdge
     }
   }
   
-  std::string str(std::string indent="") {
+  std::string str(std::string indent="") const {
     ostringstream oss;
     oss << "[Int: ";
     int v=curVal;
-    for(list<int>::iterator i=commonFactors.begin(); i!=commonFactors.end(); i++)
+    for(list<int>::const_iterator i=commonFactors.begin(); i!=commonFactors.end(); i++)
       v *= *i;
     oss << v;
     /*oss << endl << indent << "commonFactors=";

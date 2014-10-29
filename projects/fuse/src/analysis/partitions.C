@@ -203,10 +203,10 @@ bool MLRemapper::operator==(const MLRemapper& that) const
 }
 
 // String representation of object
-std::string MLRemapper::map2Str(map<ComposedAnalysis*, set<set<MLMapping> > >& ml2ml, std::string indent) {
+std::string MLRemapper::map2Str(const map<ComposedAnalysis*, set<set<MLMapping> > >& ml2ml, std::string indent) const {
   ostringstream oss;
 
-  for(map<ComposedAnalysis*, set<set<MLMapping> > >::iterator client=ml2ml.begin(); client!=ml2ml.end(); client++) {
+  for(map<ComposedAnalysis*, set<set<MLMapping> > >::const_iterator client=ml2ml.begin(); client!=ml2ml.end(); client++) {
     if(client!=ml2ml.begin()) oss << indent;
     oss << client->first->str() << ": "<<endl;
     
@@ -221,7 +221,7 @@ std::string MLRemapper::map2Str(map<ComposedAnalysis*, set<set<MLMapping> > >& m
   return oss.str();
 }
 
-std::string MLRemapper::str(std::string indent)
+std::string MLRemapper::str(std::string indent) const
 {
   ostringstream oss;
 
@@ -544,14 +544,14 @@ bool Context::operator>=(const ContextPtr& that) const { return !(*this<that); }
 bool Context::operator<=(const ContextPtr& that) const { return (*this<that) || (*this == that); }
 bool Context::operator> (const ContextPtr& that) const { return !(*this<=that); }
 
-std::string Context::str(std::string indent)
+std::string Context::str(std::string indent) const
 {
   ostringstream oss;
   
   oss << "[Context: ";
   //oss << str_rec(part, indent);
   bool wroteAnyCtxts = false;
-  for(list<PartContextPtr>::iterator p=partContexts.begin(); p!=partContexts.end(); p++) {
+  for(list<PartContextPtr>::const_iterator p=partContexts.begin(); p!=partContexts.end(); p++) {
     string partStr = (*p)->str();
     if(partStr != "") {
       if(!wroteAnyCtxts) oss << endl << indent;
@@ -1034,7 +1034,7 @@ bool IntersectionPartContext::operator< (const PartContextPtr& that_arg) const {
   return false;
 }
   
-std::string IntersectionPartContext::str(std::string indent) {
+std::string IntersectionPartContext::str(std::string indent) const {
   ostringstream oss;
   oss << "[IntersectionPartContext: ";
   bool anyValidCtxtStrs = false;
@@ -1439,12 +1439,12 @@ bool IntersectionPart::less(const PartPtr& that_arg) const
   return false;
 }
 
-std::string IntersectionPart::str(std::string indent)
+std::string IntersectionPart::str(std::string indent) const
 {
   ostringstream oss;
   oss << "[IntersectionPart:";
   if(parts.size() > 1) oss << endl;
-  for(map<ComposedAnalysis*, PartPtr>::iterator part=parts.begin(); part!=parts.end(); ) {
+  for(map<ComposedAnalysis*, PartPtr>::const_iterator part=parts.begin(); part!=parts.end(); ) {
     if(parts.size() > 1) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << (part->second? part->second->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;") : "NULL");
     part++;
@@ -1753,12 +1753,12 @@ Lattice* IntersectionPartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEd
   return edges.begin()->second->backwardRemapML(lat, fromPEdge, client);
 }
 
-std::string IntersectionPartEdge::str(std::string indent)
+std::string IntersectionPartEdge::str(std::string indent) const
 {
   ostringstream oss;
   oss << "[IntersectionPartEdge:";
   if(edges.size() > 1) oss << endl;
-  for(map<ComposedAnalysis*, PartEdgePtr>::iterator edge=edges.begin(); edge!=edges.end(); ) {
+  for(map<ComposedAnalysis*, PartEdgePtr>::const_iterator edge=edges.begin(); edge!=edges.end(); ) {
     if(edges.size() > 1) oss << indent << "&nbsp;&nbsp;&nbsp;&nbsp;";
     oss << edge->second->str(indent+"&nbsp;&nbsp;&nbsp;&nbsp;");
     edge++;

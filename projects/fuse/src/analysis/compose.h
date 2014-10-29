@@ -329,7 +329,7 @@ class CCQueryServers : public sight::printable
     //dbg << "after this="<<str()<<std::endl;
   }
   
-  std::string str(std::string indent="") {
+  std::string str(std::string indent="") const {
     std::ostringstream oss;
     oss << "[CCQueryServers:"<<std::endl;
     oss << indent << "    lastCodeLocAnalysis="  <<lastCodeLocAnalysis->str(indent)  <<": ATSGraphsSinceLastCodeLocAnalysis="  <<ATSGraphsSinceLastCodeLocAnalysis  <<std::endl;
@@ -590,7 +590,7 @@ class ChainComposer : public Composer, public UndirDataflow
   std::set<PartPtr> GetStartAStates_Spec();
   std::set<PartPtr> GetEndAStates_Spec();
 
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 // Composer that invokes multiple analyses in parallel (they do not interact) and runs them to completion independently.
@@ -766,7 +766,7 @@ class LooseParallelComposer : public Composer, public UndirDataflow
   // GetStartAState/GetEndAStates do no wrapping and thus, we can return pedge directly.
   PartEdgePtr getEdgeForAnalysis(PartEdgePtr pedge, ComposedAnalysis* analysis);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 }; // namespace fuse

@@ -6,21 +6,23 @@ using namespace sight;
 
 namespace fuse
 {
-  DEBUG_LEVEL(ptaDebugLevel, 0);
+  DEBUG_LEVEL(pointsToAnalysisDebugLevel, 0);
+
+  /****************************
+   * PointsToAnalysisTransfer *
+   ****************************/
   
   PointsToAnalysisTransfer::PointsToAnalysisTransfer(PartPtr part,
                                                      CFGNode cn, NodeState& state,
                                                      std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
-                                                     Composer* _composer, PointsToAnalysis* _analysis, 
-                                                     const debugLevel& dLevel, std::string dLevelStr)
+                                                     Composer* _composer, PointsToAnalysis* _analysis)                                                     
     :DFTransferVisitor(part, cn, state, dfInfo),
      composer(_composer),
      analysis(_analysis),
-     modified(false),
-     dLevel(dLevel), dLevelStr(dLevelStr)
+     modified(false)
   {
-    // set the pointer of the map for this PartEdge
-    setProductLattice();
+    // Set the pointer of the map for this PartEdge
+    initLattice();
   }
 
   bool PointsToAnalysisTransfer::finish()
@@ -28,119 +30,131 @@ namespace fuse
     return modified;
   }
 
-  void PointsToAnalysisTransfer::setProductLattice()
-  { 
-    // copied from VariableStateTransfer.h
-    assert(dfInfo.size()==1);
-    //#SA: Incoming dfInfo is associated with inEdgeFromAny
+  void PointsToAnalysisTransfer::initLattice()
+  {     
+    // Incoming dfInfo is associated with inEdgeFromAny
+    assert(dfInfo.size()==1);    
     assert(dfInfo[part->inEdgeFromAny()].size()==1);
     assert(*dfInfo[part->inEdgeFromAny()].begin());
+
     Lattice *l = *dfInfo[part->inEdgeFromAny()].begin();
     productLattice = (dynamic_cast<AbstractObjectMap*>(l));
+
     assert(productLattice);
   }
 
-  // NOTE: Should we use pedge instead of part->inEdgeFromAny()
-  PointsToAnalysisTransfer::AbstractObjectSetPtr 
-  PointsToAnalysisTransfer::getLattice(SgExpression* sgexp) 
+  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLattice(SgExpression* sgexp) 
   {
     MemLocObjectPtr ml= composer->Expr2MemLoc(sgexp, part->inEdgeFromAny(), analysis);
     return getLatticeCommon(ml);
   }
 
-  // NOTE: Should we use pedge instead of part->inEdgeFromAny()
-  PointsToAnalysisTransfer::AbstractObjectSetPtr 
-  PointsToAnalysisTransfer::getLatticeOperand(SgNode* sgn, SgExpression* operand) 
+  
+  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLatticeOperand(SgNode* sgn, SgExpression* operand) 
   { 
     MemLocObjectPtr oml = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis); 
     return getLatticeCommon(oml);
   }
 
-  PointsToAnalysisTransfer::AbstractObjectSetPtr 
-  PointsToAnalysisTransfer::getLatticeCommon(MemLocObjectPtr p)
+  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLatticeCommon(MemLocObjectPtr ml)
   {
-    return getLattice(AbstractObjectPtr(p));
+    return boost::dynamic_pointer_cast<AbstractObjectSet>(productLattice->get(ml));
   }
 
-  PointsToAnalysisTransfer::AbstractObjectSetPtr 
-  PointsToAnalysisTransfer::getLattice(const AbstractObjectPtr o)
-  {
-    AbstractObjectSetPtr _aos = boost::dynamic_pointer_cast<AbstractObjectSet> (productLattice->get(o));
-    assert(_aos);
-    if(ptaDebugLevel()>=1) dbg << "getLattice(o): o=" << o->strp(part->inEdgeFromAny()) << ", lattice=" << _aos->strp(part->inEdgeFromAny()) << "\n";
-    return _aos;
-  }
-
-  void PointsToAnalysisTransfer::setLattice(SgExpression* sgexp,
-                                            PointsToAnalysisTransfer::AbstractObjectSetPtr aos)
+  bool PointsToAnalysisTransfer::setLattice(SgExpression* sgexp, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)
   {
     MemLocObjectPtr ml = composer->Expr2MemLoc(sgexp, part->inEdgeFromAny(), analysis);
-    setLatticeCommon(ml, aos);
+    return setLatticeCommon(ml, lat);
   }
 
-  void PointsToAnalysisTransfer::setLatticeOperand(SgNode* sgn, SgExpression* operand,
-                                                   PointsToAnalysisTransfer::AbstractObjectSetPtr aos)
+  bool PointsToAnalysisTransfer::setLatticeOperand(SgNode* sgn, SgExpression* operand, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)                                                   
   {
     MemLocObjectPtr ml = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis);
-    setLatticeCommon(ml, aos);
+    return setLatticeCommon(ml, lat);
   }
 
-  void PointsToAnalysisTransfer::setLatticeCommon(MemLocObjectPtr ml,
-                                                  PointsToAnalysisTransfer::AbstractObjectSetPtr aos)
+  bool PointsToAnalysisTransfer::setLatticeCommon(MemLocObjectPtr ml, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)
   {
-    setLattice(AbstractObjectPtr(ml), aos);
-  }
-
-  void PointsToAnalysisTransfer::setLattice(const AbstractObjectPtr o,
-                                            PointsToAnalysisTransfer::AbstractObjectSetPtr aos)
-  {
-    modified = modified || productLattice->insert(o, aos);
-    if(dLevel() >= 2) {
+    return productLattice->insert(ml, lat);
+    if(pointsToAnalysisDebugLevel() >= 3) {
       dbg << productLattice->strp(part->inEdgeFromAny());
-    }
+    }    
   }
 
-  // very trivial transfer function
   // NOTE: requires extension for a full blown analysis
   void PointsToAnalysisTransfer::visit(SgAssignOp* sgn)
   {
     SgExpression* rhs_operand = sgn->get_rhs_operand();
     SgExpression* lhs_operand = sgn->get_lhs_operand();
-    // handle p = &x
-    // NOTE: rhs can be a complex expression but code below only handles the trivial case
-    if(isSgAddressOfOp(rhs_operand)) 
-    {
-      // operand of SgAddressOfOp should be a variable
-      SgVarRefExp* sgvexp = isSgVarRefExp(isSgAddressOfOp(rhs_operand)->get_operand()); assert(sgvexp);    
-      MemLocObjectPtr _ml = composer->OperandExpr2MemLoc(rhs_operand, sgvexp, part->inEdgeFromAny(), analysis); assert(_ml);
 
-      // get the lattice for lhs_operand
-      // insert memory object for rhs_operand into this lattice
-      AbstractObjectSetPtr aos = getLatticeOperand(sgn, lhs_operand);
-      aos->insert(_ml);
-      // update the product lattice
-      setLatticeOperand(sgn, lhs_operand, aos);
-      setLattice(sgn, aos);
-      modified = true;
+    // Handle p = &x
+    // NOTE: rhs can be a complex expression but code below only handles the trivial case
+    if(isSgAddressOfOp(rhs_operand)) {
+      // Operand of SgAddressOfOp should be a variable
+      SgVarRefExp* sgvexp = isSgVarRefExp(isSgAddressOfOp(rhs_operand)->get_operand()); 
+      assert(sgvexp);    
+      MemLocObjectPtr ml = composer->OperandExpr2MemLoc(sgn, sgvexp, part->inEdgeFromAny(), analysis); 
+      assert(ml);
+
+      // Get the AbstractObjectSet (lattice) for lhs_operand
+      AbstractObjectSetPtr aos_p = getLatticeOperand(sgn, lhs_operand);
+
+      // Pointer is reset as as result of this assignment
+      // Discard previous elements of this set
+      if(aos_p->size() > 0) aos_p->setToEmpty();
+
+      // Insert memory object for rhs_operand into this lattice
+      aos_p->insert(ml);
+
+      // If a new element is inserted into set, AbstractObjectMap corresponding to lhs needs update.
+      // AbstractObjetMap::get only returns a copy of the set.
+      // AbstractObjectMap should be updated with the set* methods.     
+      modified = setLatticeOperand(sgn, lhs_operand, aos_p) || modified;
     }
     //TODO: handle p = q
     else if(isSgPointerType(lhs_operand->get_type()) &&
-            isSgPointerType(rhs_operand->get_type()))
-    {
-      AbstractObjectSetPtr l_aos = getLatticeOperand(sgn, lhs_operand); 
-      AbstractObjectSetPtr r_aos = getLatticeOperand(sgn, rhs_operand); 
-      // union the information
+            isSgPointerType(rhs_operand->get_type())) {
+      AbstractObjectSetPtr laos_p = getLatticeOperand(sgn, lhs_operand); 
+      AbstractObjectSetPtr raos_p = getLatticeOperand(sgn, rhs_operand);
+
+      if(pointsToAnalysisDebugLevel() >= 3) {
+        dbg << "laos_p=" << laos_p->str() << endl;
+        dbg << "raos_p=" << raos_p->str() << endl;
+      }
+
+      // Union the information
       // NOTE: points to information can be NULL
-      // merge pointsToSet from rhs if available
-      if(l_aos && r_aos) l_aos->meetUpdate(dynamic_cast<Lattice*>(r_aos.get()));
-      // pointsToSet is empty for lhs, populate it with rhs information
-      if(!l_aos && r_aos) l_aos = boost::make_shared<AbstractObjectSet>(*r_aos);
-      // set the map with this pointsToSet
-      setLatticeOperand(sgn, lhs_operand, l_aos);
-      setLattice(sgn, l_aos);
-      modified = true;
+      // Merge pointsToSet from rhs if available
+      assert(laos_p && raos_p);
+      if(raos_p->size() > 0) {
+        modified = laos_p->meetUpdate(dynamic_cast<Lattice*>(raos_p.get()));
+      }
+      
+      if(pointsToAnalysisDebugLevel() >= 3) {
+        dbg << "modified=" << modified << ", laos_p=" << laos_p->str() << endl;
+      }
+
+      // If the set was updated then update the map as well.
+      if(modified)
+        modified = setLatticeOperand(sgn, lhs_operand, laos_p) || modified;
     }
   }
+
+  void PointsToAnalysisTransfer::visit(SgPointerDerefExp* sgn) {
+    // scope reg(txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    // AbstractObjectSetPtr operandLat = getLatticeOperand(sgn, sgn->get_operand());
+    // MemLocObjectPtr opML_p = composer->OperandExpr2MemLoc(sgn, sgn->get_operand(), part->inEdgeFromAny(), analysis);
+    // // MemLocObjectPtr ml_p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
+    // if(pointsToAnalysisDebugLevel() >= 2) {
+    //   dbg << "ML(op)=" << opML_p->str() << endl;
+    //   dbg << "operandLat=" << operandLat->str() << endl;
+    // }
+    // setLattice(sgn, operandLat);
+  }
+
+  /********************
+   * PointsToAnalysis *
+   ********************/
 
   void PointsToAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge,
                                         std::vector<Lattice*>& initLattices)
@@ -157,147 +171,307 @@ namespace fuse
 
 
   boost::shared_ptr<DFTransferVisitor>
-  PointsToAnalysis::getTransferVisitor(PartPtr _part, CFGNode cn, NodeState& state, 
+  PointsToAnalysis::getTransferVisitor(PartPtr part, CFGNode cn, NodeState& state, 
                                        std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo)                                     
   {
-    PointsToAnalysisTransfer* idftv = new PointsToAnalysisTransfer(_part, cn, state, dfInfo, getComposer(), this, ptaDebugLevel, "ptaDebugLevel");
-    return boost::shared_ptr<DFTransferVisitor>(idftv);
+    PointsToAnalysisTransfer* ptat = new PointsToAnalysisTransfer(part, cn, state, dfInfo, getComposer(), this);
+    return boost::shared_ptr<DFTransferVisitor>(ptat);
   }
 
-  std::string PointsToAnalysis::str(std::string indent="")
+  std::string PointsToAnalysis::str(std::string indent="") const
   { 
     return "PointsToAnalysis"; 
   }
 
-  void PointsToAnalysis::copyAbstractObjectSet(const AbstractObjectSet& aos, std::list<MemLocObjectPtr>& list)
-  {
-    for(AbstractObjectSet::const_iterator it = aos.begin(); it != aos.end(); it++)
-    {
-      list.push_back(boost::dynamic_pointer_cast<MemLocObject> (*it));
-    }
-  }
-
-  boost::shared_ptr<AbstractObjectSet> 
-  PointsToAnalysis::getPointsToSet(SgNode* sgn, PartEdgePtr pedge, AbstractObjectMap* aom)
-  {
-    // use the visitor pattern to get pointsToSet for arbitrary sgn
-    Expr2MemLocTraversal e2mlt(composer, this, pedge, aom);
-    sgn->accept(e2mlt);
-    boost::shared_ptr<AbstractObjectSet> aos = e2mlt.getPointsToSet();
-    return aos;
-  }
-
-  PointsToMLPtr PointsToAnalysis::Expr2PointsToMLPtr(SgNode* sgn, PartEdgePtr pedge, boost::shared_ptr<AbstractObjectSet> aos)
-  {
-    // we have points to set for the current MemLocObject
-    // wrap it up by PointsToML
-    std::list<MemLocObjectPtr> pointsToSet;
-    //NOTE: It can be empty if no entry was found in AbstractObjectMap
-    if(aos.get())
-    {
-      // copy the elements of aos into pointsToSet which will be wrapped by PoinsToML
-      copyAbstractObjectSet(*aos, pointsToSet);
-    }
-    else
-    {
-      // wrap other memory objects that don't point to any memory object
-      // push the ml for sgn itself into the pointsToSet as it does not points to any other object
-      MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, this);
-      pointsToSet.push_back(ml);
-    }
-    PointsToMLPtr ptmlp = boost::make_shared<PointsToML> (pointsToSet);
-    return ptmlp;
-  }
-
   MemLocObjectPtr PointsToAnalysis::Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge)
   {
-    scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("ptaDebugLevel", 1));
-    if(ptaDebugLevel()>=1) dbg << "pedge=" << pedge->str() << endl;
+    scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    if(pointsToAnalysisDebugLevel()>=2) {
+      dbg << "pedge=" << pedge->str() << endl;     
+    }
 
-    // NOTE: source and target of edge are not wildcard
-    if(pedge->source() && pedge->target())
-    {
-      NodeState* state = NodeState::getNodeState(this, pedge->source());
-      if(ptaDebugLevel()>=1) dbg << "state="<<state->str(this)<<endl;
-      AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeBelow(this, pedge, 0));
-      assert(aom);
-      boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
-      return boost::dynamic_pointer_cast<MemLocObject>(Expr2PointsToMLPtr(sgn, pedge, aos));
-    }    
-    // NOTE: merge information across all outgoing edges
-    // target of this edge is wildcard
-    else if(pedge->source()) 
-    { 
-      NodeState* state = NodeState::getNodeState(this, pedge->source());
-      //dbg << "state="<<state->str(this)<<endl;
-    
-      // Merge the lattices along all the outgoing edges
-      map<PartEdgePtr, std::vector<Lattice*> >& e2lats = state->getLatticeBelowAllMod(this);
-      assert(e2lats.size()>=1);
-      boost::shared_ptr<AbstractObjectSet> mergedSet = boost::make_shared<AbstractObjectSet>(pedge, getComposer(), this, AbstractObjectSet::may);
-      for(map<PartEdgePtr, std::vector<Lattice*> >::iterator lats=e2lats.begin(); lats!=e2lats.end(); lats++) 
-      {
-        PartEdge* edgePtr = lats->first.get();
-        assert(edgePtr->source() == pedge.get()->source());
-      
-        AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeBelow(this, lats->first, 0));
-        assert(aom);
-        if(ptaDebugLevel()>=1) dbg << "aom="<<aom->str()<<endl;
-        boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
-        // NOTE: It can be empty if no entry was found in AbstractObjectMap
-        // Safe approximation : merge only if it contains pointsTo information along this particular edge
-        // 
-        if(aos.get())
-          mergedSet->meetUpdate(aos.get());
+    // ML object returned by Pointsto analysis
+    boost::shared_ptr<PTMemLocObject> ptML_p = boost::make_shared<PTMemLocObject>(pedge, getComposer(), this);
+
+    // Switch based on the type of the expression
+    switch(sgn->variantT()) {
+    // Handle all pointer dereference expressions by looking up analysis state
+    case V_SgPointerDerefExp: {
+      MemLocObjectPtr opML_p = getComposer()->OperandExpr2MemLoc(sgn, isSgPointerDerefExp(sgn)->get_operand(), pedge, this);
+
+      Lattice* lattice;
+
+      // Incoming information is stored Above for Forward analysis
+      if(pedge->target()) {
+        NodeState* state = NodeState::getNodeState(this, pedge->target());
+        lattice = state->getLatticeAbove(this, pedge, 0);
       }
-      return boost::dynamic_pointer_cast<MemLocObject>(Expr2PointsToMLPtr(sgn, pedge, mergedSet));
+      // Incoming information is stored Below for Backward analysis
+      else if(pedge->source()) {
+        NodeState* state = NodeState::getNodeState(this, pedge->source());
+        lattice = state->getLatticeBelow(this, pedge, 0);
+      }
+      else ROSE_ASSERT(0);
+
+      assert(lattice);
+      AbstractObjectMap* aom_p = dynamic_cast<AbstractObjectMap*>(lattice);
+
+      if(pointsToAnalysisDebugLevel() >= 2) {
+        dbg << "PointsToMap=" << aom_p->str() << endl;
+      }
+
+      boost::shared_ptr<AbstractObjectSet> aos_p = boost::dynamic_pointer_cast<AbstractObjectSet>(aom_p->get(opML_p));
+      assert(!aos_p->isEmptyLat());
+      if(pointsToAnalysisDebugLevel() >= 2) dbg << "MLSet=" << aos_p->str() << endl;
+      ptML_p->add(aos_p, pedge);
+      break;
     }
-    // source of this edge is a wildcard
-    else if(pedge->target()) 
-    {
-      NodeState* state = NodeState::getNodeState(this, pedge->target());
-      if(ptaDebugLevel()>=1) dbg << "state="<<state->str()<<endl;
-      //#SA: query dfInfo on wildcard edges (inEdgeFromAny)
-      AbstractObjectMap* aom = dynamic_cast<AbstractObjectMap*>(state->getLatticeAbove(this, pedge, 0));
-      assert(aom);
-      boost::shared_ptr<AbstractObjectSet> aos = getPointsToSet(sgn, pedge, aom);
-      return boost::dynamic_pointer_cast<MemLocObject>(Expr2PointsToMLPtr(sgn, pedge, aos));
-    }
-    else { assert(false); return PointsToMLPtr(); }
+
+    // For all other cases forward the query back to the composer
+    case V_SgVarRefExp:
+    case V_SgInitializedName:
+    default:
+      MemLocObjectPtr ml_p = getComposer()->Expr2MemLoc(sgn, pedge, this);
+      ptML_p->add(ml_p, pedge);
+      break;      
+    };     
+
+    return ptML_p;
   }
 
-  void Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)
-  {
-    scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, attrGE("ptaDebugLevel", 1));
-    SgExpression* operand = sgn->get_operand();
-    operand->accept(*this);
-    boost::shared_ptr<AbstractObjectSet> new_p_aos = 
-            boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
-    for(AbstractObjectSet::const_iterator i=p_aos->begin(); i!=p_aos->end(); i++) {
-      boost::shared_ptr<AbstractObjectSet> ao = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(*i));
-      assert(ao);
-      new_p_aos->meetUpdate(ao.get());
+  /******************
+   * PTMemLocObject *
+   ******************/
+
+  PTMemLocObject::PTMemLocObject(PartEdgePtr pedge, Composer* composer, PointsToAnalysis* ptanalysis)
+    : MemLocObject(NULL) { 
+    aos_p = boost::make_shared<AbstractObjectSet>(pedge, composer, ptanalysis, AbstractObjectSet::may);
+  }
+
+  PTMemLocObject::PTMemLocObject(const PTMemLocObject& thatPTML)
+    : MemLocObject(thatPTML) {
+    aos_p = boost::make_shared<AbstractObjectSet>(*(thatPTML.aos_p));
+  }
+
+  void PTMemLocObject::add(MemLocObjectPtr ml_p, PartEdgePtr pedge) {
+    if(ml_p->isFullML(pedge)) {
+      // Set the set to full
+      aos_p->setToFull();
+      return;
     }
-    p_aos = new_p_aos;
+    // If the set is already full return
+    else if(aos_p->isFullLat()) return;
+    // Add the element otherwise
+    else aos_p->insert(ml_p);
   }
 
-  void Expr2MemLocTraversal::visit(SgVarRefExp* sgn)
-  {
-    scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, attrGE("ptaDebugLevel", 1));
-    dbg << "isSgPointerType(sgn->get_type())="<<isSgPointerType(sgn->get_type())<<endl;
-    // return points to set only for pointer types
-    /*if(isSgPointerType(sgn->get_type()))
-    {
-      MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, analysis);
-      p_aos = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(ml));
-    }*/
-    p_aos = boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
-    p_aos->insert(composer->Expr2MemLoc(sgn, pedge, analysis));
-    if(ptaDebugLevel()>=1) dbg << "p_aos="<<p_aos->str()<<endl;
+  void PTMemLocObject::add(boost::shared_ptr<AbstractObjectSet> thataos_p, PartEdgePtr pedge) {
+    // Addd elements of the set into this set
+    AbstractObjectSet::const_iterator cIt = thataos_p->begin();    
+    for( ; cIt != thataos_p->end(); ++cIt) {
+      MemLocObjectPtr cItML_p = boost::dynamic_pointer_cast<MemLocObject>(*cIt);
+      add(cItML_p, pedge);
+    }
   }
 
-  void Expr2MemLocTraversal::visit(SgAssignOp* sgn)
-  {
-    // handle p = q where p, q are pointer types    
+  const AbstractObjectSet& PTMemLocObject::getMLSet() const {
+    return *(aos_p.get());
   }
+
+  boost::shared_ptr<AbstractObjectSet> PTMemLocObject::getMLSetPtr() const {
+    return aos_p;
+  }
+
+  Lattice* PTMemLocObject::getMLSetLatticePtr() const {
+    return static_cast<Lattice*>(aos_p.get());
+  }
+
+  // If the two sets of PTMemLocObject contain overlapping MemLocObjects
+  // then the two PTMemLocObjects mayEquals.
+  bool PTMemLocObject::mayEqualML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
+    // scope reg(txt()<<"PTMemLocObject::mayEqualML", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    if(isFullML(pedge) || thatPTML_p->isFullML(pedge)) return true;
+
+    // if(pointsToAnalysisDebugLevel() >= 2) {
+    //   dbg << "thisML=" << str() << endl;
+    //   dbg << "thatML=" << thatPTML_p->str() << endl;
+    // }
+    
+    // Check if the sets are overlapping.
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+    // Iterate over one of the sets
+    // Check if any ML from that set mayEquals any element in this set
+    AbstractObjectSet::const_iterator cIt = thatMLSet.begin();
+    for( ; cIt != thatMLSet.end(); ++cIt) {
+      if(aos_p->containsMay(boost::static_pointer_cast<AbstractObject>(*cIt))) return true;
+    }
+    return false;
+  }
+
+  // Two PTMemLocObjects are mustEquals if the sets are singleton and
+  // the object in the sets mustEqual each other
+  bool PTMemLocObject::mustEqualML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    if(isFullML(pedge) || thatPTML_p->isFullML(pedge)) return false;
+    
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+    
+    // If the sets are not singleton they are not mustEquals.
+    if(aos_p->size() != 1 || thatMLSet.size() != 1) return false;
+
+    assert(aos_p->size() == thatMLSet.size() == 1);
+
+    // The object in the set should also mustEqual each other
+    const AbstractObjectPtr thatAO_p = boost::static_pointer_cast<AbstractObject>(*thatMLSet.begin());
+
+    return aos_p->containsMust(thatAO_p);
+  }
+
+  bool PTMemLocObject::equalSetML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    // If this full then thatML should also be full for the two to be equalSet
+    if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+
+    // If the sets are not of same size then they are not equalSets
+    if(aos_p->size() != thatMLSet.size()) return false;
+
+    // Two sets are of same size
+    AbstractObjectSet::const_iterator cIt = thatMLSet.begin();
+    for( ; cIt != thatMLSet.end(); ++cIt) {
+      // If a single element in that set not equals any element in this set
+      // then the two MLs are not equalSets.
+      if(!aos_p->containsEqualSet(*cIt)) return false;
+    }
+    
+    // Two sets have identical elements.
+    return true;
+  }
+
+  bool PTMemLocObject::subSetML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    // If this full then thatML should also be full for the two to be equalSet
+    if(isFullML(pedge)) return thatML_p->isFullML(pedge);
+
+    const AbstractObjectSet& thatMLSet = thatPTML_p->getMLSet();
+    AbstractObjectSet::const_iterator cbegin, cend, cIt;
+
+    // Larger set of the two.
+    boost::shared_ptr<AbstractObjectSet> laos_p;
+
+    if(aos_p->size() <= thatMLSet.size()) {
+      // aos_p is the smaller set.
+      cbegin = aos_p->begin();
+      cend = aos_p->end();
+      laos_p = thatPTML_p->getMLSetPtr();
+    }
+    else {
+      // thatMLSet is the smaller set
+      cbegin = thatMLSet.begin();
+      cend = thatMLSet.end();
+      laos_p = aos_p;
+    }
+    assert(laos_p);
+
+    // Iterate on the smaller set.
+    // Check if the element equals any element in the larger set.
+    for( cIt = cbegin; cIt != cend; ++cIt) {
+      // If a single element in the smaller set not equals any element in the larger set
+      // then the subSet relation does not hold.
+      if(!laos_p->containsEqualSet(*cIt)) return false;
+    }
+    return true;
+  }
+
+  bool PTMemLocObject::isLiveML(PartEdgePtr pedge) {
+    if(aos_p->size() == 0) return false;
+    AbstractObjectSet::const_iterator cIt = aos_p->begin();
+    for( ; cIt != aos_p->end(); ++cIt) {
+      MemLocObjectPtr cML_p = boost::dynamic_pointer_cast<MemLocObject>(*cIt);
+      if(cML_p->isLiveML(pedge)) return true;
+    }
+    return false;
+  }
+
+  bool PTMemLocObject::meetUpdateML(MemLocObjectPtr thatML_p, PartEdgePtr pedge) {
+    PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
+    assert(thatPTML_p);
+
+    if(isFullML(pedge)) return false;
+    
+    Lattice* thatMLSetLatPtr = thatPTML_p->getMLSetLatticePtr();
+    return aos_p->meetUpdate(thatMLSetLatPtr);
+  }
+
+  bool PTMemLocObject::isFullML(PartEdgePtr pedge) {
+    return aos_p->isFullLat();
+  }
+
+  bool PTMemLocObject::isEmptyML(PartEdgePtr pedge) {
+    return aos_p->isEmptyLat();
+  }
+
+  MemLocObjectPtr PTMemLocObject::copyML() const {
+    return boost::make_shared<PTMemLocObject>(*this);
+  }
+
+  MemLocObject* PTMemLocObject::copyMLPtr() const {
+    return boost::make_shared<PTMemLocObject>(*this).get();
+  }
+
+  string PTMemLocObject::str(string indent) const {
+    ostringstream oss;
+    oss << "[PointsToML:" << aos_p->str(indent) << "]\n";
+    return oss.str();
+  }
+
+
+  /************************
+   * Expr2MemLocTraversal *
+   ************************/
+
+  // void Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)
+  // {
+  //   scope regvis("Expr2MemLocTraversal::visit(SgPointerDerefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
+  //   SgExpression* operand = sgn->get_operand();
+  //   operand->accept(*this);
+  //   boost::shared_ptr<AbstractObjectSet> new_p_aos = 
+  //           boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
+  //   for(AbstractObjectSet::const_iterator i=p_aos->begin(); i!=p_aos->end(); i++) {
+  //     boost::shared_ptr<AbstractObjectSet> ao = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(*i));
+  //     assert(ao);
+  //     new_p_aos->meetUpdate(ao.get());
+  //   }
+  //   p_aos = new_p_aos;
+  // }
+
+  // void Expr2MemLocTraversal::visit(SgVarRefExp* sgn)
+  // {
+  //   scope regvis("Expr2MemLocTraversal::visit(SgVarRefExp* sgn)", scope::medium, attrGE("pointsToAnalysisDebugLevel", 1));
+  //   dbg << "isSgPointerType(sgn->get_type())="<<isSgPointerType(sgn->get_type())<<endl;
+  //   // return points to set only for pointer types
+  //   /*if(isSgPointerType(sgn->get_type()))
+  //   {
+  //     MemLocObjectPtr ml = composer->Expr2MemLoc(sgn, pedge, analysis);
+  //     p_aos = boost::dynamic_pointer_cast<AbstractObjectSet>(aom->get(ml));
+  //   }*/
+  //   p_aos = boost::make_shared<AbstractObjectSet>(pedge, composer, analysis, AbstractObjectSet::may);
+  //   p_aos->insert(composer->Expr2MemLoc(sgn, pedge, analysis));
+  //   if(pointsToAnalysisDebugLevel()>=1) dbg << "p_aos="<<p_aos->str()<<endl;
+  // }
+
+  // void Expr2MemLocTraversal::visit(SgAssignOp* sgn)
+  // {
+  //   // handle p = q where p, q are pointer types    
+  // }
 };

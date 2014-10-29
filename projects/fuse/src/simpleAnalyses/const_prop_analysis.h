@@ -193,8 +193,8 @@ class CPValueObject : public FiniteLattice, public ValueObject {
   bool isEmptyLat();
   
   // pretty print for the object
-  std::string str(std::string indent="");
-  std::string strp(PartEdgePtr pedge, std::string indent="");
+  std::string str(std::string indent="") const;
+  std::string strp(PartEdgePtr pedge, std::string indent="") const;
   
   // Applies the given unary or binary operation to this and the given CPValueKind
   // Returns:
@@ -279,7 +279,7 @@ class CPUninitializedKind : public CPValueKind {
   // Returns a copy of this CPUninitializedKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPUninitializedKind>(); }
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CPUninitializedKind
 
 class CPConcreteKind : public CPValueKind {
@@ -379,7 +379,7 @@ class CPConcreteKind : public CPValueKind {
   // Returns a copy of this CPConcreteKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPConcreteKind>(getVal()); }
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CPConcreteKind
 
 class CPOffsetListKind : public CPValueKind {
@@ -477,7 +477,7 @@ class CPOffsetListKind : public CPValueKind {
   // Returns a copy of this CPOffsetListKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPOffsetListKind>(offsetL); }
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CPOffsetListKind
 
 class CPUnknownKind : public CPValueKind {
@@ -524,7 +524,7 @@ class CPUnknownKind : public CPValueKind {
   // Returns a copy of this CPUnknownKind
   CPValueKindPtr copyV() const { return boost::make_shared<CPUnknownKind>(); }
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CPUnknownKind
 
 class CPMemLocObject;
@@ -652,7 +652,7 @@ class CPMemLocObject: public MemLocObject, public FiniteLattice
   // Allocates a copy of this object and returns a regular pointer to it
   MemLocObject* copyMLPtr() const;
   
-  std::string str(std::string indent=""); // pretty print for the object
+  std::string str(std::string indent="") const; // pretty print for the object
 }; // CPMemLocObject
   
 class CPMemLocObjectNodeFact: public NodeFact
@@ -663,7 +663,7 @@ class CPMemLocObjectNodeFact: public NodeFact
   
   // returns a copy of this node fact
   NodeFact* copy() const { return new CPMemLocObjectNodeFact(ml); }
-  std::string str(std::string indent="") { return ml->str(); }
+  std::string str(std::string indent="") const { return ml->str(); }
 };
 
 class ConstantPropagationAnalysis : virtual public FWDataflow
@@ -702,7 +702,7 @@ class ConstantPropagationAnalysis : virtual public FWDataflow
   implTightness Expr2MemLocTightness() { return ComposedAnalysis::tight; }
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "ConstantPropagationAnalysis"; }
   
   friend class ConstantPropagationAnalysisTransfer;
@@ -727,7 +727,10 @@ class ConstantPropagationAnalysisTransfer : public VariableStateTransfer<CPValue
   void visit(SgMinusMinusOp *sgn);
   void visit(SgPlusPlusOp *sgn);
   // Unary ops that do not update the operand
-  void visit(SgUnaryOp *sgn);
+  // void visit(SgUnaryOp *sgn);
+  void visit(SgCastExp* sgn);
+  void visit(SgMinusOp* sgn);
+  void visit(SgNotOp* sgn);
   
   void visit(SgValueExp *val);
    

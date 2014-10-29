@@ -89,7 +89,7 @@ class CallPartContext : public PartContext
   // Return true if this causes the object to change and false otherwise.
   bool setToFull();
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CallPartContext
 
 // This object's current level in the lattice: (bottom, dead, live)
@@ -171,7 +171,7 @@ class CallCtxSensPart : public Part
   bool less(const PartPtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // class CallCtxSensPart
 
 /* ###############################
@@ -226,7 +226,7 @@ class CallCtxSensPartEdge : public PartEdge {
   bool less(const PartEdgePtr& o)  const;
   
   // Pretty print for the object
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CallCtxSensPartEdge
 
 /* #########################
@@ -253,7 +253,7 @@ class CallCtxSensMR : public MemRegionObject
     
     // pretty print
     //std::string str(std::string indent="") const;
-    std::string str(std::string indent="");// { return ((const CallCtxSensMR*)this)->str(indent); }
+    std::string str(std::string indent="") const;// { return ((const CallCtxSensMR*)this)->str(indent); }
 
     // copy this object and return a pointer to it
     MemRegionObjectPtr copyMR() const;
@@ -314,7 +314,7 @@ class CallCtxSensML : public MemLocObject
     
     // pretty print
     //std::string str(std::string indent="") const;
-    std::string str(std::string indent="");// { return ((const CallCtxSensML*)this)->str(indent); }
+    std::string str(std::string indent="") const;// { return ((const CallCtxSensML*)this)->str(indent); }
 
     // copy this object and return a pointer to it
     MemLocObjectPtr copyML() const;
@@ -468,7 +468,7 @@ class CallCtxSensLattice: public FiniteLattice
   // Returns whether this lattice denotes the empty set.
   bool isEmptyLat();
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 }; // CallCtxSensLattice
 
 /* ##########################################
@@ -550,7 +550,7 @@ class CallContextSensitivityAnalysis : public FWDataflow
   //PartEdgePtr convertPEdge_Spec(PartEdgePtr pedge);
   
   // pretty print for the object
-  std::string str(std::string indent="")
+  std::string str(std::string indent="") const
   { return "CallContextSensitivityAnalysis"; }
 }; // CallContextSensitivityAnalysis
 

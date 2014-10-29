@@ -26,7 +26,7 @@ class DummyContext: public PartContext
   bool operator==(const PartContextPtr& that) const;
   bool operator< (const PartContextPtr& that) const;
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 typedef CompSharedPtr<DummyContext> DummyContextPtr;
 
@@ -97,7 +97,7 @@ class Ctxt2PartsMap : public sight::printable {
   // subgraphName: name of the subgraph that contains the current level in the map
   virtual void map2dot(std::ostream& o, std::map<PartPtr, partDotInfoPtr>& partInfo, std::string subgraphName="cluster", std::string indent="") const;
   
-  virtual std::string str(std::string indent="");
+  virtual std::string str(std::string indent="") const;
 };
 
 class Ctxt2PartsMap_Leaf : public sight::printable {
@@ -117,7 +117,7 @@ class Ctxt2PartsMap_Leaf : public sight::printable {
   // subgraphName: name of the subgraph that contains the current level in the map
   virtual void map2dot(std::ostream& o, std::map<PartPtr, partDotInfoPtr>& partInfo, std::string subgraphName="cluster", std::string indent="") const;
   
-  virtual std::string str(std::string indent="");
+  virtual std::string str(std::string indent="") const;
 };
 
 // Returns an empty Ctxt2PartsMap that can support keys of this length

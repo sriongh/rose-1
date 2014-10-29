@@ -85,7 +85,7 @@ class BoolAndLattice : public FiniteLattice
   // Returns whether this lattice denotes the empty set.
   bool isEmptyLat();
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 class IntMaxLattice : public InfiniteLattice
@@ -162,7 +162,7 @@ class IntMaxLattice : public InfiniteLattice
   // Returns whether this lattice denotes the empty set.
   bool isEmptyLat();
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 /*########################
@@ -252,7 +252,7 @@ class ProductLattice : public virtual Lattice
   // The string that represents this object
   // If indent!="", every line of this string must be prefixed by indent
   // The last character of the returned string should not be '\n', even if it is a multi-line string.
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 class FiniteProductLattice : public virtual ProductLattice

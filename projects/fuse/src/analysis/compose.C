@@ -1327,10 +1327,10 @@ set<PartPtr> ChainComposer::GetStartAStates_Spec()
 set<PartPtr> ChainComposer::GetEndAStates_Spec()
 { return GetEndAStates(this); }
 
-string ChainComposer::str(string indent) {
+string ChainComposer::str(string indent) const {
   ostringstream oss;
   oss << "[ChainComposer: ";
-  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); ) {
+  for(list<ComposedAnalysis*>::const_iterator a=allAnalyses.begin(); a!=allAnalyses.end(); ) {
     oss << (*a)->str();
     a++;
     if(a!=allAnalyses.end()) oss << ", ";
@@ -2046,10 +2046,10 @@ PartEdgePtr LooseParallelComposer::getEdgeForAnalysis(PartEdgePtr pedge, Compose
   }
 }
 
-string LooseParallelComposer::str(string indent) {
+string LooseParallelComposer::str(string indent) const {
   ostringstream oss;
   oss << "[LooseParallelComposer: ";
-  for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); ) {
+  for(list<ComposedAnalysis*>::const_iterator a=allAnalyses.begin(); a!=allAnalyses.end(); ) {
     oss << (*a)->str();
     a++;
     if(a!=allAnalyses.end()) oss << ", ";
