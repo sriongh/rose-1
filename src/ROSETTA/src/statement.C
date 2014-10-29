@@ -893,8 +893,15 @@ Grammar::setUpStatements ()
   //               NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE);
   // FunctionDeclaration.setDataPrototype ( "SgFunctionParameterList*", "parameterList", "= NULL",
   //               NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE, NO_COPY_DATA);
+#if 1
+  // Original code.
      FunctionDeclaration.setDataPrototype ( "SgFunctionParameterList*", "parameterList", "= NULL",
                                             NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE, CLONE_PTR);
+#else
+  // DQ (10/11/2014): Make this a constructor parameter list so that we can support the generation from ATerms.
+     FunctionDeclaration.setDataPrototype ( "SgFunctionParameterList*", "parameterList", "= NULL",
+                                            CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, DEF_TRAVERSAL, NO_DELETE, CLONE_PTR);
+#endif
 
   // DQ (4/25/2004): Add modifier FunctionModifier and SpecialFunctionModifier
      FunctionDeclaration.setDataPrototype ( "SgFunctionModifier", "functionModifier", "",
@@ -1052,6 +1059,20 @@ Grammar::setUpStatements ()
 
   // DQ (2/19/2014): Add support for gnu attribute regnum (required to compile valgrind).
      FunctionDeclaration.setDataPrototype ( "int","gnu_regparm_attribute", "= 0",
+                   NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (7/9/2014): Example test2014_85.C demonstrates that the declared type of a function can be 
+  // equivalent to other same functions (associated defining and non-defining declarations), but 
+  // syntatically different in a way that makes a difference to the code generated from the unparser 
+  // (but not to the formal type system).  I am not clear if this type should be traversed, I think 
+  // not, since it is a function type used only for the representation of syntax.
+     FunctionDeclaration.setDataPrototype ( "SgFunctionType*", "type_syntax", "= NULL",
+                                            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL /* || DEF2TYPE_TRAVERSAL */, NO_DELETE);
+
+  // DQ (7/9/2014): Added boolean flag to communicate when the function's type syntax is different from 
+  // the function's type.  However, when the type_syntax is non-null, it is always an equivalent type.
+  // Future work will enforce this concept fo type equivalence, not yet supported.
+     FunctionDeclaration.setDataPrototype ( "bool","type_syntax_is_available", "= false",
                    NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
 
   // DQ (7/26/2014): Added support for C11 "_Noreturn" keyword (alternative noreturn specification).
@@ -2603,6 +2624,19 @@ Grammar::setUpStatements ()
      NamespaceAliasDeclarationStatement.setDataPrototype ( 
                "SgNamespaceDeclarationStatement*", "namespaceDeclaration", "= NULL",
                CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (7/8/2014): Added support for name qualification.
+     NamespaceAliasDeclarationStatement.setDataPrototype ( "int", "name_qualification_length", "= 0",
+            NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (7/8/2014): Added information required for new name qualification support.
+     NamespaceAliasDeclarationStatement.setDataPrototype("bool","type_elaboration_required","= false",
+                                NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
+  // DQ (7/8/2014): Added information required for new name qualification support.
+     NamespaceAliasDeclarationStatement.setDataPrototype("bool","global_qualification_required","= false",
+                                NO_CONSTRUCTOR_PARAMETER, BUILD_ACCESS_FUNCTIONS, NO_TRAVERSAL, NO_DELETE);
+
 
      NamespaceDefinitionStatement.setFunctionPrototype ( "HEADER_NAMESPACE_DEFINITION_STATEMENT", "../Grammar/Statement.code" );
   // NamespaceDefinitionStatement.setDataPrototype ("SgDeclarationStatementPtrList", "declarationList", "",
