@@ -3,7 +3,7 @@
 
 #include <set>
 #include <string>
-#include "widgets.h"
+#include "sight.h"
 
 namespace fuse
 {
@@ -15,6 +15,10 @@ namespace fuse
   // pulls off all the SgCastExps that may be wrapping the given expression, returning the expression that is being wrapped
   SgExpression* unwrapCasts(SgExpression* e);
 
+  // Creates the SgValueExp that denotes the contents of the given expression, returning NULL if this is not possible.
+  // The caller must deallocate the returned object
+  SgValueExp* getSGValueExp(SgExpression* e);
+  
   // returns the DataflowNode that represents that start of the CFG of the given function's body
   CFGNode getFuncStartCFG(SgFunctionDefinition* func);
 

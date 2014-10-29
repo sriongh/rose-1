@@ -108,7 +108,7 @@ class graphEdgeIterator
           
     checkpoint(const checkpoint& that);
     
-    std::string str(std::string indent="");
+    std::string str(std::string indent="") const;
     
     friend class graphEdgeIterator;
   };
@@ -119,7 +119,7 @@ class graphEdgeIterator
   // Loads this iterator's state from the given checkpoint.
   void restartFromChkpt(checkpoint& chkpt);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 typedef graphEdgeIterator<PartEdgePtr, PartPtr> partEdgeIterator;
@@ -249,7 +249,7 @@ class dataflowGraphEdgeIterator : public virtual graphEdgeIterator<GraphEdgePtr,
     
     checkpoint(const checkpoint &that);
             
-    std::string str(std::string indent="");
+    std::string str(std::string indent="") const;
     
     friend class dataflowGraphEdgeIterator;
   };
@@ -260,7 +260,7 @@ class dataflowGraphEdgeIterator : public virtual graphEdgeIterator<GraphEdgePtr,
   // Loads this dataflow iterator's state from the given checkpoint.
   void restartFromChkpt(checkpoint& chkpt);
   
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 typedef dataflowGraphEdgeIterator<PartEdgePtr, PartPtr> dataflowPartEdgeIterator;

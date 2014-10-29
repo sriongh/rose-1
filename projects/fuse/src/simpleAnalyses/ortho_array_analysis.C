@@ -4,10 +4,12 @@
 #include <boost/make_shared.hpp>
 
 using namespace std;
-using namespace dbglog;
+using namespace sight;
+
 
 namespace fuse {
-int orthoArrayAnalysisDebugLevel=0;
+//int orthoArrayAnalysisDebugLevel=0;
+DEBUG_LEVEL(orthoArrayAnalysisDebugLevel, 0);
 
 /*********************************
  ***** OrthoIndexVector_Impl *****
@@ -193,34 +195,34 @@ bool OrthoIndexVector_Impl::isEmpty(PartEdgePtr pedge, Composer* comp, ComposedA
 
 bool OrthoArrayML::mayEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
 {
-  scope reg(txt()<<"OrthoArrayML::mayEqualML("<<other->str()<<")", scope::medium, orthoArrayAnalysisDebugLevel, 1);
+  scope reg(txt()<<"OrthoArrayML::mayEqualML("<<other->str()<<")", scope::medium, attrGE("orthoArrayAnalysisDebugLevel", 1));
   OrthoArrayMLPtr that = boost::dynamic_pointer_cast<OrthoArrayML>(other);
   assert(that);
   
-  if(orthoArrayAnalysisDebugLevel>=1) 
+  if(orthoArrayAnalysisDebugLevel()>=1) 
     dbg << "level="<<(level==empty? "empty": (level==array? "array": (level==notarray? "notarray": (level==full? "full": "???"))))<<", "<<
          "that->level="<<(that->level==empty? "empty": (that->level==array? "array": (that->level==notarray? "notarray": (that->level==full? "full": "???"))))<<", "<<endl;
 
   // If both objects denote empty sets, they're definitely equal
   if(this->level==empty && that->level==empty) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>May-Equal</b>"<<endl;
     return true;
   // If one is empty and the other is not, they're definitely not equal
   } else if(this->level==empty || that->level==empty) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>Not May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>Not May-Equal</b>"<<endl;
     return false;
   }
   
   // If either object is full, they may be equal
   if(this->level==full  || that->level==full) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>May-Equal</b>"<<endl;
     return true;
   }
   
   // If the two objects are different types, they're not equal
   if( (this->level==array    && that->level==notarray) ||
       (this->level==notarray && that->level==array)) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>May-Equal</b>"<<endl;
     return false;
   }
 
@@ -235,7 +237,7 @@ bool OrthoArrayML::mayEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
     // index vector mayequals the other
     bool areMayEqual = (this->p_array)->mayEqual(that->p_array, pedge, oaa->getComposer(), oaa) &&
                        (this->p_iv)->mayEqual(that->p_iv, pedge, oaa->getComposer(), oaa);
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(areMayEqual?"":"Not ")<<"May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(areMayEqual?"":"Not ")<<"May-Equal</b>"<<endl;
     return areMayEqual;
   }
   // both ML are not array elements
@@ -243,7 +245,7 @@ bool OrthoArrayML::mayEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
     // making sure both are not array
     assert(p_notarray); assert(that->p_notarray);
     bool areMayEqual = p_notarray->mayEqual(that->p_notarray, pedge, oaa->getComposer(), oaa);
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(areMayEqual?"":"Not ")<<"May-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(areMayEqual?"":"Not ")<<"May-Equal</b>"<<endl;
     return areMayEqual;
   }
   assert(0);
@@ -251,22 +253,22 @@ bool OrthoArrayML::mayEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
 
 bool OrthoArrayML::mustEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
 {
-  scope reg(txt()<<"OrthoArrayML::mustEqualML("<<other->str()<<")", scope::medium, orthoArrayAnalysisDebugLevel, 1);
+  scope reg(txt()<<"OrthoArrayML::mustEqualML("<<other->str()<<")", scope::medium, attrGE("orthoArrayAnalysisDebugLevel", 1));
   OrthoArrayMLPtr that = boost::dynamic_pointer_cast<OrthoArrayML>(other);
   
   // If both objects denote empty sets, they're definitely equal
   if(this->level==empty && that->level==empty) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>Must-Equal</b>"<<endl;
     return true;
   // If one is empty and the other is not, they're definitely not equal
   } else if(this->level==empty || that->level==empty) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
     return false;
   }
   
   // If either object is full, they may or may not be equal
   if(this->level==full  || that->level==full) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
     return false;
   }
   
@@ -274,7 +276,7 @@ bool OrthoArrayML::mustEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
   // compare only if two objects are same types
   if( (this->level==array    && that->level==notarray) ||
       (this->level==notarray && that->level==array) ) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>Not Must-Equal</b>"<<endl;
     return false;
   }
   
@@ -289,7 +291,7 @@ bool OrthoArrayML::mustEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
     // index vector mayequals the other
     bool areMustEqual = (this->p_array)->mustEqual(that->p_array, pedge, oaa->getComposer(), oaa) && 
                         (this->p_iv)->mustEqual(that->p_iv, pedge, oaa->getComposer(), oaa);
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(areMustEqual?"":"Not ")<<"Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(areMustEqual?"":"Not ")<<"Must-Equal</b>"<<endl;
     return areMustEqual;
   }
   // both ML are not array elements
@@ -297,7 +299,7 @@ bool OrthoArrayML::mustEqualML(MemLocObjectPtr other, PartEdgePtr pedge)
     // making sure both are not array
     assert(p_notarray); assert(that->p_notarray);
     bool areMustEqual = p_notarray->mustEqual(that->p_notarray, pedge, oaa->getComposer(), oaa);
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(areMustEqual?"":"Not ")<<"Must-Equal</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(areMustEqual?"":"Not ")<<"Must-Equal</b>"<<endl;
     return areMustEqual;
   }
   assert(0);
@@ -383,13 +385,13 @@ bool OrthoArrayML::subSet(AbstractObjectPtr that_arg, PartEdgePtr pedge)
 //NOTE: Do we have to always re-implement this for every analysis
 bool OrthoArrayML::isLiveML(PartEdgePtr pedge)
 {
-  scope reg(txt()<<"OrthoArrayML::isLiveML() "<<(level==empty? "empty": (level==array? "array": (level==notarray? "notarray": (level==full? "full": "???")))), scope::medium, orthoArrayAnalysisDebugLevel, 1);
+  scope reg(txt()<<"OrthoArrayML::isLiveML() "<<(level==empty? "empty": (level==array? "array": (level==notarray? "notarray": (level==full? "full": "???")))), scope::medium, attrGE("orthoArrayAnalysisDebugLevel", 1));
   // if the array is live, element is live
   if(level==array) {
     /*bool live = oaa->getComposer()->OperandIsLiveMemLoc(array_ref, isSgPntrArrRefExp(array_ref)->get_lhs_operand(), p_array, pedge, oaa) ||
                 p_array->isLive(pedge, oaa->getComposer(), oaa);
     //dbg << "OrthoArrayML::isLive() = "<<live<<endl;
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(live?"LIVE":"DEAD")<<"</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(live?"LIVE":"DEAD")<<"</b>"<<endl;
     return live;*/
     
     // Always return live since OrthogonalArrayAnalysis knows nothing about whether a memory location is live
@@ -406,13 +408,13 @@ bool OrthoArrayML::isLiveML(PartEdgePtr pedge)
   } else if(level==notarray) {
     //dbg << "OrthoArrayML::isLiveML() p_notarray: "<<str()<<endl;
     bool live = p_notarray->isLive(pedge, oaa->getComposer(), oaa);
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>"<<(live?"LIVE":"DEAD")<<"</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>"<<(live?"LIVE":"DEAD")<<"</b>"<<endl;
     return live;
   } else if(level==full) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>LIVE</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>LIVE</b>"<<endl;
     return true;
   } else if(level==empty) {
-    if(orthoArrayAnalysisDebugLevel>=1) dbg << "<b>DEAD</b>"<<endl;
+    if(orthoArrayAnalysisDebugLevel()>=1) dbg << "<b>DEAD</b>"<<endl;
     return false;
   }
   assert(0);
@@ -682,7 +684,7 @@ MemLocObjectPtr OrthogonalArrayAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr pedg
     MemLocObjectPtr tmp = boost::make_shared<OrthoArrayML>(n, array, iv, this);
 
     // GB: Do we need to deallocate subscripts???
-    if(orthoArrayAnalysisDebugLevel>=1) {
+    if(orthoArrayAnalysisDebugLevel()>=1) {
       dbg << "OrthogonalArrayAnalysis::Expr2MemLoc() "<<endl;
       dbg << "&nbsp;&nbsp;&nbsp;&nbsp;"<<tmp->str("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
     }
