@@ -1014,7 +1014,7 @@ const StaticSingleAssignment::VarName& HeapSSA::hv_getHeapVarName(SgExpression* 
     std::string hv_ = "_hv_";
     SgName name(hv_.c_str());
     SgType* type = sgn->get_type();
-    SgInitializedName* initializedName = new SgInitializedName(name, type);
+    SgInitializedName* initializedName = SageBuilder::buildInitializedName(name,type);
     initializedName->set_scope(hv_currFunc);
 
     // Create a new unique var name object which take the psudo SgInitializedName object

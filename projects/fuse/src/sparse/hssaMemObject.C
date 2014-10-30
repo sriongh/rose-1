@@ -1695,7 +1695,7 @@ const StaticSingleAssignment::VarName& PGSSA::getHeapVarName(SgNode* sgn) {
       type = funcDecl->get_orig_return_type();
     else
       ROSE_ASSERT(type != NULL);
-    SgInitializedName* initializedName = new SgInitializedName(name, type);
+    SgInitializedName* initializedName = SageBuilder::buildInitializedName(name, type);
     initializedName->set_scope(currFunc);
 
     // Create a new unique var name object which take the psudo SgInitializedName object
