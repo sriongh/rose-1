@@ -9,6 +9,8 @@
 
 namespace fuse {
 
+  class MPICommAnalysis;
+
   /******************
    * MPICommATSPart *
    ******************/
@@ -18,8 +20,8 @@ namespace fuse {
   public:
     MPICommATSPart(PartPtr base, MPICommAnalysis* analysis);
 
-    std::list<PartPtr> outEdges();
-    std::list<PartPtr> inEdges();
+    std::list<PartEdgePtr> outEdges();
+    std::list<PartEdgePtr> inEdges();
 
     std::set<CFGNode> CFGNodes() const;
 
@@ -33,6 +35,8 @@ namespace fuse {
 
     std::string str(std::string indent="") const;
   };
+
+  typedef CompSharedPtr<MPICommATSPart> MPICommATSPartPtr;
 
   /**********************
    * MPICommATSPartEdge *
@@ -55,10 +59,18 @@ namespace fuse {
     std::string str(std::string indent="") const;
   };
 
+  typedef CompSharedPtr<MPICommATSPartEdge> MPICommATSPartEdgePtr;
+
   /*******************
    * MPICommAnalysis *
    *******************/
   class MPICommAnalysis : public FWDataflow {
+
+    std::map<PartPtr, MPICommATSPartPtr> mpiCommATSPartMap;
+
+    std::map<MPICommATSPartPtr, std::set<MPICommATSPartPtr> > predMap;
+    std::map<MPICommATSPartPtr, std::set<MPICommATSPartPtr> > succMap;
+
   public:
     MPICommAnalysis() { }
 
