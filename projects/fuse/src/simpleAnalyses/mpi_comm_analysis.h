@@ -64,12 +64,19 @@ namespace fuse {
   /*******************
    * MPICommAnalysis *
    *******************/
+  typedef std::map<PartPtr, MPICommATSPartPtr> Part2MCAPartMap;
+  typedef std::pair<PartPtr, MPICommATSPartPtr> Part2MCAPartMapElement;
+
+  typedef std::set<MPICommATSPartPtr> MCAPartSet;
+  typedef std::map<MPICommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMap;
+  typedef std::pair<MPICommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMapElement;
+
   class MPICommAnalysis : public FWDataflow {
 
-    std::map<PartPtr, MPICommATSPartPtr> mpiCommATSPartMap;
+    Part2MCAPartMap p2mcapMap;
 
-    std::map<MPICommATSPartPtr, std::set<MPICommATSPartPtr> > predMap;
-    std::map<MPICommATSPartPtr, std::set<MPICommATSPartPtr> > succMap;
+    MCAPart2MCAPartsMap predMap;
+    MCAPart2MCAPartsMap succMap;
 
   public:
     MPICommAnalysis() { }
@@ -98,6 +105,9 @@ namespace fuse {
     
     // pretty print for the object
     std::string str(std::string indent="") const { return "MPICommAnalysis"; }
+    std::string str(const Part2MCAPartMap& p2mcapMap) const ;
+    std::string str(const MCAPart2MCAPartsMap& mcap2mcapMap) const ;
+    std::string str(const MCAPartSet& mcapSet) const ;
   };
 };
 
