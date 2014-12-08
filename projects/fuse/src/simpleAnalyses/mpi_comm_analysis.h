@@ -11,6 +11,100 @@ namespace fuse {
 
   class MPICommAnalysis;
 
+  /*********
+   * MPIOp *
+   *********/
+  //! Type of MPI operations
+  class MPIOp {
+    enum MPIOp_t { SEND, RECV, ISEND, IRECV, BARRIER };
+
+    MPIOp_t op;
+  public:
+    MPIOp(const Function& mpif);
+    bool operator<(const MPIOp& that) const;
+    bool operator==(const MPIOp& that) const;
+  };
+
+  /************
+   * MPIOpAbs *
+   ************/
+  //! Abstract base class for grouping MPI operations.
+  class MPIOpAbs {
+  public:
+    virtual bool operator==(const MPIOpAbsPtr& that) const = 0;
+    virtual bool operator<(const MPIOpAbsPtr& that) const = 0;
+  };
+  
+  typedef boost::shared_ptr<MPIOpAbs> MPIOpAbsPtr;
+
+  /****************
+   * MPIOpAbsType *
+   ****************/
+  //! Group MPI operations by the type of MPI operation
+  class MPIOpAbsType : public MPIOpAbs {
+    MPIOp op;
+  public:
+    MPIOpAbsType(const Function& mpif);
+    bool operator<(const MPIOpAbsPtr& that) const;
+    bool operator==(const MPIOpAbsPtr& that) const;
+  };
+
+  typedef boost::shared_ptr<MPIOpAbsType> MPIOpAbsTypePtr;
+
+  /*********************
+   * MPIOpAbsTargetVal *
+   *********************/
+  //! Group MPI operations by type and value of target expression
+  class MPIOpAbsTargetVal : public MPIOpAbs {
+  };
+
+  typedef boost::shared_ptr<MPIOpAbsTargetVal> MPIOpAbsTargetValPtr;
+
+  /********************
+   * MPIOpAbsCallSite *
+   ********************/
+  //! Group MPI operations by type and call site
+  class MPIOpAbsCallSite : public MPIOpAbs {
+    MPIOp op;
+    const SgFunctionCallExp* callsite;
+  public:
+    MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall);
+    bool operator<(const MPIOpAbsPtr& that) const;
+    bool operator==(const MPIOpAbsPtr& that) const;
+  };
+
+  typedef boost::shared_ptr<MPIOpAbsCallSite> MPIOpAbsCallSitePtr;
+
+  //! Methods for creating MPI operation abstraction
+  MPIOpAbsPtr createMPIOpAbs(SgFunctionCallExp* exp);
+
+  /*************************
+   * MPICommATSPartContext *
+   *************************/
+  // class MPICommATSPartContext : public PartContext {
+  // public:
+  //   std::list<PartContextPtr> getSubPartContexts() const=0;
+  //   bool operator==(const PartContextPtr& that) const;
+  //   bool operator<(const PartContextPtr& that) const;
+  //   virtual ~MPICommATSPartContext();
+  // };
+
+  /******************
+   * MPICallContext *
+   ******************/
+  class MPICallContext /*: public MPICommATSPartContext { */
+    MPIOpAbsPtr mpiopabs_p;
+  public:
+    MPIFuncContext(int calldepth, );
+    std::list<PartContextPtr> getSubPartContexts() const;
+    bool operator==(const PartContextPtr& that) const;
+    bool operator<(const PartContextPtr& that) const;
+  };
+
+  /*********************
+   * NonMPICallContext *
+   *********************/
+
   /******************
    * MPICommATSPart *
    ******************/

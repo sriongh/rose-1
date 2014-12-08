@@ -13,6 +13,63 @@ using namespace boost;
 namespace fuse {
   DEBUG_LEVEL(mpiCommAnalysisDebugLevel, 2);
 
+  /*********
+   * MPIOp *
+   *********/
+  MPIOp::MPIOp(const Function& mpif) {
+    string mpifunc = mpif.get_name().getString();
+    if(mpifunc.compare("MPI_Send")==0) op = MPIOp::SEND;
+    else if(mpifunc.compare("MPI_Recv")==0) op = MPIOp::RECV;
+    else if(mpifunc.compare("MPI_ISend")==0) op = MPIOp::ISEND;
+    else if(mpifunc.compare("MPI_IRecv")==0) op = MPIOp::IRECV;
+    else if(mpifunc.compare("MPI_Barrier")==0) op = MPIOp::BARRIER;
+    else { dbg << "MPIOp::MPIOp() Unhandled MPI Function\n"; assert(0); }
+  }
+
+  bool MPIOp::operator<(const MPIOp& that) const {
+    return op < that.op;
+  }
+
+  bool MPIOp::operator==(const MPIOp& that) const {
+    return op == that.op;
+  }
+
+  /****************
+   * MPIOpAbsType *
+   ****************/
+  MPIOpAbsType::MPIOpAbsType(const Function& mpif) : MPIOpAbs(*this), op(mpif) { }
+  
+  bool MPIOpAbsType::operator<(const MPIOpAbsPtr& that_p) const {
+    MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
+    assert(moat_p);
+    return op < moat_p->op;
+  }
+
+  bool MPIOpAbsType::operator==(const MPIOpAbsPtr& that_p) const {
+    MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
+    assert(moat_p);
+    return op == moat_p->op;
+  }
+
+  /********************
+   * MPIOpAbsCallSite *
+   ********************/
+
+  MPIOpAbsCallSite::MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall) :
+    MPIOpAbs(*this), op(mpif), callsite(sgfncall) { }
+
+  // Check this again
+  bool MPIOpAbsCallSite::operator<(const MPIOpAbsPtr& that_p) const {
+    MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
+    assert(moacs_p);
+  }
+
+  // Check this again
+  bool MPIOpAbsCallSite::operator==(const MPIOpAbsPtr& that_p) const {
+    MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
+    assert(moacs_p);
+  }
+
   /******************
    * MPICommATSPart *
    ******************/
@@ -23,12 +80,13 @@ namespace fuse {
   }
 
   list<PartEdgePtr> MPICommATSPart::outEdges() {
-    assert(0);
-    return parent->outEdges();
+    // Look up succMap in MPICommAnalysis to find the successor of this MPICommATSPart
+    // Create MPICommATSPartEdge between this part and all the successors
   }
 
   list<PartEdgePtr> MPICommATSPart::inEdges() {
-    assert(0);
+    // Look up predMap in MPICommAnalysis to find the predecessor of this MPICommATSPart
+    // Create MPICommATSPartEdge between this part and all the successors
     return parent->inEdges();
   }
 
