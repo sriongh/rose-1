@@ -16,11 +16,11 @@ namespace fuse {
    *********/
   //! Type of MPI operations
   class MPIOp {
-    enum MPIOp_t { SEND, RECV, ISEND, IRECV, BARRIER };
-
+    enum MPIOp_t { SEND, RECV, ISEND, IRECV, BARRIER, NOOP };
     MPIOp_t op;
   public:
     MPIOp(const Function& mpif);
+    MPIOp(const MPIOp& that);
     bool operator<(const MPIOp& that) const;
     bool operator==(const MPIOp& that) const;
   };
@@ -30,11 +30,10 @@ namespace fuse {
    ************/
   //! Abstract base class for grouping MPI operations.
   class MPIOpAbs {
-  public:
+  public:    
     virtual bool operator==(const MPIOpAbsPtr& that) const = 0;
     virtual bool operator<(const MPIOpAbsPtr& that) const = 0;
   };
-  
   typedef boost::shared_ptr<MPIOpAbs> MPIOpAbsPtr;
 
   /****************
@@ -45,6 +44,7 @@ namespace fuse {
     MPIOp op;
   public:
     MPIOpAbsType(const Function& mpif);
+    MPIOpAbsType(const MPIOpAbsType& that);
     bool operator<(const MPIOpAbsPtr& that) const;
     bool operator==(const MPIOpAbsPtr& that) const;
   };
@@ -57,7 +57,6 @@ namespace fuse {
   //! Group MPI operations by type and value of target expression
   class MPIOpAbsTargetVal : public MPIOpAbs {
   };
-
   typedef boost::shared_ptr<MPIOpAbsTargetVal> MPIOpAbsTargetValPtr;
 
   /********************
@@ -69,47 +68,73 @@ namespace fuse {
     const SgFunctionCallExp* callsite;
   public:
     MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall);
+    MPIOpAbsCallSite(const MPIOpAbsCallSite& that);
     bool operator<(const MPIOpAbsPtr& that) const;
     bool operator==(const MPIOpAbsPtr& that) const;
   };
-
   typedef boost::shared_ptr<MPIOpAbsCallSite> MPIOpAbsCallSitePtr;
 
   //! Methods for creating MPI operation abstraction
-  MPIOpAbsPtr createMPIOpAbs(SgFunctionCallExp* exp);
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif);
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, const SgFunctionCallExp* callsite);
 
   /*************************
    * MPICommATSPartContext *
    *************************/
-  // class MPICommATSPartContext : public PartContext {
-  // public:
-  //   std::list<PartContextPtr> getSubPartContexts() const=0;
-  //   bool operator==(const PartContextPtr& that) const;
-  //   bool operator<(const PartContextPtr& that) const;
-  //   virtual ~MPICommATSPartContext();
-  // };
+  //! Abstract based class for context associated with parts of MPICommATS.
+  //! This context separates the MPI parts of the program from non MPI parts
+  //! based on the usage of MPI function calls.
+  //! Based on MPI function call used the part is provided a context.
+  //! Provides a total order between parts implementing < operator. 
+  //! Context are of two types - MPICallContext and NonMPICallContext.
+  //! NonMPICallContext parts are ordered before MPICallContext parts.
+  class MPICommATSPartContext : public PartContext {
+  public:
+    std::list<PartContextPtr> getSubPartContexts() const=0;
+    bool operator==(const PartContextPtr& that) const;
+    bool operator<(const PartContextPtr& that) const;
+    virtual bool less(const PartContextPtr& that) const=0;
+    virtual bool equals(const PartContextPtr& that) const=0;
+  };
+  typedef boost::shared_ptr<MPICommATSPartContext> MPICommATSPartContextPtr;
 
   /******************
    * MPICallContext *
    ******************/
-  class MPICallContext /*: public MPICommATSPartContext { */
+  //! Provides a context to MPICommATSPart based on the MPI operation used.
+  //! Two MPICallContext are differentiated based on the abstraction used for MPI operations.
+  //! The MPI operation abstraction selectively blows up the context of MPI call sites
+  //! Communication analysis carries out the semantics of MPI operation by issuing the operation
+  //! to runtime based on the context.
+  //! Each context is executed at least once by the communication analysis.
+  class MPICallContext : public MPICommATSPartContext {
     MPIOpAbsPtr mpiopabs_p;
-  public:
-    MPIFuncContext(int calldepth, );
+  public:    
     std::list<PartContextPtr> getSubPartContexts() const;
-    bool operator==(const PartContextPtr& that) const;
-    bool operator<(const PartContextPtr& that) const;
+    bool less(const PartContextPtr& that) const;
+    bool equals(const PartContextPtr& that) const;
   };
+  typedef boost::shared_ptr<MPICallContext> MPICallContextPtr;
 
+  //! All non MPI parts are assigned this context.
+  //! Two NonMPICallContexts are differentiated based on the parent context.
   /*********************
    * NonMPICallContext *
    *********************/
+  class NonMPICallContext : public MPICommATSPartContext {
+    PartContextPtr parentContext_p;
+  public:    
+    std::list<PartContextPtr> getSubPartContexts() const;
+    bool less(const PartContextPtr& that) const;
+    bool equals(const PartContextPtr& that) const;
+  };
+  typedef boost::shared_ptr<NonMPICallContext> NonMPICallContextPtr;
 
   /******************
    * MPICommATSPart *
    ******************/
   class MPICommATSPart : public Part {
-    PartPtr parent;
+    MPICommATSPartContextPtr context;
     MPICommAnalysis* mpicommanalysis;
   public:
     MPICommATSPart(PartPtr base, MPICommAnalysis* analysis);
@@ -129,7 +154,6 @@ namespace fuse {
 
     std::string str(std::string indent="") const;
   };
-
   typedef CompSharedPtr<MPICommATSPart> MPICommATSPartPtr;
 
   /**********************

@@ -58,16 +58,30 @@ namespace fuse {
   MPIOpAbsCallSite::MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall) :
     MPIOpAbs(*this), op(mpif), callsite(sgfncall) { }
 
-  // Check this again
+  //! Order the operations by type first
+  //! If two operations are of same type 
+  //! order them using the callsite pointer (SgFunctionCallExp*)
   bool MPIOpAbsCallSite::operator<(const MPIOpAbsPtr& that_p) const {
     MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
     assert(moacs_p);
+    if(op < moacs_p->op) return true;
+    if(op == moacs_p->op) return callsite < moacs_p->callsite;
+    return false;
   }
 
-  // Check this again
   bool MPIOpAbsCallSite::operator==(const MPIOpAbsPtr& that_p) const {
     MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
     assert(moacs_p);
+    if(op == moacs_p->op) return callsite == moacs_p->callsite;
+    return false;
+  }
+
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif) {
+    return boost::make_shared<MPIOpAbsType>(mpif);
+  }
+
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, const SgFunctionCallExp* callsite) {
+    return boost::make_shared<MPIOpAbsCallSite>(mpif, callsite);
   }
 
   /******************
