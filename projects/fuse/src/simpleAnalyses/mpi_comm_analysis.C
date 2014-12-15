@@ -23,8 +23,11 @@ namespace fuse {
     else if(mpifunc.compare("MPI_ISend")==0) op = MPIOp::ISEND;
     else if(mpifunc.compare("MPI_IRecv")==0) op = MPIOp::IRECV;
     else if(mpifunc.compare("MPI_Barrier")==0) op = MPIOp::BARRIER;
+    else if(mpifunc.find("MPI_")==0) op = MPIOp::NOOP;
     else { dbg << "MPIOp::MPIOp() Unhandled MPI Function\n"; assert(0); }
   }
+
+  MPIOp::MPIOp(const MPIOp& that) : op(that.op) { }
 
   bool MPIOp::operator<(const MPIOp& that) const {
     return op < that.op;
@@ -39,6 +42,8 @@ namespace fuse {
    ****************/
   MPIOpAbsType::MPIOpAbsType(const Function& mpif) : MPIOpAbs(*this), op(mpif) { }
   
+  MPIOpAbsType::MPIOpAbsType(const MPIOpAbsType& that) : MPIOpAbs(that), op(that.op) { }
+
   bool MPIOpAbsType::operator<(const MPIOpAbsPtr& that_p) const {
     MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
     assert(moat_p);
