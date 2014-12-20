@@ -16,7 +16,7 @@ namespace fuse {
    *********/
   //! Type of MPI operations
   class MPIOp {
-    enum MPIOp_t { SEND, RECV, ISEND, IRECV, BARRIER, NOOP };
+    enum MPIOp_t { SEND, RECV, ISEND, IRECV, BARRIER, NOOP};
     MPIOp_t op;
   public:
     MPIOp(const Function& mpif);
@@ -36,18 +36,18 @@ namespace fuse {
   };
   typedef CompSharedPtr<MPIOpAbs> MPIOpAbsPtr;
 
-  /****************
-   * MPIOpAbsType *
-   ****************/
-  //! Group MPI operations by the type of MPI operation
-  class MPIOpAbsType : public MPIOpAbs {
-    MPIOp op;
-  public:
-    MPIOpAbsType(const Function& mpif);
-    MPIOpAbsType(const MPIOpAbsType& that);
-    bool operator<(const MPIOpAbsPtr& that) const;
-    bool operator==(const MPIOpAbsPtr& that) const;
-  };
+  // /****************
+  //  * MPIOpAbsType *
+  //  ****************/
+  // //! Group MPI operations by the type of MPI operation
+  // class MPIOpAbsType : public MPIOpAbs {
+  //   MPIOp op;
+  // public:
+  //   MPIOpAbsType(const Function& mpif);
+  //   MPIOpAbsType(const MPIOpAbsType& that);
+  //   bool operator<(const MPIOpAbsPtr& that) const;
+  //   bool operator==(const MPIOpAbsPtr& that) const;
+  // };
 
   typedef CompSharedPtr<MPIOpAbsType> MPIOpAbsTypePtr;
 
@@ -65,9 +65,10 @@ namespace fuse {
   //! Group MPI operations by type and call site
   class MPIOpAbsCallSite : public MPIOpAbs {
     MPIOp op;
+    //! Part that denotes the callsite at which this call was made
     PartPtr callsite;
   public:
-    MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall);
+    MPIOpAbsCallSite(const Function& mpif, PartPtr pCallSite);
     MPIOpAbsCallSite(const MPIOpAbsCallSite& that);
     bool operator<(const MPIOpAbsPtr& that) const;
     bool operator==(const MPIOpAbsPtr& that) const;
@@ -75,20 +76,17 @@ namespace fuse {
   typedef CompSharedPtr<MPIOpAbsCallSite> MPIOpAbsCallSitePtr;
 
   //! Methods for creating MPI operation abstraction
-  MPIOpAbsPtr createMPIOpAbs(const Function& mpif);
-  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, const SgFunctionCallExp* callsite);
+  // MPIOpAbsPtr createMPIOpAbs(const Function& mpif);
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, PartPtr callsite);
 
-  /*************************
-   * MPICommATSPartContext *
-   *************************/
-  //! Abstract based class for context associated with parts of MPICommATS.
-  //! This context separates the MPI parts of the program from non MPI parts
-  //! based on the usage of MPI function calls.
-  //! Based on MPI function call used the part is provided a context.
-  //! Provides a total order between parts implementing < operator. 
-  //! Context are of two types - MPICallContext and NonMPICallContext.
-  //! NonMPICallContext parts are ordered before MPICallContext parts.
-  class MPICommATSPartContext : public PartContext {
+  /**********************
+   * CommATSPartContext *
+   **********************/
+  //! Contexts are additional information used to refine a Part reachable through multiple edges.
+  //! Abstract based class for context associated with parts of CommATS.
+  //! Subclassed by two types of context MPICallContext and NonMPICallContext.
+  //! MPICallContext are used only at call sites of MPI operations
+  class CommATSPartContext : public PartContext {
   public:
     std::list<PartContextPtr> getSubPartContexts() const=0;
     bool operator==(const PartContextPtr& that) const;
@@ -96,20 +94,23 @@ namespace fuse {
     virtual bool less(const PartContextPtr& that) const=0;
     virtual bool equals(const PartContextPtr& that) const=0;
   };
-  typedef CompSharedPtr<MPICommATSPartContext> MPICommATSPartContextPtr;
+  typedef CompSharedPtr<CommATSPartContext> CommATSPartContextPtr;
 
   /******************
    * MPICallContext *
    ******************/
-  //! Provides a context to MPICommATSPart based on the MPI operation used.
+  //! Provides a context to CommATSPart based on the MPI operation used.
   //! Two MPICallContext are differentiated based on the abstraction used for MPI operations.
   //! The MPI operation abstraction selectively blows up the context of MPI call sites
   //! Communication analysis carries out the semantics of MPI operation by issuing the operation
   //! to runtime based on the context.
   //! Each context is executed at least once by the communication analysis.
-  class MPICallContext : public MPICommATSPartContext {
+  class MPICallContext : public CommATSPartContext {
     MPIOpAbsPtr mpiopabs_p;
-  public:    
+    PartContextPtr calleeContext_p;
+  public:
+    MPICallContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p);
+    MPICallContext(const MPICallContext& that);
     std::list<PartContextPtr> getSubPartContexts() const;
     bool less(const PartContextPtr& that) const;
     bool equals(const PartContextPtr& that) const;
@@ -117,27 +118,29 @@ namespace fuse {
   typedef CompSharedPtr<MPICallContext> MPICallContextPtr;
 
   //! All non MPI parts are assigned this context.
-  //! Two NonMPICallContexts are differentiated based on the parent context.
-  /*********************
-   * NonMPICallContext *
-   *********************/
-  class NonMPICallContext : public MPICommATSPartContext {
+  //! Two NonMPIContexts are differentiated based on the parent context.
+  /*****************
+   * NonMPIContext *
+   *****************/
+  class NonMPIContext : public MPICommATSPartContext {
     PartContextPtr parentContext_p;
-  public:    
+  public:
+    NonMPIContext(PartContextPtr parentContext_p);
+    NonMPIContext(const NonMPIContext& that);
     std::list<PartContextPtr> getSubPartContexts() const;
     bool less(const PartContextPtr& that) const;
     bool equals(const PartContextPtr& that) const;
   };
-  typedef CompSharedPtr<NonMPICallContext> NonMPICallContextPtr;
+  typedef CompSharedPtr<NonMPIContext> NonMPIContextPtr;
 
   /******************
-   * MPICommATSPart *
+   * CommATSPart *
    ******************/
-  class MPICommATSPart : public Part {
-    MPICommATSPartContextPtr context;
+  class CommATSPart : public Part {
+    CommATSPartContextPtr context;
     MPICommAnalysis* mpicommanalysis;
   public:
-    MPICommATSPart(PartPtr base, MPICommAnalysis* analysis);
+    CommATSPart(PartPtr base, MPICommAnalysis* analysis);
 
     std::list<PartEdgePtr> outEdges();
     std::list<PartEdgePtr> inEdges();
@@ -154,16 +157,16 @@ namespace fuse {
 
     std::string str(std::string indent="") const;
   };
-  typedef CompSharedPtr<MPICommATSPart> MPICommATSPartPtr;
+  typedef CompSharedPtr<CommATSPart> CommATSPartPtr;
 
   /**********************
-   * MPICommATSPartEdge *
+   * CommATSPartEdge *
    **********************/
-  class MPICommATSPartEdge : public PartEdge {
+  class CommATSPartEdge : public PartEdge {
     PartEdgePtr parent;
     MPICommAnalysis* mpicommanalysis;
   public:
-    MPICommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr parent);
+    CommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr parent);
 
     PartPtr source() const;
     PartPtr target() const;
@@ -177,17 +180,17 @@ namespace fuse {
     std::string str(std::string indent="") const;
   };
 
-  typedef CompSharedPtr<MPICommATSPartEdge> MPICommATSPartEdgePtr;
+  typedef CompSharedPtr<CommATSPartEdge> CommATSPartEdgePtr;
 
   /*******************
    * MPICommAnalysis *
    *******************/
-  typedef std::map<PartPtr, MPICommATSPartPtr> Part2MCAPartMap;
-  typedef std::pair<PartPtr, MPICommATSPartPtr> Part2MCAPartMapElement;
+  typedef std::map<PartPtr, CommATSPartPtr> Part2MCAPartMap;
+  typedef std::pair<PartPtr, CommATSPartPtr> Part2MCAPartMapElement;
 
-  typedef std::set<MPICommATSPartPtr> MCAPartSet;
-  typedef std::map<MPICommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMap;
-  typedef std::pair<MPICommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMapElement;
+  typedef std::set<CommATSPartPtr> MCAPartSet;
+  typedef std::map<CommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMap;
+  typedef std::pair<CommATSPartPtr, MCAPartSet> MCAPart2MCAPartsMapElement;
 
   class MPICommAnalysis : public FWDataflow {
 

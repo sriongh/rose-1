@@ -19,12 +19,15 @@ namespace fuse {
   MPIOp::MPIOp(const Function& mpif) {
     string mpifunc = mpif.get_name().getString();
     if(mpifunc.compare("MPI_Send")==0) op = MPIOp::SEND;
-    else if(mpifunc.compare("MPI_Recv")==0) op = MPIOp::RECV;
-    else if(mpifunc.compare("MPI_ISend")==0) op = MPIOp::ISEND;
-    else if(mpifunc.compare("MPI_IRecv")==0) op = MPIOp::IRECV;
-    else if(mpifunc.compare("MPI_Barrier")==0) op = MPIOp::BARRIER;
-    else if(mpifunc.find("MPI_")==0) op = MPIOp::NOOP;
-    else { dbg << "MPIOp::MPIOp() Unhandled MPI Function\n"; assert(0); }
+    else if(mpifunc.compare("MPI_Recv") == 0) op = MPIOp::RECV;
+    else if(mpifunc.compare("MPI_ISend") == 0) op = MPIOp::ISEND;
+    else if(mpifunc.compare("MPI_IRecv") == 0) op = MPIOp::IRECV;
+    else if(mpifunc.compare("MPI_Barrier") == 0) op = MPIOp::BARRIER;
+    else if(mpifunc.find("MPI_", 0) == 0) op = MPIOp::NOOP;
+    else {
+      dbg << "Unhandled MPI function\n";
+      assert(0);
+    }
   }
 
   MPIOp::MPIOp(const MPIOp& that) : op(that.op) { }
@@ -40,34 +43,37 @@ namespace fuse {
   /****************
    * MPIOpAbsType *
    ****************/
-  MPIOpAbsType::MPIOpAbsType(const Function& mpif) : MPIOpAbs(*this), op(mpif) { }
+  // MPIOpAbsType::MPIOpAbsType(const Function& mpif) : MPIOpAbs(*this), op(mpif) { }
   
-  MPIOpAbsType::MPIOpAbsType(const MPIOpAbsType& that) : MPIOpAbs(that), op(that.op) { }
+  // MPIOpAbsType::MPIOpAbsType(const MPIOpAbsType& that) : MPIOpAbs(that), op(that.op) { }
 
-  bool MPIOpAbsType::operator<(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
-    assert(moat_p);
-    return op < moat_p->op;
-  }
+  // bool MPIOpAbsType::operator<(const MPIOpAbsPtr& that_p) const {
+  //   MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
+  //   assert(moat_p);
+  //   return op < moat_p->op;
+  // }
 
-  bool MPIOpAbsType::operator==(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
-    assert(moat_p);
-    return op == moat_p->op;
-  }
+  // bool MPIOpAbsType::operator==(const MPIOpAbsPtr& that_p) const {
+  //   MPIOpAbsTypePtr moat_p = boost::dynamic_pointer_cast<MPIOpAbsType>(that_p);
+  //   assert(moat_p);
+  //   return op == moat_p->op;
+  // }
 
   /********************
    * MPIOpAbsCallSite *
    ********************/
 
-  MPIOpAbsCallSite::MPIOpAbsCallSite(const Function& mpif, const SgFunctionCallExp* sgfncall) :
-    MPIOpAbs(*this), op(mpif), callsite(sgfncall) { }
+  MPIOpAbsCallSite::MPIOpAbsCallSite(const Function& mpif, PartPtr pCallSite)
+    : MPIOpAbs(*this), op(mpif), callsite(pCallSite) { }
+
+  MPIOpAbsCallSite::MPIOpAbsCallSite(const MPIOpAbsCallSite& that)
+    : MPIOpAbs(that), op(that.op), callsite(that.callsite) { }
 
   //! Order the operations by type first
   //! If two operations are of same type 
   //! order them using the callsite pointer (SgFunctionCallExp*)
   bool MPIOpAbsCallSite::operator<(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
+    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite, MPIOpAbs>(that_p);
     assert(moacs_p);
     if(op < moacs_p->op) return true;
     if(op == moacs_p->op) return callsite < moacs_p->callsite;
@@ -75,121 +81,207 @@ namespace fuse {
   }
 
   bool MPIOpAbsCallSite::operator==(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsCallSitePtr moacs_p = boost::dynamic_pointer_cast<MPIOpAbsCallSite>(that_p);
+    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite, MPIOpAbs>(that_p);
     assert(moacs_p);
     if(op == moacs_p->op) return callsite == moacs_p->callsite;
     return false;
   }
 
-  MPIOpAbsPtr createMPIOpAbs(const Function& mpif) {
-    return boost::make_shared<MPIOpAbsType>(mpif);
+  // MPIOpAbsPtr createMPIOpAbs(const Function& mpif) {
+  //   return boost::make_shared<MPIOpAbsType>(mpif);
+  // }
+
+  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, PartPtr callsite) {
+    return make_ptr<MPIOpAbsCallSite>(mpif, callsite);
   }
 
-  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, const SgFunctionCallExp* callsite) {
-    return boost::make_shared<MPIOpAbsCallSite>(mpif, callsite);
+  /**********************
+   * CommATSPartContext *
+   **********************/
+  //! For two parts that are equal both parts have NonMPIContexts or MPICallContexts.
+  //! This is due to association of MPICallContext only with MPI functions.
+  //! The cases where two parts are equal and one having a NonMPIContext and
+  //! the other having MPICallContext is rare or impossible.
+  //! However such a case should arise for two equal parts order its NonMPIContext before its MPICallContext.
+  bool CommATSPartContext::less(const PartContextPtr& that) const {
+    // If this is MPICallContext and that is NonMPIContext
+    if(dynamic_cast<MPICallContext>(this) && 
+       dynamicPtrCast<NonMPIContext, PartContext>(that)) return false;
+    // If this is NonMPIContext and that is MPICallContext
+    else if(dynamic_cast<NonMPIContext>(this) && 
+            dynamicPtrCast<MPICallContext, PartContext>(that)) return true;
+    // If both are either NonMPIContext or MPICallContext use their respective implementation of less
+    else return less(that);
+  }
+
+  //! For two parts that are equal both parts have NonMPIContexts or MPICallContexts.
+  //! This is due to association of MPICallContext only with MPI functions.
+  //! The cases where two parts are equal and one having a NonMPIContext and
+  //! the other having MPICallContext is rare or impossible.
+  //! However such a case should arise for two equal parts order its NonMPIContext before its MPICallContext.
+  bool CommATSPartContext::equals(const PartContextPtr& that) const {
+    // If this is MPICallContext and that is NonMPIContext
+    if(dynamic_cast<MPICallContext>(this) && 
+       dynamicPtrCast<NonMPICallContext, PartContext>(that)) return false;
+    // If this is NonMPIContext and that is MPICallContext
+    else if(dynamic_cast<NonMPICallContext>(this) && 
+            dynamicPtrCast<MPICallContext, PartContext>(that)) return false;
+    // If both are either NonMPIContext or MPICallContext use their respective implementation of less
+    else return equals(that);
   }
 
   /******************
-   * MPICommATSPart *
+   * MPICallContext *
    ******************/
-  MPICommATSPart::MPICommATSPart(PartPtr base, MPICommAnalysis* analysis) 
+  MPICallContext::MPICallContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p)
+    : CommATSPartContext(), this->mpiopabs_p(mpiopabs_p), this->calleeContext_p(calleeContext_p) { }
+
+  MPICallContext::MPICallContext(const MPICallContext& that)
+    : CommATSPartContext(that), this->mpiopabs_p(that.mpiopabs_p), this->calleeContext_p(that.calleeContext_p) { }
+
+  list<PartContextPtr> MPICallContext::getSubPartContexts() const {
+    assert(false);
+  }
+
+  bool MPICallContext::less(const PartContextPtr& that) const {
+    MPICallContextPtr thatmcc_p = dynamicPtrCast<MPICallContext, PartContext>(that);
+    assert(thatmcc_p);
+    // Differentiate two MPICallContext using the MPI operation abstraction
+    return mpiopabs_p < that.mpiopabs_p;
+  }
+   
+  bool MPICallContext::equals(const PartContextPtr& that) const {
+    MPICallContextPtr thatmcc_p = dynamicPtrCast<MPICallContext, PartContext>(that);
+    assert(thatmcc_p);
+    // Differentiate two MPICallContext using the MPI operation abstraction
+    return mpiopabs_p == that.mpiopabs_p;
+  }
+
+  /*****************
+   * NonMPIContext *
+   *****************/
+  NonMPIContext::NonMPIContext(PartContextPtr parentContext_p) 
+    : CommATSPartContext(), this->parentContext_p(parentContext_p) { }
+  NonMPIContext::NonMPIContext(const NonMPIContext& that)
+    : CommATSPartContext(that), this->parentContext_p(that.parentContext_p) { }
+
+  list<PartContextPtr> NonMPIContext::getSubPartContexts() const {
+    assert(false);
+  }
+
+  bool NonMPIContext::less(const PartContextPtr& that) const {
+    NonMPIContextPtr thatnmc_p = dynamicPtrCast<NonMPIContext, PartContext>(that);
+    assert(thatnmc_p);
+    return parentContext_p < thatnmc_p.parentContext_p;
+  }
+
+  bool NonMPIContext::equals(const PartContextPtr& that) const {
+    NonMPIContextPtr thatnmc_p = dynamicPtrCast<NonMPIContext, PartContext>(that);
+    assert(thatnmc_p);
+    return parentContext_p == thatnmc_p.parentContext_p;
+  }
+
+  /******************
+   * CommATSPart *
+   ******************/
+  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis) 
     : Part(analysis, base),
       parent(base), 
       mpicommanalysis(analysis) {
   }
 
-  list<PartEdgePtr> MPICommATSPart::outEdges() {
-    // Look up succMap in MPICommAnalysis to find the successor of this MPICommATSPart
-    // Create MPICommATSPartEdge between this part and all the successors
+  list<PartEdgePtr> CommATSPart::outEdges() {
+    // Look up succMap in MPICommAnalysis to find the successor of this CommATSPart
+    // Create CommATSPartEdge between this part and all the successors
   }
 
-  list<PartEdgePtr> MPICommATSPart::inEdges() {
-    // Look up predMap in MPICommAnalysis to find the predecessor of this MPICommATSPart
-    // Create MPICommATSPartEdge between this part and all the successors
+  list<PartEdgePtr> CommATSPart::inEdges() {
+    // Look up predMap in MPICommAnalysis to find the predecessor of this CommATSPart
+    // Create CommATSPartEdge between this part and all the successors
     return parent->inEdges();
   }
 
-  set<CFGNode> MPICommATSPart::CFGNodes() const {
+  set<CFGNode> CommATSPart::CFGNodes() const {
     assert(0);
     return parent->CFGNodes();
   }
 
-  set<PartPtr> MPICommATSPart::matchingCallParts() const {
+  set<PartPtr> CommATSPart::matchingCallParts() const {
     assert(0);
     return parent->matchingCallParts();
   }
 
-  PartEdgePtr MPICommATSPart::outEdgeToAny() {
+  PartEdgePtr CommATSPart::outEdgeToAny() {
     assert(0);
     return parent->outEdgeToAny();
   }
 
-  PartEdgePtr MPICommATSPart::inEdgeFromAny() {
+  PartEdgePtr CommATSPart::inEdgeFromAny() {
     assert(0);
     return parent->inEdgeFromAny();
   }
 
-  bool MPICommATSPart::equal(const PartPtr& that) const {
-    const MPICommATSPartPtr mcap_p = dynamicConstPtrCast<MPICommATSPart>(that);
+  bool CommATSPart::equal(const PartPtr& that) const {
+    const CommATSPartPtr mcap_p = dynamicConstPtrCast<CommATSPart>(that);
     assert(0);
     return parent->equal(mcap_p->parent);
   }
 
-  bool MPICommATSPart::less(const PartPtr& that) const {
-    const MPICommATSPartPtr mcap_p = dynamicConstPtrCast<MPICommATSPart>(that);
+  bool CommATSPart::less(const PartPtr& that) const {
+    const CommATSPartPtr mcap_p = dynamicConstPtrCast<CommATSPart>(that);
     // assert(0);
     return parent->less(mcap_p->parent);
   }
 
-  string MPICommATSPart::str(string indent) const {
+  string CommATSPart::str(string indent) const {
     ostringstream oss;
-    oss << "[MPICommATSPart:" << parent->str() << "]";
+    oss << "[CommATSPart:" << parent->str() << "]";
     return oss.str();
   }
 
   /**********************
-   * MPICommATSPartEdge *
+   * CommATSPartEdge *
    **********************/
-  MPICommATSPartEdge::MPICommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr base)
+  CommATSPartEdge::CommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr base)
     : PartEdge(analysis, base),
       parent(base),
       mpicommanalysis(analysis) {
   }
 
-  PartPtr MPICommATSPartEdge::source() const {
+  PartPtr CommATSPartEdge::source() const {
     assert(0);
     return parent->source();
   }
 
-  PartPtr MPICommATSPartEdge::target() const {
+  PartPtr CommATSPartEdge::target() const {
     assert(0);
     return parent->target();
   }
 
-  list<PartEdgePtr> MPICommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
+  list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
     assert(0);
     return parent->getOperandPartEdge(anchor, operand);
   }
 
-  map<CFGNode, shared_ptr<SgValueExp> > MPICommATSPartEdge::getPredicateValue() {
+  map<CFGNode, shared_ptr<SgValueExp> > CommATSPartEdge::getPredicateValue() {
     assert(0);
     return parent->getPredicateValue();
   }
 
-  bool MPICommATSPartEdge::equal(const PartEdgePtr& that) const {
-    const MPICommATSPartEdgePtr mcape_p = dynamicConstPtrCast<MPICommATSPartEdge>(that);
+  bool CommATSPartEdge::equal(const PartEdgePtr& that) const {
+    const CommATSPartEdgePtr mcape_p = dynamicConstPtrCast<CommATSPartEdge>(that);
     assert(0);
     return parent->equal(mcape_p->parent);
   }
 
-  bool MPICommATSPartEdge::less(const PartEdgePtr& that) const {
-    const MPICommATSPartEdgePtr mcape_p = dynamicConstPtrCast<MPICommATSPartEdge>(that);
+  bool CommATSPartEdge::less(const PartEdgePtr& that) const {
+    const CommATSPartEdgePtr mcape_p = dynamicConstPtrCast<CommATSPartEdge>(that);
     assert(0);
     return parent->less(mcape_p->parent);
   }
 
-  string MPICommATSPartEdge::str(string indent) const {
-    return "[MPICommATSPartEdge]";
+  string CommATSPartEdge::str(string indent) const {
+    return "[CommATSPartEdge]";
   }
     
  
@@ -206,7 +298,7 @@ namespace fuse {
     scope reg("MPICommAnalysis::transfer", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 1));
     bool modified=false;
 
-    MPICommATSPartPtr mcap_p = makePtr<MPICommATSPart, PartPtr, MPICommAnalysis*>(part, this);
+    CommATSPartPtr mcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(part, this);
     if(mpiCommAnalysisDebugLevel() >= 2) {
       dbg << mcap_p->str() << endl;
     }
@@ -221,7 +313,7 @@ namespace fuse {
     MCAPartSet& inEdgeSet = predMap[mcap_p];
     for(inEdgeIt=inedges.begin(); inEdgeIt != inedges.end(); ++inEdgeIt) {
       PartPtr src = (*inEdgeIt)->source();
-      MPICommATSPartPtr smcap_p = makePtr<MPICommATSPart, PartPtr, MPICommAnalysis*>(src, this);      
+      CommATSPartPtr smcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(src, this);      
       pair<MCAPartSet::iterator, bool> retVal = inEdgeSet.insert(smcap_p);
       modified = retVal.second || modified;
     }
@@ -229,7 +321,7 @@ namespace fuse {
     MCAPartSet& outEdgeSet = succMap[mcap_p];
     for(outEdgeIt=outedges.begin(); outEdgeIt != outedges.end(); ++outEdgeIt) {
       PartPtr tgt = (*outEdgeIt)->target();
-      MPICommATSPartPtr tmcap_p = makePtr<MPICommATSPart, PartPtr, MPICommAnalysis*>(tgt, this);
+      CommATSPartPtr tmcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(tgt, this);
       pair<MCAPartSet::iterator, bool> retVal = outEdgeSet.insert(tmcap_p);
       modified = retVal.second || modified;
     }
