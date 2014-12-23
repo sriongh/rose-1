@@ -137,10 +137,12 @@ namespace fuse {
    * CommATSPart *
    ******************/
   class CommATSPart : public Part {
-    CommATSPartContextPtr context;
+    CommATSPartContextPtr context_p;
     MPICommAnalysis* mpicommanalysis;
+    PartPtr base_p;
   public:
-    CommATSPart(PartPtr base, MPICommAnalysis* analysis);
+    CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommATSPartContextPtr context);
+    CommATSPart(const CommATSPart& that);
 
     std::list<PartEdgePtr> outEdges();
     std::list<PartEdgePtr> inEdges();
@@ -163,10 +165,11 @@ namespace fuse {
    * CommATSPartEdge *
    **********************/
   class CommATSPartEdge : public PartEdge {
-    PartEdgePtr parent;
-    MPICommAnalysis* mpicommanalysis;
+    PartEdgePtr parent_p;
+    CommATSPartPtr source_p, target_p;
   public:
-    CommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr parent);
+    CommATSPartEdge(PartEdgePtr base, CommATSPartPtr source, CommATSPartPtr target);
+    CommATSPartEdge(const CommATSPartEdge& that);
 
     PartPtr source() const;
     PartPtr target() const;

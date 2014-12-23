@@ -140,7 +140,9 @@ namespace fuse {
     : CommATSPartContext(that), this->mpiopabs_p(that.mpiopabs_p), this->calleeContext_p(that.calleeContext_p) { }
 
   list<PartContextPtr> MPICallContext::getSubPartContexts() const {
-    assert(false);
+    list<PartContextPtr> listOfMe;
+    listOfMe.push_back(makePtr<MPICallContext>(mpiopabs_p, calleeContext_p));
+    return listOfMe;
   }
 
   bool MPICallContext::less(const PartContextPtr& that) const {
@@ -165,8 +167,13 @@ namespace fuse {
   NonMPIContext::NonMPIContext(const NonMPIContext& that)
     : CommATSPartContext(that), this->parentContext_p(that.parentContext_p) { }
 
+  // Returns a list of PartContextPtr objects that denote more detailed context information about
+  // this PartContext's internal contexts. If there aren't any, the function may just return a list containing
+  // this PartContext itself.
   list<PartContextPtr> NonMPIContext::getSubPartContexts() const {
-    assert(false);
+    list<PartContextPtr> listOfMe;
+    listOfMe.push_back(makePtr<NonMPIContext>(parentContext_p));
+    return listOfMe;
   }
 
   bool NonMPIContext::less(const PartContextPtr& that) const {
@@ -184,12 +191,19 @@ namespace fuse {
   /******************
    * CommATSPart *
    ******************/
-  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis) 
-    : Part(analysis, base),
-      parent(base), 
-      mpicommanalysis(analysis) {
+  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommATSPartContextPtr context)
+    : Part(anlaysis, base),
+      base_p(base),
+      mpicommanalysis(analysis),
+      context_p(context) { 
   }
-
+  CommATSPart::CommATSPart(const CommATSPart& that)
+    : Part(that),
+      base_p(that.base_p),
+      mpicommanalysis(that.mpicommanalysis),
+      context_p(that.context_p) {
+  }
+  
   list<PartEdgePtr> CommATSPart::outEdges() {
     // Look up succMap in MPICommAnalysis to find the successor of this CommATSPart
     // Create CommATSPartEdge between this part and all the successors
@@ -202,8 +216,7 @@ namespace fuse {
   }
 
   set<CFGNode> CommATSPart::CFGNodes() const {
-    assert(0);
-    return parent->CFGNodes();
+    return base_p->CFGNodes();
   }
 
   set<PartPtr> CommATSPart::matchingCallParts() const {
@@ -242,25 +255,31 @@ namespace fuse {
   /**********************
    * CommATSPartEdge *
    **********************/
-  CommATSPartEdge::CommATSPartEdge(MPICommAnalysis* analysis, PartEdgePtr base)
+  CommATSPartEdge::CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target)
     : PartEdge(analysis, base),
-      parent(base),
-      mpicommanalysis(analysis) {
+      parent_p(base),
+      source_p(source),
+      target_p(target) {
+  }
+
+  CommATSPartEdge::CommATSPartEdge(const CommATSPartEdge& that)
+    : PartEdge(that),
+      parent_p(that.parent_p),
+      source_p(that.source_p),
+      target_p(that.target_p) {
   }
 
   PartPtr CommATSPartEdge::source() const {
-    assert(0);
-    return parent->source();
+    return source_p;
   }
 
   PartPtr CommATSPartEdge::target() const {
-    assert(0);
-    return parent->target();
+    return target_p;
   }
 
   list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
+    list<PartEdgePtr> baseOpPartEdges = parent_p->getOperandPartEdge(anchor, operand);
     assert(0);
-    return parent->getOperandPartEdge(anchor, operand);
   }
 
   map<CFGNode, shared_ptr<SgValueExp> > CommATSPartEdge::getPredicateValue() {
