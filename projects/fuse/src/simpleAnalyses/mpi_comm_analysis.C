@@ -44,7 +44,7 @@ namespace fuse {
    * MPIOpAbsType *
    ****************/
   // MPIOpAbsType::MPIOpAbsType(const Function& mpif) : MPIOpAbs(*this), op(mpif) { }
-  
+
   // MPIOpAbsType::MPIOpAbsType(const MPIOpAbsType& that) : MPIOpAbs(that), op(that.op) { }
 
   // bool MPIOpAbsType::operator<(const MPIOpAbsPtr& that_p) const {
@@ -62,12 +62,11 @@ namespace fuse {
   /********************
    * MPIOpAbsCallSite *
    ********************/
-
   MPIOpAbsCallSite::MPIOpAbsCallSite(const Function& mpif, PartPtr pCallSite)
-    : MPIOpAbs(*this), op(mpif), callsite(pCallSite) { }
+  : MPIOpAbs(*this), op(mpif), callsite(pCallSite) { }
 
   MPIOpAbsCallSite::MPIOpAbsCallSite(const MPIOpAbsCallSite& that)
-    : MPIOpAbs(that), op(that.op), callsite(that.callsite) { }
+  : MPIOpAbs(that), op(that.op), callsite(that.callsite) { }
 
   //! Order the operations by type first
   //! If two operations are of same type 
@@ -87,126 +86,128 @@ namespace fuse {
     return false;
   }
 
-  // MPIOpAbsPtr createMPIOpAbs(const Function& mpif) {
-  //   return boost::make_shared<MPIOpAbsType>(mpif);
-  // }
+  string MPIOpAbsCallSite::str(string indent) const {
+    return "[MPIOpAbsCallSite]";
+  }
 
   MPIOpAbsPtr createMPIOpAbs(const Function& mpif, PartPtr callsite) {
-    return make_ptr<MPIOpAbsCallSite>(mpif, callsite);
-  }
-
-  /**********************
-   * CommATSPartContext *
-   **********************/
-  //! For two parts that are equal both parts have NonMPIContexts or MPICallContexts.
-  //! This is due to association of MPICallContext only with MPI functions.
-  //! The cases where two parts are equal and one having a NonMPIContext and
-  //! the other having MPICallContext is rare or impossible.
-  //! However such a case should arise for two equal parts order its NonMPIContext before its MPICallContext.
-  bool CommATSPartContext::less(const PartContextPtr& that) const {
-    // If this is MPICallContext and that is NonMPIContext
-    if(dynamic_cast<MPICallContext>(this) && 
-       dynamicPtrCast<NonMPIContext, PartContext>(that)) return false;
-    // If this is NonMPIContext and that is MPICallContext
-    else if(dynamic_cast<NonMPIContext>(this) && 
-            dynamicPtrCast<MPICallContext, PartContext>(that)) return true;
-    // If both are either NonMPIContext or MPICallContext use their respective implementation of less
-    else return less(that);
-  }
-
-  //! For two parts that are equal both parts have NonMPIContexts or MPICallContexts.
-  //! This is due to association of MPICallContext only with MPI functions.
-  //! The cases where two parts are equal and one having a NonMPIContext and
-  //! the other having MPICallContext is rare or impossible.
-  //! However such a case should arise for two equal parts order its NonMPIContext before its MPICallContext.
-  bool CommATSPartContext::equals(const PartContextPtr& that) const {
-    // If this is MPICallContext and that is NonMPIContext
-    if(dynamic_cast<MPICallContext>(this) && 
-       dynamicPtrCast<NonMPICallContext, PartContext>(that)) return false;
-    // If this is NonMPIContext and that is MPICallContext
-    else if(dynamic_cast<NonMPICallContext>(this) && 
-            dynamicPtrCast<MPICallContext, PartContext>(that)) return false;
-    // If both are either NonMPIContext or MPICallContext use their respective implementation of less
-    else return equals(that);
+    return makePtr<MPIOpAbsCallSite>(mpif, callsite);
   }
 
   /******************
-   * MPICallContext *
+   * MPICommContext *
    ******************/
-  MPICallContext::MPICallContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p)
-    : CommATSPartContext(), this->mpiopabs_p(mpiopabs_p), this->calleeContext_p(calleeContext_p) { }
+  MPICommContext::MPICommContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p)
+  : CommContext(), mpiopabs_p(mpiopabs_p), calleeContext_p(calleeContext_p) { }
 
-  MPICallContext::MPICallContext(const MPICallContext& that)
-    : CommATSPartContext(that), this->mpiopabs_p(that.mpiopabs_p), this->calleeContext_p(that.calleeContext_p) { }
+  MPICommContext::MPICommContext(const MPICommContext& that)
+  : CommContext(that), mpiopabs_p(that.mpiopabs_p), calleeContext_p(that.calleeContext_p) { }
 
-  list<PartContextPtr> MPICallContext::getSubPartContexts() const {
+  //! Returns a list of PartContextPtr objects that denote more detailed context information about
+  //! this PartContext's internal contexts. If there aren't any, the function may just return a list containing
+  //! this PartContext itself.
+  list<PartContextPtr> MPICommContext::getSubPartContexts() const {
     list<PartContextPtr> listOfMe;
-    listOfMe.push_back(makePtr<MPICallContext>(mpiopabs_p, calleeContext_p));
+    listOfMe.push_back(makePtr<MPICommContext>(mpiopabs_p, calleeContext_p));
     return listOfMe;
   }
 
-  bool MPICallContext::less(const PartContextPtr& that) const {
-    MPICallContextPtr thatmcc_p = dynamicPtrCast<MPICallContext, PartContext>(that);
+  //!\param that Argument is either CompSharedPtr<MPICommContext> or CompSharedPtr<NonMPICommContext>
+  bool MPICommContext::operator<(const PartContextPtr& that) const {
+    // Check if that is NonMPICommContextPtr
+    // If that is NonMPICommContext then it is ordered before this
+    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
+    if(thatnmcc_p) return false;
+
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
     assert(thatmcc_p);
-    // Differentiate two MPICallContext using the MPI operation abstraction
-    return mpiopabs_p < that.mpiopabs_p;
-  }
-   
-  bool MPICallContext::equals(const PartContextPtr& that) const {
-    MPICallContextPtr thatmcc_p = dynamicPtrCast<MPICallContext, PartContext>(that);
-    assert(thatmcc_p);
-    // Differentiate two MPICallContext using the MPI operation abstraction
-    return mpiopabs_p == that.mpiopabs_p;
+    // Differentiate two MPICommContext using the MPI operation abstraction
+    return mpiopabs_p < thatmcc_p->mpiopabs_p;
   }
 
-  /*****************
-   * NonMPIContext *
-   *****************/
-  NonMPIContext::NonMPIContext(PartContextPtr parentContext_p) 
-    : CommATSPartContext(), this->parentContext_p(parentContext_p) { }
-  NonMPIContext::NonMPIContext(const NonMPIContext& that)
-    : CommATSPartContext(that), this->parentContext_p(that.parentContext_p) { }
+  //!\param that Argument is either CompSharedPtr<MPICommContext> or CompSharedPtr<NonMPICommContext>
+  bool MPICommContext::operator==(const PartContextPtr& that) const {
+    // Check if that is NonMPICommContextPtr
+    // If that is NonMPICommContext then they are not equal
+    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
+    if(thatnmcc_p) return false;
 
-  // Returns a list of PartContextPtr objects that denote more detailed context information about
-  // this PartContext's internal contexts. If there aren't any, the function may just return a list containing
-  // this PartContext itself.
-  list<PartContextPtr> NonMPIContext::getSubPartContexts() const {
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
+    assert(thatmcc_p);
+    // Differentiate two MPICommContext using the MPI operation abstraction
+    return mpiopabs_p == thatmcc_p->mpiopabs_p;
+  }
+
+  string MPICommContext::str(string indent) const {
+    return "[CommContext:MPI]";
+  }
+
+  /*********************
+   * NonMPICommContext *
+   *********************/
+  NonMPICommContext::NonMPICommContext(PartContextPtr parentContext_p) 
+  : CommContext(), parentContext_p(parentContext_p) { }
+  NonMPICommContext::NonMPICommContext(const NonMPICommContext& that)
+  : CommContext(that), parentContext_p(that.parentContext_p) { }
+
+  //! Returns a list of PartContextPtr objects that denote more detailed context information about
+  //! this PartContext's internal contexts. If there aren't any, the function may just return a list containing
+  //! this PartContext itself.
+  list<PartContextPtr> NonMPICommContext::getSubPartContexts() const {
     list<PartContextPtr> listOfMe;
-    listOfMe.push_back(makePtr<NonMPIContext>(parentContext_p));
+    listOfMe.push_back(makePtr<NonMPICommContext>(parentContext_p));
     return listOfMe;
   }
 
-  bool NonMPIContext::less(const PartContextPtr& that) const {
-    NonMPIContextPtr thatnmc_p = dynamicPtrCast<NonMPIContext, PartContext>(that);
+  //!\param that Argument is either CompSharedPtr<MPICommContext> or CompSharedPtr<NonMPICommContext>
+  bool NonMPICommContext::operator<(const PartContextPtr& that) const {
+    // Check if that argument is MPICommContextPtr
+    // If so then return true as NonMPICommContext is ordered before MPICommContext
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
+    if(thatmcc_p) return true;
+
+    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
     assert(thatnmc_p);
-    return parentContext_p < thatnmc_p.parentContext_p;
+    return parentContext_p < thatnmc_p->parentContext_p;
   }
 
-  bool NonMPIContext::equals(const PartContextPtr& that) const {
-    NonMPIContextPtr thatnmc_p = dynamicPtrCast<NonMPIContext, PartContext>(that);
+  //!\param that Argument is either CompSharedPtr<MPICommContext> or CompSharedPtr<NonMPICommContext>
+  bool NonMPICommContext::operator==(const PartContextPtr& that) const {
+    // Check if that argument is MPICommContextPtr
+    // If so then then they are not equal
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
+    if(thatmcc_p) return false;
+
+    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
     assert(thatnmc_p);
-    return parentContext_p == thatnmc_p.parentContext_p;
+    return parentContext_p == thatnmc_p->parentContext_p;
   }
 
-  /******************
+  string NonMPICommContext::str(string indent) const {
+    return "[CommContext: NonMPI]";
+  }
+
+  /***************
    * CommATSPart *
-   ******************/
-  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommATSPartContextPtr context)
-    : Part(anlaysis, base),
-      base_p(base),
-      mpicommanalysis(analysis),
-      context_p(context) { 
+   ***************/
+  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommContextPtr context)
+  : Part(analysis, base),
+    base_p(base),
+    mpicommanalysis(analysis),
+    context_p(context) {
   }
   CommATSPart::CommATSPart(const CommATSPart& that)
-    : Part(that),
-      base_p(that.base_p),
-      mpicommanalysis(that.mpicommanalysis),
-      context_p(that.context_p) {
+  : Part(that),
+    base_p(that.base_p),
+    mpicommanalysis(that.mpicommanalysis),
+    context_p(that.context_p) {
   }
-  
+
   list<PartEdgePtr> CommATSPart::outEdges() {
     // Look up succMap in MPICommAnalysis to find the successor of this CommATSPart
     // Create CommATSPartEdge between this part and all the successors
+    assert(0);
+    return parent->outEdges();
   }
 
   list<PartEdgePtr> CommATSPart::inEdges() {
@@ -252,21 +253,21 @@ namespace fuse {
     return oss.str();
   }
 
-  /**********************
+  /*******************
    * CommATSPartEdge *
-   **********************/
+   *******************/
   CommATSPartEdge::CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target)
-    : PartEdge(analysis, base),
-      parent_p(base),
-      source_p(source),
-      target_p(target) {
+  : PartEdge(analysis, base),
+    base_p(base),
+    source_p(source),
+    target_p(target) {
   }
 
   CommATSPartEdge::CommATSPartEdge(const CommATSPartEdge& that)
-    : PartEdge(that),
-      parent_p(that.parent_p),
-      source_p(that.source_p),
-      target_p(that.target_p) {
+  : PartEdge(that),
+    base_p(that.base_p),
+    source_p(that.source_p),
+    target_p(that.target_p) {
   }
 
   PartPtr CommATSPartEdge::source() const {
@@ -278,7 +279,7 @@ namespace fuse {
   }
 
   list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
-    list<PartEdgePtr> baseOpPartEdges = parent_p->getOperandPartEdge(anchor, operand);
+    list<PartEdgePtr> baseOpPartEdges = base_p->getOperandPartEdge(anchor, operand);
     assert(0);
   }
 
@@ -302,53 +303,165 @@ namespace fuse {
   string CommATSPartEdge::str(string indent) const {
     return "[CommATSPartEdge]";
   }
-    
- 
+
+  /**********************
+   * CommContextLattice *
+   **********************/
+  CommContextLattice::CommContextLattice(PartEdgePtr edge_p)
+  : Lattice(edge_p), FiniteLattice(edge_p) {
+    elem = CommContextLattice::UNKNOWN;
+  }
+
+  CommContextLattice::CommContextLattice(const CommContextLattice& that)
+  : Lattice(that.latPEdge), FiniteLattice(that.latPEdge),
+    elem(that.elem) {
+  }
+
+  CommContextLattice::CommContextLatticeElem
+  CommContextLattice::getCCLatElem() const {
+    return elem;
+  }
+
+  void CommContextLattice::initialize() {
+    elem = CommContextLattice::NOCONTEXT;
+  }
+
+  bool CommContextLattice::setCCLatElemMPI() {
+    elem = CommContextLattice::MPICOMMCONTEXT;
+    return true;
+  }
+
+  bool CommContextLattice::setCCLatElemNonMPI() {
+    elem = CommContextLattice::NONMPICOMMCONTEXT;
+    return true;
+  }
+
+  bool CommContextLattice::setToFull() {
+    assert(0);
+    elem = CommContextLattice::UNKNOWN;
+    return true;
+  }
+
+  bool CommContextLattice::setToEmpty() {
+    assert(0);
+    elem = CommContextLattice::NOCONTEXT;
+    return true;
+  }
+
+  Lattice* CommContextLattice::copy() const {
+    return new CommContextLattice(*this);
+  }
+
+  void CommContextLattice::copy(Lattice* that) {
+    CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(that);
+    ROSE_ASSERT(ccl);
+    elem = ccl->getCCLatElem();
+  }
+
+  bool CommContextLattice::operator==(Lattice* that) {
+    CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(that);
+    assert(ccl);
+    if(elem == ccl->getCCLatElem()) return true;
+    return false;
+  }
+
+  bool CommContextLattice::isCCLatElemMPI() const {
+    if(elem == CommContextLattice::MPICOMMCONTEXT) return true;
+    return false;
+  }
+
+  bool CommContextLattice::isCCLatElemNonMPI() const {
+    if(elem == CommContextLattice::NONMPICOMMCONTEXT) return true;
+    return false;
+  }
+
+  bool CommContextLattice::isEmptyLat() {
+    if(elem == CommContextLattice::NOCONTEXT) return true;
+    return false;
+  }
+
+  bool CommContextLattice::isFullLat() {
+    if(elem == CommContextLattice::UNKNOWN) return true;
+    return false;
+  }
+
+  bool CommContextLattice::meetUpdate(Lattice* that) {
+    CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(that);
+    ROSE_ASSERT(ccl);
+    // if this is full nothing to update
+    if(isFullLat()) return false;
+    // this is not full and if that is full set to full
+    else if(ccl->isFullLat()) return setToFull();
+    // both are not full
+    // this is MPI and that is NonMPI
+    else if(isCCLatElemMPI()&& ccl->isCCLatElemNonMPI())
+      return setToFull();
+    // this is NonMPI and that is MPI
+    else if(isCCLatElemNonMPI() && ccl->isCCLatElemMPI())
+      return setToFull();
+    // this is empty
+    // if that is not empty update this lattice value
+    else if (!ccl->isEmptyLat()) {
+      elem = ccl->getCCLatElem();
+      return true;
+    }
+    // both are empty
+    return false;
+  }
+
+  bool CommContextLattice::setMLValueToFull(MemLocObjectPtr ml_p) {
+    return false;
+  }
+
+  string CommContextLattice::str(string indent) const {
+    ostringstream oss;
+    oss << "[CommContextLatticeVal: ";
+    switch(elem) {
+      case NOCONTEXT: oss << "NOCONTEXT"; break;
+      case NONMPICOMMCONTEXT: oss << "NONMPICOMMCONTEXT"; break;
+      case MPICOMMCONTEXT: oss << "MPICOMMCONTEXT"; break;
+      default: assert(false); break;
+    }
+    oss << "]";
+    return oss.str();
+  }
+
   /*******************
    * MPICommAnalysis *
    *******************/
   void MPICommAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
-                                       std::vector<Lattice*>& initLattices) {
+      std::vector<Lattice*>& initLattices) {
     initLattices.push_back(new BoolAndLattice(true, pedge));
   }
 
+  bool MPICommAnalysis::isMPIFuncCall(SgFunctionCallExp* sgn) {
+    assert(sgn);
+    Function func(sgn);
+    if(func.get_name().getString().find("MPI_",0) == 0) return true;
+    return false;
+  }
+
+  //! Clone MPI functions giving them context using CommContext
   bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
-                                 std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
+      std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
     scope reg("MPICommAnalysis::transfer", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 1));
     bool modified=false;
 
-    CommATSPartPtr mcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(part, this);
-    if(mpiCommAnalysisDebugLevel() >= 2) {
-      dbg << mcap_p->str() << endl;
+    // Create the CommATSPart for this part
+
+    // While traversing the ATS for each part get its descendants
+    // Create CommATSPart with CommContext for each descendant
+    // Update the predMap and succMap with newly created CommATSPart
+
+    // Context for descendants is decided based on this parts position on the
+    // function boundaries
+    if(part->isOutgoingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
     }
-
-    pair<Part2MCAPartMap::iterator, bool> retVal = p2mcapMap.insert(Part2MCAPartMapElement(part, mcap_p));
-    modified = retVal.second;
-
-    list<PartEdgePtr> inedges = part->inEdges();
-    list<PartEdgePtr> outedges = part->outEdges();
-    list<PartEdgePtr>::iterator inEdgeIt, outEdgeIt;
-
-    MCAPartSet& inEdgeSet = predMap[mcap_p];
-    for(inEdgeIt=inedges.begin(); inEdgeIt != inedges.end(); ++inEdgeIt) {
-      PartPtr src = (*inEdgeIt)->source();
-      CommATSPartPtr smcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(src, this);      
-      pair<MCAPartSet::iterator, bool> retVal = inEdgeSet.insert(smcap_p);
-      modified = retVal.second || modified;
+    else if(part->isFuncExit(cn)) {
     }
-
-    MCAPartSet& outEdgeSet = succMap[mcap_p];
-    for(outEdgeIt=outedges.begin(); outEdgeIt != outedges.end(); ++outEdgeIt) {
-      PartPtr tgt = (*outEdgeIt)->target();
-      CommATSPartPtr tmcap_p = makePtr<CommATSPart, PartPtr, MPICommAnalysis*>(tgt, this);
-      pair<MCAPartSet::iterator, bool> retVal = outEdgeSet.insert(tmcap_p);
-      modified = retVal.second || modified;
+    else {
+      // the context for the descendant is same as this Part's context
     }
-
-    // if(mpiCommAnalysisDebugLevel() >= 2) {
-    //   dbg << str(succMap) << endl;
-    // }
-
     return modified;
   }
 
@@ -362,46 +475,10 @@ namespace fuse {
     return composer->GetEndAStates(this);
   }
 
-  string MPICommAnalysis::str(const Part2MCAPartMap& p2mcapMap) const {
-    ostringstream oss;
-    oss << "<u>Part2MCAPartMap: </u>";
-    oss << "<table border=1><tr><td>Key</td><td>Value</td>";
-    Part2MCAPartMap::const_iterator it = p2mcapMap.begin();
-    for(; it != p2mcapMap.end(); ++it) {
-      oss << "<tr><td>#"  << (it->first)->str();
-      oss << "</td><td>#" << (it->second)->str();
-      oss << "</td></tr>";
-    }
-    oss << "</table>";
-    return oss.str();
+  string MPICommAnalysis::str(string indent) const {
+    return "MPICommAnalysis";
   }
 
-  string MPICommAnalysis::str(const MCAPart2MCAPartsMap& mcap2mcapMap) const {
-    ostringstream oss;
-    oss << "<u>MCAPart2MCAPartsMap: </u>";
-    oss << "<table border=1><tr><td>Key</td><td>Value</td>";
-    MCAPart2MCAPartsMap::const_iterator it = mcap2mcapMap.begin();
-    for(; it != mcap2mcapMap.end(); ++it) {
-      oss << "<tr><td>#"  << (it->first)->str();
-      oss << "</td><td>#" << str(it->second);
-      oss << "</td></tr>";
-    }
-    oss << "</table>";
-    return oss.str();
-  }
-
-  string MPICommAnalysis::str(const MCAPartSet& mcapSet) const {
-    ostringstream oss;
-    oss << "<u>MCAPartSet: </u>";
-    oss << "<dl>";
-    MCAPartSet::const_iterator it = mcapSet.begin();
-    for( ; it != mcapSet.end(); ++it) {
-      oss << "<dt>" << it->str() << "</dt>";
-    }
-    oss << "</dl>";
-    return oss.str();
-  }
-      
 }; // end namespace
 
 //  LocalWords:  MPICommAnalysis MPICommATSPartEdge
