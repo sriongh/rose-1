@@ -308,8 +308,8 @@ namespace fuse {
    * CommContextLattice *
    **********************/
   CommContextLattice::CommContextLattice(PartEdgePtr edge_p)
-  : Lattice(edge_p), FiniteLattice(edge_p) {
-    elem = CommContextLattice::UNKNOWN;
+  : Lattice(edge_p), FiniteLattice(edge_p),
+    elem(CommContextLattice::NOCONTEXT) {
   }
 
   CommContextLattice::CommContextLattice(const CommContextLattice& that)
@@ -337,13 +337,13 @@ namespace fuse {
   }
 
   bool CommContextLattice::setToFull() {
-    assert(0);
+    if(isFullLat()) return false;
     elem = CommContextLattice::UNKNOWN;
     return true;
   }
 
   bool CommContextLattice::setToEmpty() {
-    assert(0);
+    if(isEmptyLat()) return false;
     elem = CommContextLattice::NOCONTEXT;
     return true;
   }
@@ -430,8 +430,9 @@ namespace fuse {
    * MPICommAnalysis *
    *******************/
   void MPICommAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
-      std::vector<Lattice*>& initLattices) {
-    initLattices.push_back(new BoolAndLattice(true, pedge));
+                                       std::vector<Lattice*>& initLattices) {
+    CommContextLattice* ccl = new CommContextLattice(pedge);
+    initLattices.push_back(ccl);
   }
 
   bool MPICommAnalysis::isMPIFuncCall(SgFunctionCallExp* sgn) {
@@ -443,21 +444,23 @@ namespace fuse {
 
   //! Clone MPI functions giving them context using CommContext
   bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
-      std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
+                                 std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
     scope reg("MPICommAnalysis::transfer", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 1));
     bool modified=false;
 
-    // Create the CommATSPart for this part
+    // Incoming lattice information
+    CommContextLattice* cclat = dynamic_cast<CommContextLattice*>(dfInfo[part->inEdgeFromAny()][0]);
+    assert(cclat);
 
-    // While traversing the ATS for each part get its descendants
-    // Create CommATSPart with CommContext for each descendant
-    // Update the predMap and succMap with newly created CommATSPart
+    if(mpiCommAnalysisDebugLevel() >= 2) dbg << cclat->str() << endl;
 
     // Context for descendants is decided based on this parts position on the
     // function boundaries
     if(part->isOutgoingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
+      modified = cclat->setCCLatElemMPI();
     }
     else if(part->isFuncExit(cn)) {
+      assert(0);
     }
     else {
       // the context for the descendant is same as this Part's context
