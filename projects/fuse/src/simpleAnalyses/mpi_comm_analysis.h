@@ -203,48 +203,36 @@ namespace fuse {
    * CommContextLattice *
    **********************/
   class CommContextLattice : public FiniteLattice {
-	  enum CommContextLatticeElem {
-		  NOCONTEXT,
-		  NONMPICOMMCONTEXT,
-		  MPICOMMCONTEXT,
-		  UNKNOWN
-	  };
+    enum CommContextLatticeElem {
+      NOCONTEXT,
+      NONMPICOMMCONTEXT,
+      MPICOMMCONTEXT,
+      UNKNOWN
+    };
 
-	  CommContextLatticeElem elem;
+    CommContextLatticeElem elem;
   public:
-	  CommContextLattice(PartEdgePtr edge_p);
-	  CommContextLattice(const CommContextLattice& that);
+    CommContextLattice(PartEdgePtr edge_p);
+    CommContextLattice(const CommContextLattice& that);
 
-	  CommContextLatticeElem getCCLatElem() const;
+    CommContextLatticeElem getCCLatElem() const;
 
-	  void initialize();
-	  bool setCCLatElemMPI();
-	  bool setCCLatElemNonMPI();
-	  bool setToFull();
-	  bool setToEmpty();
-	  bool meetUpdate(Lattice* that);
-	  Lattice* copy() const;
-	  void copy(Lattice* that);
-	  bool operator==(Lattice* that);
-	  bool isCCLatElemMPI() const;
-	  bool isCCLatElemNonMPI() const;
-	  bool isFullLat();
-	  bool isEmptyLat();
-	  bool setMLValueToFull(MemLocObjectPtr ml_p);
-	  std::string str(std::string indent="") const;
-  };
-
-  typedef boost::shared_ptr<CommContextLattice> CommContextLatticePtr;
-
-  /*************************
-   * CommContextLatticeMap *
-   *************************/
-  class CommContextLatticeMap : public FiniteLattice {
-    std::map<PartEdgePtr, CommContextLatticePtr> commContextEdgeMap;
-  public:
-    CommContextLatticeMap(PartEdgePtr pedge);
     void initialize();
+    bool setCCLatElemMPI();
+    bool setCCLatElemNonMPI();
+    bool setToFull();
+    bool setToEmpty();
+    bool meetUpdate(Lattice* that);
     Lattice* copy() const;
+    void copy(Lattice* that);
+    bool copy(CommContextLattice* that);
+    bool operator==(Lattice* that);
+    bool isCCLatElemMPI() const;
+    bool isCCLatElemNonMPI() const;
+    bool isFullLat();
+    bool isEmptyLat();
+    bool setMLValueToFull(MemLocObjectPtr ml_p);
+    std::string str(std::string indent="") const;
   };
 
   /*******************
@@ -255,21 +243,16 @@ namespace fuse {
   typedef std::pair<CommATSPartPtr, CAPartSet> CAPart2CAPartSetMapElement;
 
   class MPICommAnalysis : public FWDataflow {
-    bool initialized;
-    //! Cache the starting parts
-    std::set<PartPtr> startingParts;
   public:
     MPICommAnalysis();
     virtual void initAnalysis(std::set<PartPtr>& startingParts);
-
-    bool isStartingPart(PartPtr part) const;
 
     ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(); }
 
     // Initializes the state of analysis lattices at the given function, part and edge into our out of the part
     // by setting initLattices to refer to freshly-allocated Lattice objects.
     void genInitLattice(PartPtr part, PartEdgePtr pedge, 
-                      std::vector<Lattice*>& initLattices);
+                        std::vector<Lattice*>& initLattices);
 
     bool transfer(PartPtr part, CFGNode cn, NodeState& state, 
                   std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
