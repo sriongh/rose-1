@@ -8,6 +8,7 @@
 #include "printAnalysisStates.h"
 #include "pointsToAnalysis.h"
 #include "mpi_value_analysis.h"
+#include "mpi_comm_analysis.h"
 #include "analysis_tester.h"
 #include "sight.h"
 #include "mpi.h"
@@ -27,10 +28,11 @@ int main(int argc, char* argv[])
   printf("Frontend done\n");fflush(stdout);
 
   std::list<ComposedAnalysis*> analyses;
-  analyses.push_back(new CallContextSensitivityAnalysis(1, CallContextSensitivityAnalysis::callSite));
+  // analyses.push_back(new CallContextSensitivityAnalysis(1, CallContextSensitivityAnalysis::callSite));
   analyses.push_back(new MPIValueAnalysis());
   analyses.push_back(new ConstantPropagationAnalysis());
-  analyses.push_back(new DeadPathElimAnalysis());
+  // analyses.push_back(new DeadPathElimAnalysis());
+  analyses.push_back(new MPICommAnalysis());
   checkDataflowInfoPass* cdip = new checkDataflowInfoPass();
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();

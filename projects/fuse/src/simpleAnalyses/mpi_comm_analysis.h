@@ -234,25 +234,35 @@ namespace fuse {
 	  std::string str(std::string indent="") const;
   };
 
+  typedef boost::shared_ptr<CommContextLattice> CommContextLatticePtr;
+
+  /*************************
+   * CommContextLatticeMap *
+   *************************/
+  class CommContextLatticeMap : public FiniteLattice {
+    std::map<PartEdgePtr, CommContextLatticePtr> commContextEdgeMap;
+  public:
+    CommContextLatticeMap(PartEdgePtr pedge);
+    void initialize();
+    Lattice* copy() const;
+  };
+
   /*******************
    * MPICommAnalysis *
    *******************/
-  typedef std::map<PartPtr, CommATSPartPtr> Part2CAPartMap;
-  typedef std::pair<PartPtr, CommATSPartPtr> Part2CAPartMapElement;
-
   typedef std::set<CommATSPartPtr> CAPartSet;
   typedef std::map<CommATSPartPtr, CAPartSet> CAPart2CAPartSetMap;
   typedef std::pair<CommATSPartPtr, CAPartSet> CAPart2CAPartSetMapElement;
 
   class MPICommAnalysis : public FWDataflow {
-
-    Part2CAPartMap p2caMap;
-
-    CAPart2CAPartSetMap predMap;
-    CAPart2CAPartSetMap succMap;
-
+    bool initialized;
+    //! Cache the starting parts
+    std::set<PartPtr> startingParts;
   public:
-    MPICommAnalysis() { }
+    MPICommAnalysis();
+    virtual void initAnalysis(std::set<PartPtr>& startingParts);
+
+    bool isStartingPart(PartPtr part) const;
 
     ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(); }
 

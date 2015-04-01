@@ -429,6 +429,23 @@ namespace fuse {
   /*******************
    * MPICommAnalysis *
    *******************/
+  MPICommAnalysis::MPICommAnalysis():initialized(false) {
+  }
+
+  void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {
+    set<PartPtr>::iterator s = startingParts.begin();
+    for( ; s != startingParts.end(); ++s) {
+      PartPtr part = *s;
+      NodeState* state = NodeState::getNodeState(this, part);
+      assert(state);
+      Lattice* l = state->getLatticeAbove(this, part->inEdgeFromAny(), 0);
+      assert(l);
+      CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(l);
+      assert(ccl);
+      ccl->setCCLatElemNonMPI();
+    }
+  }
+
   void MPICommAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
                                        std::vector<Lattice*>& initLattices) {
     CommContextLattice* ccl = new CommContextLattice(pedge);
@@ -459,11 +476,11 @@ namespace fuse {
     if(part->isOutgoingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
       modified = cclat->setCCLatElemMPI();
     }
-    else if(part->isFuncExit(cn)) {
-      assert(0);
+    else if(part->isIncomingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
+      modified = cclat->setCCLatElemNonMPI();
     }
     else {
-      // the context for the descendant is same as this Part's context
+      modified = true;
     }
     return modified;
   }
