@@ -179,7 +179,7 @@ void ComposedAnalysis::initializeState(PartPtr part, NodeState& state)
 
 void ComposedAnalysis::runAnalysis()
 {
-  scope reg("ComposedAnalysis", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
+  scope reg("ComposedAnalysis::runAnalysis", scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   
   // Quit out if this is an undirected analysis (i.e. doesn't need the fixed-point algorithm)
   if(getDirection() == none) return;
@@ -200,17 +200,21 @@ void ComposedAnalysis::runAnalysis()
     //for(set<PartPtr>::iterator start=startingParts.begin(); start!=startingParts.end(); start++) {
     //scope reg(txt()<<"Starting from "<<(*start)->str(), scope::medium, attrGE("composedAnalysisDebugLevel", 1));
   }
-  
+
   // Initialize the starting states
   for(set<PartPtr>::iterator s=startingParts.begin(); s!=startingParts.end(); s++) {
-    // client analysis registers and initialize the state for starting parts 
+    // client analysis registers and initialize the state for starting parts
+    scope reg(sight::txt()<< "Initializing Starting part="<<(*s)->str(), scope::low, attrGE("composedAnalysisDebugLevel", 2));
     initNodeState(*s);
     initialized.insert(*s);
   }
 
   // If the entry dataflow is different from bot
   // Initialize the entry dataflow information for the starting parts
-  initAnalysis(startingParts);
+  {
+    scope reg(sight::txt()<<"Initializing analysis="<<this->str(), scope::low, attrGE("composedAnalysisDebugLevel", 2));
+    initAnalysis(startingParts);
+  }
 
   // Iterate over the abstract states that are downstream from the starting states
   dataflowPartEdgeIterator* curNodeIt = getIterator();
@@ -285,6 +289,8 @@ void ComposedAnalysis::runAnalysis()
       // The part of the current descendant
       PartEdgePtr nextPartEdge = *de;
       PartPtr nextPart = (getDirection() == fw? nextPartEdge->target(): nextPartEdge->source());
+      scope reg(sight::txt()<<"Initializing descendant part="<<nextPart->str(), 
+                scope::low, attrGE("composedAnalysisDebugLevel", 2));
       // Initialize this descendant's state if it has not yet been
       if(initialized.find(nextPart) == initialized.end()) {
         initNodeState(nextPart);
@@ -772,7 +778,7 @@ void BWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
 }
 
 void FWDataflow::initNodeState(PartPtr part) {
-  scope reg(sight::txt() << "FWDataflow::initNodeState(part=" << part->str() << ")", scope::low, attrGE("composedAnalysisDebugLevel", 2));
+  // scope reg(sight::txt() << "FWDataflow::initNodeState(part=" << part->str() << ")", scope::low, attrGE("composedAnalysisDebugLevel", 2));
   // registers if not already registered
   NodeState* state = NodeState::getNodeState(this, part);
   // fill the state with Lattices
