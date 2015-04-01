@@ -354,8 +354,18 @@ namespace fuse {
 
   void CommContextLattice::copy(Lattice* that) {
     CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(that);
-    ROSE_ASSERT(ccl);
+    assert(ccl);
     elem = ccl->getCCLatElem();
+  }
+
+  bool CommContextLattice::copy(CommContextLattice* that) {
+    if(isFullLat()) return false;
+    ROSE_ASSERT(that);
+    if(elem != that->getCCLatElem()) {
+      elem = that->getCCLatElem();
+      return true;
+    }
+    return false;
   }
 
   bool CommContextLattice::operator==(Lattice* that) {
@@ -429,20 +439,28 @@ namespace fuse {
   /*******************
    * MPICommAnalysis *
    *******************/
-  MPICommAnalysis::MPICommAnalysis():initialized(false) {
+  MPICommAnalysis::MPICommAnalysis() {
   }
 
   void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {
+    scope reg("MPICommAnalysis::initAnalysis", scope::low, attrGE("mpiCommAnalysisDebugLevel", 2));
     set<PartPtr>::iterator s = startingParts.begin();
     for( ; s != startingParts.end(); ++s) {
       PartPtr part = *s;
+      dbg << "Part=" << part->str() << endl;
+
+      // Get the lattice associated with all incoming edges to starting parts
       NodeState* state = NodeState::getNodeState(this, part);
       assert(state);
       Lattice* l = state->getLatticeAbove(this, part->inEdgeFromAny(), 0);
       assert(l);
       CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(l);
       assert(ccl);
+
+      // Set the lattice to NonMPICommContext
       ccl->setCCLatElemNonMPI();
+
+      dbg << "state=" << state->str() << endl;
     }
   }
 
@@ -462,25 +480,38 @@ namespace fuse {
   //! Clone MPI functions giving them context using CommContext
   bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
                                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
-    scope reg("MPICommAnalysis::transfer", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 1));
+    scope reg("MPICommAnalysis::transfer", scope::low, attrGE("mpiCommAnalysisDebugLevel", 1));
     bool modified=false;
 
     // Incoming lattice information
     CommContextLattice* cclat = dynamic_cast<CommContextLattice*>(dfInfo[part->inEdgeFromAny()][0]);
     assert(cclat);
 
-    if(mpiCommAnalysisDebugLevel() >= 2) dbg << cclat->str() << endl;
+    if(mpiCommAnalysisDebugLevel() >= 2) {
+      dbg << "Lattice IN:" << cclat->str() << endl;
+    }
 
     // Context for descendants is decided based on this parts position on the
     // function boundaries
+    // If this is an outgoing MPI Call mark the edge as MPICommContext
     if(part->isOutgoingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
       modified = cclat->setCCLatElemMPI();
     }
+    // If this an call return from MPI mark the edge as NonMPICommContext
     else if(part->isIncomingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
       modified = cclat->setCCLatElemNonMPI();
     }
+    // If its not function boundary set the outgoing edge to
+    // same context as incoming edge
     else {
-      modified = true;
+      PartEdgePtr iedge = part->inEdgeFromAny();
+      Lattice* lin = state.getLatticeAbove(this, iedge, 0); assert(lin);
+      CommContextLattice* cclin = dynamic_cast<CommContextLattice*>(lin); assert(cclin);
+      modified = cclat->copy(cclin);
+    }
+
+    if(mpiCommAnalysisDebugLevel() >= 2) {
+      dbg << "Lattice OUT:" << cclat->str() << endl;
     }
     return modified;
   }
