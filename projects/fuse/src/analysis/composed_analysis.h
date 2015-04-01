@@ -166,6 +166,10 @@ class ComposedAnalysis : public virtual Dataflow, public sight::printable
 
   public:
   typedef enum {fw=0, bw=1, none=2} direction;
+
+  //! Provide a default implementation for initAnalysis
+  //! Can be customized by any derived analysis
+  virtual void initAnalysis(std::set<PartPtr>& startingParts) { }
   
   // Runs the intra-procedural analysis on the given function and returns true if
   /* // the function's NodeState gets modified as a result and false otherwise

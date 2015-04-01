@@ -47,7 +47,10 @@ class Analysis
     bool (*filter) (CFGNode cfgn); 
     Analysis(bool (*f)(CFGNode) = defaultFilter):filter(f) {}
 
-    // Runs the analysis. Returns true if the function's NodeState gets modified as a result and false otherwise
+    //! Set up initial conditions for the analysis
+    virtual void initAnalysis(std::set<PartPtr>& startingParts)=0;
+
+    //! Runs the analysis. Returns true if the function's NodeState gets modified as a result and false otherwise
     virtual void runAnalysis();
     
     ~Analysis();
@@ -65,6 +68,9 @@ class UnstructuredPassAnalysis : virtual public Analysis
   ComposedAnalysis* analysis;
   
   UnstructuredPassAnalysis(ComposedAnalysis* analysis) : analysis(analysis) {}
+
+  // Empty definition that can be overridden by derived classes
+  virtual void initAnalysis(std::set<PartPtr>& startingParts) { }
   
   // Runs the analysis. Returns true if the function's NodeState gets modified as a result and false otherwise
   void runAnalysis();

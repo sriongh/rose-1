@@ -208,7 +208,10 @@ void ComposedAnalysis::runAnalysis()
     initialized.insert(*s);
   }
 
-  
+  // If the entry dataflow is different from bot
+  // Initialize the entry dataflow information for the starting parts
+  initAnalysis(startingParts);
+
   // Iterate over the abstract states that are downstream from the starting states
   dataflowPartEdgeIterator* curNodeIt = getIterator();
   for(set<PartPtr>::iterator s=startingParts.begin(); s!=startingParts.end(); s++) curNodeIt->addStart(*s);
