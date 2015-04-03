@@ -150,6 +150,9 @@ namespace fuse {
   /***************
    * CommATSPart *
    ***************/
+  class CommATSPart;
+  typedef CompSharedPtr<CommATSPart> CommATSPartPtr;
+
   class CommATSPart : public Part {
     CommContextPtr context_p;
     MPICommAnalysis* mpicommanalysis;
@@ -157,6 +160,8 @@ namespace fuse {
   public:
     CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommContextPtr context);
     CommATSPart(const CommATSPart& that);
+
+    CommATSPartPtr get_shared_this();
 
     std::list<PartEdgePtr> outEdges();
     std::list<PartEdgePtr> inEdges();
@@ -172,8 +177,7 @@ namespace fuse {
     bool less(const PartPtr& that) const;
 
     std::string str(std::string indent="") const;
-  };
-  typedef CompSharedPtr<CommATSPart> CommATSPartPtr;
+  };  
 
   /*******************
    * CommATSPartEdge *

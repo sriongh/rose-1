@@ -139,7 +139,7 @@ namespace fuse {
   }
 
   string MPICommContext::str(string indent) const {
-    return "[CommContext:MPI]";
+    return "MPI";
   }
 
   /*********************
@@ -184,7 +184,7 @@ namespace fuse {
   }
 
   string NonMPICommContext::str(string indent) const {
-    return "[CommContext: NonMPI]";
+    return "NonMPI";
   }
 
   /***************
@@ -203,11 +203,18 @@ namespace fuse {
     context_p(that.context_p) {
   }
 
+  CommATSPartPtr CommATSPart::get_shared_this() {
+    return dynamicPtrCast<CommATSPart>(makePtrFromThis(shared_from_this()));
+  }
+
   list<PartEdgePtr> CommATSPart::outEdges() {
-    // Look up succMap in MPICommAnalysis to find the successor of this CommATSPart
-    // Create CommATSPartEdge between this part and all the successors
+    list<PartEdgePtr> oedges = base_p->outEdges();
+    list<PartEdgePtr>::iterator oe = oedges.begin();
+    // For each out edge look up the context annotation from NodeState
+    // If its MPI create MPIOpAbs and the MPICommContext
+    // If its NonMPI create the NonMPICommContext based on parent context
+    // Create the corresponding CommATSPart based on contexts and the respective edges
     assert(0);
-    return parent->outEdges();
   }
 
   list<PartEdgePtr> CommATSPart::inEdges() {
@@ -216,6 +223,7 @@ namespace fuse {
     return parent->inEdges();
   }
 
+  // this analysis does not refine any CFGNodes within a part
   set<CFGNode> CommATSPart::CFGNodes() const {
     return base_p->CFGNodes();
   }
@@ -231,8 +239,8 @@ namespace fuse {
   }
 
   PartEdgePtr CommATSPart::inEdgeFromAny() {
-    assert(0);
-    return parent->inEdgeFromAny();
+    PartEdgePtr baseInEdgeFromAny = parent->inEdgeFromAny();
+    return makePtr<CommATSPartEdge>(baseInEdgeFromAny, mpicommanalysis, NULLPart, get_shared_this());
   }
 
   bool CommATSPart::equal(const PartPtr& that) const {
@@ -249,7 +257,7 @@ namespace fuse {
 
   string CommATSPart::str(string indent) const {
     ostringstream oss;
-    oss << "[CommATSPart:" << parent->str() << "]";
+    oss << "[CommATSPart: " << context_p->str() << " base=" << base_p->str() << "]";
     return oss.str();
   }
 
@@ -516,14 +524,44 @@ namespace fuse {
     return modified;
   }
 
-  std::set<PartPtr> MPICommAnalysis::GetStartAStates_Spec() {
-    assert(0);
-    return composer->GetStartAStates(this);
+  set<PartPtr> MPICommAnalysis::GetStartAStates_Spec() {
+    set<PartPtr> sParts = composer->GetStartAStates(this);
+    set<PartPtr> sCommParts;
+    set<PartPtr>::iterator s=sParts.begin();
+    for( ; s != sParts.end(); ++s) {
+      PartPtr spart = *s;
+      NodeState* state = NodeState::getNodeState(this, spart);
+      CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(this, 
+                                                                                           spart->inEdgeFromAny(), 0));
+      ROSE_ASSERT(ccl_p);
+      // Startings must have NonMPICommContext
+      assert(ccl_p->isCCLatElemNonMPI());
+      // Create NonMPICommContext based on parent context
+      NonMPICommContextPtr nmcc = makePtr<NonMPICommContext>(spart->getPartContext());
+      CommATSPartPtr cap = makePtr<CommATSPart>(spart, this, nmcc);
+      sCommParts.insert(cap);      
+    }
+    return sCommParts;
   }
 
-  std::set<PartPtr> MPICommAnalysis::GetEndAStates_Spec() {
-    assert(0);
-    return composer->GetEndAStates(this);
+  set<PartPtr> MPICommAnalysis::GetEndAStates_Spec() {
+    set<PartPtr> eParts = composer->GetEndAStates(this);
+    set<PartPtr> eCommParts;
+    set<PartPtr>::iterator e=eParts.begin();
+    for( ; e != eParts.end(); ++e) {
+      PartPtr epart = *e;
+      NodeState* state = NodeState::getNodeState(this, epart);
+      CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(this, 
+                                                                                           epart->inEdgeFromAny(), 0));
+      ROSE_ASSERT(ccl_p);
+      // Ending must have NonMPICommContext
+      assert(ccl_p->isCCLatElemNonMPI());
+      // Create NonMPICommContext based on parent context
+      NonMPICommContextPtr nmcc = makePtr<NonMPICommContext>(epart->getPartContext());
+      CommATSPartPtr cap = makePtr<CommATSPart>(epart, this, nmcc);
+      eCommParts.insert(cap);      
+    }
+    return eCommParts;
   }
 
   string MPICommAnalysis::str(string indent) const {
