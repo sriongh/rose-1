@@ -81,7 +81,7 @@ namespace fuse {
 
   //! Methods for creating MPI operation abstraction
   // MPIOpAbsPtr createMPIOpAbs(const Function& mpif);
-  MPIOpAbsPtr createMPIOpAbs(const Function& mpif, PartPtr callsite);
+  MPIOpAbsPtr createMPIOpAbs(PartPtr callsite);
 
   /***************
    * CommContext *
@@ -150,19 +150,21 @@ namespace fuse {
   /***************
    * CommATSPart *
    ***************/
+  class CommContextLattice;
   class CommATSPart;
   typedef CompSharedPtr<CommATSPart> CommATSPartPtr;
 
   class CommATSPart : public Part {
-    CommContextPtr context_p;
-    MPICommAnalysis* mpicommanalysis;
-    PartPtr base_p;
+    CommContextPtr context;
+    MPICommAnalysis* mpicommanalysis_p;
+    PartPtr base;
   public:
     CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommContextPtr context);
     CommATSPart(const CommATSPart& that);
 
     CommATSPartPtr get_shared_this();
 
+    // Part interface
     std::list<PartEdgePtr> outEdges();
     std::list<PartEdgePtr> inEdges();
 
@@ -177,14 +179,43 @@ namespace fuse {
     bool less(const PartPtr& that) const;
 
     std::string str(std::string indent="") const;
+
+    // Helper methods
+    //! Get the CommContextLattice above from NodeState
+    //! @param part NodeState at this part
+    //! @param pedge Lattice info along this pedge
+    CommContextLattice* getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge);
+    //! Get the CommContextLattice below from NodeState
+    //! @param part NodeState at this part
+    //! @param pedge Lattice info along this pedge
+    CommContextLattice* getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge);
+    //! Checks if NonMPICommContext is preserved along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if CommContext switches from NonMPI to MPI along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if CommContext switches from MPI to NonMPI along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if MPICommContext is preserved along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
   };  
 
   /*******************
    * CommATSPartEdge *
    *******************/
+  class CommATSPartEdge;
+  typedef CompSharedPtr<CommATSPartEdge> CommATSPartEdgePtr;
+
   class CommATSPartEdge : public PartEdge {
-    PartEdgePtr base_p;
-    CommATSPartPtr source_p, target_p;
+    PartEdgePtr base;
+    CommATSPartPtr src, tgt;
   public:
     CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target);
     CommATSPartEdge(const CommATSPartEdge& that);
@@ -199,9 +230,7 @@ namespace fuse {
     bool less(const PartEdgePtr& that) const;
 
     std::string str(std::string indent="") const;
-  };
-
-  typedef CompSharedPtr<CommATSPartEdge> CommATSPartEdgePtr;
+  };  
 
   /**********************
    * CommContextLattice *
