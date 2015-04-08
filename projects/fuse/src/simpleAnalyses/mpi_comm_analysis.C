@@ -72,7 +72,7 @@ namespace fuse {
   //! If two operations are of same type 
   //! order them using the callsite pointer (SgFunctionCallExp*)
   bool MPIOpAbsCallSite::operator<(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite, MPIOpAbs>(that_p);
+    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite>(that_p);
     assert(moacs_p);
     if(op < moacs_p->op) return true;
     if(op == moacs_p->op) return callsite < moacs_p->callsite;
@@ -80,7 +80,7 @@ namespace fuse {
   }
 
   bool MPIOpAbsCallSite::operator==(const MPIOpAbsPtr& that_p) const {
-    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite, MPIOpAbs>(that_p);
+    MPIOpAbsCallSitePtr moacs_p = dynamicPtrCast<MPIOpAbsCallSite>(that_p);
     assert(moacs_p);
     if(op == moacs_p->op) return callsite == moacs_p->callsite;
     return false;
@@ -110,18 +110,18 @@ namespace fuse {
   /******************
    * MPICommContext *
    ******************/
-  MPICommContext::MPICommContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p)
-  : CommContext(), mpiopabs_p(mpiopabs_p), calleeContext_p(calleeContext_p) { }
+  MPICommContext::MPICommContext(MPIOpAbsPtr mpiopabs_p)
+  : CommContext(), mpiopabs_p(mpiopabs_p) { }
 
   MPICommContext::MPICommContext(const MPICommContext& that)
-  : CommContext(that), mpiopabs_p(that.mpiopabs_p), calleeContext_p(that.calleeContext_p) { }
+  : CommContext(that), mpiopabs_p(that.mpiopabs_p) { }
 
   //! Returns a list of PartContextPtr objects that denote more detailed context information about
   //! this PartContext's internal contexts. If there aren't any, the function may just return a list containing
   //! this PartContext itself.
   list<PartContextPtr> MPICommContext::getSubPartContexts() const {
     list<PartContextPtr> listOfMe;
-    listOfMe.push_back(makePtr<MPICommContext>(mpiopabs_p, calleeContext_p));
+    listOfMe.push_back(makePtr<MPICommContext>(mpiopabs_p));
     return listOfMe;
   }
 
@@ -129,11 +129,11 @@ namespace fuse {
   bool MPICommContext::operator<(const PartContextPtr& that) const {
     // Check if that is NonMPICommContextPtr
     // If that is NonMPICommContext then it is ordered before this
-    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
-    if(thatnmcc_p) return false;
+    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext>(that);
+    if(thatnmcc_p.get()) return false;
 
-    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
-    assert(thatmcc_p);
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext>(that);
+    assert(thatmcc_p.get());
     // Differentiate two MPICommContext using the MPI operation abstraction
     return mpiopabs_p < thatmcc_p->mpiopabs_p;
   }
@@ -142,11 +142,11 @@ namespace fuse {
   bool MPICommContext::operator==(const PartContextPtr& that) const {
     // Check if that is NonMPICommContextPtr
     // If that is NonMPICommContext then they are not equal
-    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
-    if(thatnmcc_p) return false;
+    NonMPICommContextPtr thatnmcc_p = dynamicPtrCast<NonMPICommContext>(that);
+    if(thatnmcc_p.get()) return false;
 
-    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
-    assert(thatmcc_p);
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext>(that);
+    assert(thatmcc_p.get());
     // Differentiate two MPICommContext using the MPI operation abstraction
     return mpiopabs_p == thatmcc_p->mpiopabs_p;
   }
@@ -176,10 +176,10 @@ namespace fuse {
   bool NonMPICommContext::operator<(const PartContextPtr& that) const {
     // Check if that argument is MPICommContextPtr
     // If so then return true as NonMPICommContext is ordered before MPICommContext
-    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext>(that);
     if(thatmcc_p) return true;
 
-    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
+    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext>(that);
     assert(thatnmc_p);
     return parentContext_p < thatnmc_p->parentContext_p;
   }
@@ -188,10 +188,10 @@ namespace fuse {
   bool NonMPICommContext::operator==(const PartContextPtr& that) const {
     // Check if that argument is MPICommContextPtr
     // If so then then they are not equal
-    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext, PartContext>(that);
+    MPICommContextPtr thatmcc_p = dynamicPtrCast<MPICommContext>(that);
     if(thatmcc_p) return false;
 
-    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext, PartContext>(that);
+    NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext>(that);
     assert(thatnmc_p);
     return parentContext_p == thatnmc_p->parentContext_p;
   }
@@ -276,7 +276,7 @@ namespace fuse {
       else if(contextFromNonMPItoMPI(edgefromccl_p, edgetoccl_p)) {
         PartPtr calleePart = base;
         MPIOpAbsPtr mpiopabs = createMPIOpAbs(calleePart);
-        targetContext = makePtr<MPICommContext>(mpiopabs, base->getPartContext());
+        targetContext = makePtr<MPICommContext>(mpiopabs);
       }
       else assert(0);
       CommATSPartPtr caTargetPart = makePtr<CommATSPart>(target, mpicommanalysis_p, targetContext);
@@ -305,7 +305,6 @@ namespace fuse {
   }
 
   PartEdgePtr CommATSPart::outEdgeToAny() {
-    assert(0);
     PartEdgePtr baseOutEdgeToAny = base->outEdgeToAny();
     return makePtr<CommATSPartEdge>(baseOutEdgeToAny, mpicommanalysis_p, get_shared_this(), NULLPart);
   }

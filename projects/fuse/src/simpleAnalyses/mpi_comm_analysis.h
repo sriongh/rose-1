@@ -119,9 +119,8 @@ namespace fuse {
   //! Each context is executed at least once by the communication analysis.
   class MPICommContext : public CommContext {
     MPIOpAbsPtr mpiopabs_p;
-    PartContextPtr calleeContext_p;
   public:
-    MPICommContext(MPIOpAbsPtr mpiopabs_p, PartContextPtr calleeContext_p);
+    MPICommContext(MPIOpAbsPtr mpiopabs_p);
     MPICommContext(const MPICommContext& that);
     std::list<PartContextPtr> getSubPartContexts() const;
     bool operator<(const PartContextPtr& that) const;
