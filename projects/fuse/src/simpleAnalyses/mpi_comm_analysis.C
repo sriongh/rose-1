@@ -220,69 +220,17 @@ namespace fuse {
     return dynamicPtrCast<CommATSPart>(makePtrFromThis(shared_from_this()));
   }
 
-  CommContextLattice* CommATSPart::getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge) {
-    NodeState* state_p = NodeState::getNodeState(mpicommanalysis_p, part);
-    CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeAbove(mpicommanalysis_p, pedge, 0));
-    ROSE_ASSERT(ccl_p);
-    return ccl_p;
-  }
-
-  CommContextLattice* CommATSPart::getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge) {
-    NodeState* state_p = NodeState::getNodeState(mpicommanalysis_p, part);
-    CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeBelow(mpicommanalysis_p, pedge, 0));
-    ROSE_ASSERT(ccl_p);
-    return ccl_p;
-  }
-
-  bool CommATSPart::contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, 
-                                              CommContextLattice* edgetoccl_p) {
-    if(edgefromccl_p->isCCLatElemNonMPI() && edgetoccl_p->isCCLatElemNonMPI()) return true;
-    return false;
-  }
-
-  bool CommATSPart::contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, 
-                                           CommContextLattice* edgetoccl_p) {
-    if(edgefromccl_p->isCCLatElemNonMPI() && edgetoccl_p->isCCLatElemMPI()) return true;
-    return false;
-  }
-
-  bool CommATSPart::contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, 
-                                           CommContextLattice* edgetoccl_p) {
-    if(edgefromccl_p->isCCLatElemMPI() && edgetoccl_p->isCCLatElemNonMPI()) return true;
-    return false;
-  }
-
-  bool CommATSPart::contextFromMPItoMPI(CommContextLattice* edgefromccl_p, 
-                                        CommContextLattice* edgetoccl_p) {
-    if(edgefromccl_p->isCCLatElemMPI() && edgetoccl_p->isCCLatElemMPI()) return true;
-    return false;
-  }
-
   list<PartEdgePtr> CommATSPart::outEdges() {
     scope reg("CommATSPart::outEdges()", scope::low, attrGE("mpiCommAnalysisDebugLevel", 3)); 
     list<PartEdgePtr> caOutEdges;
 
     list<PartEdgePtr> oedges = base->outEdges();
     list<PartEdgePtr>::iterator oe = oedges.begin();
-    
-    CommContextLattice* edgefromccl_p = getCommContextLatticeAbove(base, base->inEdgeFromAny());
     for( ; oe != oedges.end(); ++oe) {
-      PartPtr target = (*oe)->target();
-      CommContextLattice* edgetoccl_p = getCommContextLatticeBelow(base, *oe);
-      CommContextPtr targetContext;
-      if(contextFromNonMPItoNonMPI(edgefromccl_p, edgetoccl_p)) {
-        targetContext = makePtr<NonMPICommContext>(base->getPartContext());
-      }
-      else if(contextFromNonMPItoMPI(edgefromccl_p, edgetoccl_p)) {
-        PartPtr calleePart = base;
-        MPIOpAbsPtr mpiopabs = createMPIOpAbs(calleePart);
-        targetContext = makePtr<MPICommContext>(mpiopabs);
-      }
-      else assert(0);
-      CommATSPartPtr caTargetPart = makePtr<CommATSPart>(target, mpicommanalysis_p, targetContext);
-      CommATSPartEdgePtr caOutEdge = makePtr<CommATSPartEdge>(*oe, mpicommanalysis_p, makePtrFromThis(shared_from_this()), caTargetPart);
-      dbg << "CommATSPartEdge=" << caOutEdge->str() << endl;
-      caOutEdges.push_back(caOutEdge);
+      PartPtr baseTarget = (*oe)->target();
+      CommATSPartPtr commATSTarget = mpicommanalysis_p->buildCommATSPart(baseTarget, *oe, baseTarget->outEdgeToAny());
+      CommATSPartEdgePtr outEdge = makePtr<CommATSPartEdge>(*oe, mpicommanalysis_p, makePtrFromThis(shared_from_this()), commATSTarget);
+      caOutEdges.push_back(outEdge);
     }
     return caOutEdges;
   } 
@@ -300,8 +248,16 @@ namespace fuse {
   }
 
   set<PartPtr> CommATSPart::matchingCallParts() const {
-    assert(0);
-    return base->matchingCallParts();
+    set<PartPtr> baseMatchingParts;
+    set<PartPtr> commATSMatchingParts;
+    baseMatchingParts = base->matchingCallParts();
+    set<PartPtr>::iterator bp = baseMatchingParts.begin();
+    for( ; bp != baseMatchingParts.end(); ++bp) {
+      PartPtr basePart = *bp;
+      CommATSPartPtr commATSPart = mpicommanalysis_p->buildCommATSPart(basePart, basePart->inEdgeFromAny(), basePart->outEdgeToAny());
+      commATSMatchingParts.insert(commATSPart);
+    }
+    return commATSMatchingParts;
   }
 
   PartEdgePtr CommATSPart::outEdgeToAny() {
@@ -341,6 +297,7 @@ namespace fuse {
   CommATSPartEdge::CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr src, CommATSPartPtr tgt)
   : PartEdge(analysis, base),
     base(base),
+    mpicommanalysis_p(analysis),
     src(src),
     tgt(tgt) {
   }
@@ -348,6 +305,7 @@ namespace fuse {
   CommATSPartEdge::CommATSPartEdge(const CommATSPartEdge& that)
   : PartEdge(that),
     base(that.base),
+    mpicommanalysis_p(that.mpicommanalysis_p),
     src(that.src),
     tgt(that.tgt) {
   }
@@ -362,7 +320,13 @@ namespace fuse {
 
   list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
     list<PartEdgePtr> baseOpPartEdges = base->getOperandPartEdge(anchor, operand);
-    assert(0);
+    list<PartEdgePtr> commATSOpPartEdges;
+    list<PartEdgePtr>::iterator be = baseOpPartEdges.begin();
+    for( ; be != baseOpPartEdges.end(); ++be) {
+      CommATSPartEdgePtr commATSOpPartEdge = mpicommanalysis_p->buildCommATSPartEdge(*be);
+      commATSOpPartEdges.push_back(commATSOpPartEdge);
+    }
+    return commATSOpPartEdges;
   }
 
   map<CFGNode, shared_ptr<SgValueExp> > CommATSPartEdge::getPredicateValue() {
@@ -530,6 +494,30 @@ namespace fuse {
     return oss.str();
   }
 
+  /***********************
+   * CommContextNodeFact *
+   ***********************/
+  CommContextNodeFact::CommContextNodeFact(PartPtr callee) 
+    : NodeFact(), 
+      mpiCalleePart(callee) { }
+
+  CommContextNodeFact::CommContextNodeFact(const CommContextNodeFact& that)
+    : NodeFact(that), mpiCalleePart(that.mpiCalleePart) { }  
+
+  PartPtr CommContextNodeFact::getMPICalleePart() const {
+    return mpiCalleePart;
+  }
+
+  NodeFact* CommContextNodeFact::copy() const {
+    return new CommContextNodeFact(*this);
+  }
+
+  string CommContextNodeFact::str(string indent) const {
+    ostringstream oss;
+    oss << "[CommContextNodeFact callee=" << mpiCalleePart->str() << "]";
+    return oss.str();
+  }
+
   /*******************
    * MPICommAnalysis *
    *******************/
@@ -589,19 +577,45 @@ namespace fuse {
     // function boundaries
     // If this is an outgoing MPI Call mark the edge as MPICommContext
     if(part->isOutgoingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
+      // Add this CalleePart as NodeFact
+      state.addFact(this, 0, new CommContextNodeFact(part));
+      // Push the calling part into the call stack
+      mpiCallStack.push(part);
+      // Set the CommContextLattice to MPI
       modified = cclat_p->setCCLatElemMPI();
     }
     // If this an call return from MPI mark the edge as NonMPICommContext
-    else if(part->isIncomingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {
+    else if(part->isIncomingFuncCall(cn) && isMPIFuncCall(isSgFunctionCallExp(cn.getNode()))) {      
+      // Assuming MPI Functions used in the program don't call each other
+      ROSE_ASSERT(mpiCallStack.size() == 1);
+
+      // Get the Callee from top of the stack
+      PartPtr mpiFuncEntry = mpiCallStack.top();
+      ROSE_ASSERT(mpiFuncEntry.get());
+      // Update the NodeFact with MPI callee part
+      state.addFact(this, 0, new CommContextNodeFact(mpiFuncEntry));
+      mpiCallStack.pop();
+
+      // Set the CommContextLattice to NonMPI
       modified = cclat_p->setCCLatElemNonMPI();
     }
     // If its not function boundary set the outgoing edge to
     // same context as incoming edge
     else {
       PartEdgePtr iedge = part->inEdgeFromAny();
-      Lattice* lin = state.getLatticeAbove(this, iedge, 0); assert(lin);
-      CommContextLattice* cclin_p = dynamic_cast<CommContextLattice*>(lin); assert(cclin_p);
+      Lattice* lin = state.getLatticeAbove(this, iedge, 0); 
+      assert(lin);
+      CommContextLattice* cclin_p = dynamic_cast<CommContextLattice*>(lin); 
+      assert(cclin_p);
       modified = cclat_p->copy(cclin_p);
+      // If this is MPICommContext
+      // Get the MPI Callee from stack top
+      // Update the NodeFact with MPI callee part
+      if(cclat_p->isCCLatElemMPI()) {
+        PartPtr mpiFuncEntry = mpiCallStack.top();
+        ROSE_ASSERT(mpiFuncEntry.get());
+        state.addFact(this, 0, new CommContextNodeFact(mpiFuncEntry));
+      }
     }
 
     if(mpiCommAnalysisDebugLevel() >= 2) {
@@ -654,6 +668,100 @@ namespace fuse {
     return "MPICommAnalysis";
   }
 
+  CommContextLattice* MPICommAnalysis::getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge) {
+    NodeState* state_p = NodeState::getNodeState(this, part);
+    CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeAbove(this, pedge, 0));
+    ROSE_ASSERT(ccl_p);
+    return ccl_p;
+  }
+
+  CommContextLattice* MPICommAnalysis::getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge) {
+    NodeState* state_p = NodeState::getNodeState(this, part);
+    CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeBelow(this, pedge, 0));
+    ROSE_ASSERT(ccl_p);
+    return ccl_p;
+  }
+
+  CommContextNodeFact* MPICommAnalysis::getCommContextNodeFact(PartPtr part) {
+    NodeState* state_p = NodeState::getNodeState(this, part);
+    CommContextNodeFact* nodefact = dynamic_cast<CommContextNodeFact*>(state_p->getFact(this, 0));
+    ROSE_ASSERT(nodefact);
+    return nodefact;
+  }
+
+  bool MPICommAnalysis::contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, 
+                                                  CommContextLattice* edgetoccl_p) {
+    if(edgefromccl_p->isCCLatElemNonMPI() && edgetoccl_p->isCCLatElemNonMPI()) return true;
+    return false;
+  }
+
+  bool MPICommAnalysis::contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, 
+                                               CommContextLattice* edgetoccl_p) {
+    if(edgefromccl_p->isCCLatElemNonMPI() && edgetoccl_p->isCCLatElemMPI()) return true;
+    return false;
+  }
+
+  bool MPICommAnalysis::contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, 
+                                               CommContextLattice* edgetoccl_p) {
+    if(edgefromccl_p->isCCLatElemMPI() && edgetoccl_p->isCCLatElemNonMPI()) return true;
+    return false;
+  }
+
+  bool MPICommAnalysis::contextFromMPItoMPI(CommContextLattice* edgefromccl_p, 
+                                            CommContextLattice* edgetoccl_p) {
+    if(edgefromccl_p->isCCLatElemMPI() && edgetoccl_p->isCCLatElemMPI()) return true;
+    return false;
+  }
+
+  CommATSPartPtr MPICommAnalysis::buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto) {
+    CommContextLattice* efromccl_p = getCommContextLatticeAbove(base, efrom);
+    CommContextLattice* etoccl_p = getCommContextLatticeBelow(base, eto);
+
+    // Assuming the lattice value on the edge is either MPI or NonMPI
+    // It will only be full (either) when the function call expression is 
+    // through a function pointer and function pointer can call
+    // both MPI and NonMPI methods
+    // example: 
+    // int (*generic_function)();
+    // (some_cond) ? (generic_function = MPI_Finalize) : (generic_function = foo);
+    // (*generic_function)();
+    // For now we assume standard calling of MPI methods
+    ROSE_ASSERT(!efromccl_p->isFullLat() && !etoccl_p->isFullLat());
+
+    CommContextPtr commContext;
+    if(contextFromNonMPItoNonMPI(efromccl_p, etoccl_p)) {
+      commContext = makePtr<NonMPICommContext>(base->getPartContext());
+    }
+    else if(contextFromNonMPItoMPI(efromccl_p, etoccl_p)) {
+      CommContextNodeFact* nodefact = getCommContextNodeFact(base);
+      ROSE_ASSERT(nodefact->getMPICalleePart() == base);
+      MPIOpAbsPtr mpiopabs = createMPIOpAbs(base);
+      commContext = makePtr<MPICommContext>(mpiopabs);
+    }
+    else if(contextFromMPItoMPI(efromccl_p, etoccl_p)) {
+      CommContextNodeFact* nodefact = getCommContextNodeFact(base);
+      MPIOpAbsPtr mpiopabs = createMPIOpAbs(nodefact->getMPICalleePart());
+      commContext = makePtr<MPICommContext>(mpiopabs);
+    }
+    else if(contextFromMPItoNonMPI(efromccl_p, etoccl_p)) {
+      commContext = makePtr<NonMPICommContext>(base->getPartContext());
+    }
+    else assert(0);
+    CommATSPartPtr commATSPart = makePtr<CommATSPart>(base, this, commContext);
+    return commATSPart;
+  }
+
+
+  CommATSPartEdgePtr MPICommAnalysis::buildCommATSPartEdge(PartEdgePtr baseEdge) {
+    PartPtr baseSource = baseEdge->source();
+    PartPtr baseTarget = baseEdge->target();
+    CommATSPartPtr commATSSource = buildCommATSPart(baseSource, baseSource->inEdgeFromAny(), baseEdge);
+    CommATSPartPtr commATSTarget = buildCommATSPart(baseTarget, baseEdge, baseTarget->outEdgeToAny());
+    
+    CommATSPartEdgePtr commATSEdge = makePtr<CommATSPartEdge>(baseEdge, this, commATSSource, commATSTarget);
+    dbg << commATSEdge << endl;
+    return commATSEdge;
+  }
 }; // end namespace
 
 //  LocalWords:  MPICommAnalysis MPICommATSPartEdge CommATSPart

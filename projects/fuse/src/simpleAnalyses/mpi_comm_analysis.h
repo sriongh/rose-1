@@ -178,32 +178,6 @@ namespace fuse {
     bool less(const PartPtr& that) const;
 
     std::string str(std::string indent="") const;
-
-    // Helper methods
-    //! Get the CommContextLattice above from NodeState
-    //! @param part NodeState at this part
-    //! @param pedge Lattice info along this pedge
-    CommContextLattice* getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge);
-    //! Get the CommContextLattice below from NodeState
-    //! @param part NodeState at this part
-    //! @param pedge Lattice info along this pedge
-    CommContextLattice* getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge);
-    //! Checks if NonMPICommContext is preserved along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if CommContext switches from NonMPI to MPI along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if CommContext switches from MPI to NonMPI along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if MPICommContext is preserved along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
   };  
 
   /*******************
@@ -214,6 +188,7 @@ namespace fuse {
 
   class CommATSPartEdge : public PartEdge {
     PartEdgePtr base;
+    MPICommAnalysis* mpicommanalysis_p;
     CommATSPartPtr src, tgt;
   public:
     CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target);
@@ -267,14 +242,30 @@ namespace fuse {
     std::string str(std::string indent="") const;
   };
 
+  //! NodeFact for MPICommContext
+  //! Store the corresponding MPI callee part as NodeFact 
+  //! at all edges with MPICommContext
+  //! Useful in creating CommATSParts with MPICommContext
+  class CommContextNodeFact : public NodeFact {
+    PartPtr mpiCalleePart;
+  public:
+    CommContextNodeFact(PartPtr mpiCallPart);
+    CommContextNodeFact(const CommContextNodeFact& that);
+
+    PartPtr getMPICalleePart() const;
+    virtual NodeFact* copy() const;
+    std::string str(std::string indent="") const;
+  };
+
   /*******************
    * MPICommAnalysis *
    *******************/
-  typedef std::set<CommATSPartPtr> CAPartSet;
-  typedef std::map<CommATSPartPtr, CAPartSet> CAPart2CAPartSetMap;
-  typedef std::pair<CommATSPartPtr, CAPartSet> CAPart2CAPartSetMapElement;
 
   class MPICommAnalysis : public FWDataflow {
+    typedef std::stack<PartPtr> MPICallStack;
+    
+    MPICallStack mpiCallStack;
+
   public:
     MPICommAnalysis();
     virtual void initAnalysis(std::set<PartPtr>& startingParts);
@@ -296,24 +287,45 @@ namespace fuse {
     //! Fuse functionality implemented by this analysis
     bool implementsATSGraph() { return true; }
 
-    bool isMPIFuncCall(SgFunctionCallExp* sgn);
-
     //! Return the start abstract state (Part) of the application
     std::set<PartPtr> GetStartAStates_Spec();
     //! Return the end abstract state (Part) of the application
     std::set<PartPtr> GetEndAStates_Spec();
 
-    CommATSPartPtr getCommATSPartPtr(PartPtr part_p);
-    CAPartSet get_pred(PartPtr part_p);
-    CAPartSet get_succ(PartPtr part_p);
-
-  private:
-    CAPartSet get_pred(CommATSPartPtr cap_p);
-    CAPartSet get_succ(CommATSPartPtr cap_p);
-
-  public:    
     // pretty print for the object
     std::string str(std::string indent="") const;
+
+    // Helper methods
+    //! Checks if a given SgFunctionCallExp has MPI_ prefix
+    bool isMPIFuncCall(SgFunctionCallExp* sgn);
+    //! Get the CommContextLattice above from NodeState
+    //! @param part NodeState at this part
+    //! @param pedge Lattice info along this pedge
+    CommContextLattice* getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge);
+    //! Get the CommContextLattice below from NodeState
+    //! @param part NodeState at this part
+    //! @param pedge Lattice info along this pedge
+    CommContextLattice* getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge);
+    CommContextNodeFact* getCommContextNodeFact(PartPtr part);
+    //! Checks if NonMPICommContext is preserved along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if CommContext switches from NonMPI to MPI along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if CommContext switches from MPI to NonMPI along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    //! Checks if MPICommContext is preserved along edgefrom and edgeto
+    //! @param edgefromccl_p CommContextLattice on edgefrom
+    //! @param edgetoccl_p CommContextLattice on edgeto
+    bool contextFromMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
+    
+    CommATSPartPtr buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto);
+    CommATSPartEdgePtr buildCommATSPartEdge(PartEdgePtr pedge);
   };
 };
 
