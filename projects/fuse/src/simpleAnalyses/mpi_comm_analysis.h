@@ -204,63 +204,44 @@ namespace fuse {
     bool less(const PartEdgePtr& that) const;
 
     std::string str(std::string indent="") const;
-  };  
+  };
+
+  // class CommContextLatticeElem : public FiniteLattice {
+  //   std::set<CommContextPtr> commContexts;
+  // };
+
+  // class CommContextLatticeMap : public FiniteLattice {
+  //   std::map<PartEdgePtr, CommContextLatticeElemPtr> commContextMap;
+  // }
 
   /**********************
    * CommContextLattice *
    **********************/
+  typedef std::set<CommATSPartPtr> CommATSPartSet;
+  typedef std::map<CommATSPartPtr, CommATSPartSet> CommATSPartMap;
   class CommContextLattice : public FiniteLattice {
-    enum CommContextLatticeElem {
-      NOCONTEXT,
-      NONMPICOMMCONTEXT,
-      MPICOMMCONTEXT,
-      UNKNOWN
-    };
-
-    CommContextLatticeElem elem;
+    CommATSPartMap outgoing, incoming;
   public:
-    CommContextLattice(PartEdgePtr edge_p);
+    CommContextLattice(PartEdgePtr pedge);
     CommContextLattice(const CommContextLattice& that);
 
-    CommContextLatticeElem getCCLatElem() const;
-
     void initialize();
-    bool setCCLatElemMPI();
-    bool setCCLatElemNonMPI();
     bool setToFull();
     bool setToEmpty();
     bool meetUpdate(Lattice* that);
     Lattice* copy() const;
     void copy(Lattice* that);
-    bool copy(CommContextLattice* that);
     bool operator==(Lattice* that);
-    bool isCCLatElemMPI() const;
-    bool isCCLatElemNonMPI() const;
     bool isFullLat();
     bool isEmptyLat();
     bool setMLValueToFull(MemLocObjectPtr ml_p);
-    std::string str(std::string indent="") const;
-  };
-
-  //! NodeFact for MPICommContext
-  //! Store the corresponding MPI callee part as NodeFact 
-  //! at all edges with MPICommContext
-  //! Useful in creating CommATSParts with MPICommContext
-  class CommContextNodeFact : public NodeFact {
-    PartPtr mpiCalleePart;
-  public:
-    CommContextNodeFact(PartPtr mpiCallPart);
-    CommContextNodeFact(const CommContextNodeFact& that);
-
-    PartPtr getMPICalleePart() const;
-    virtual NodeFact* copy() const;
-    std::string str(std::string indent="") const;
+    std::string str(const CommATSPartSet& set) const;
+    std::string str(std::string indent="") const;    
   };
 
   /*******************
    * MPICommAnalysis *
    *******************/
-
   class MPICommAnalysis : public FWDataflow {
     typedef std::stack<PartPtr> MPICallStack;
     
@@ -306,26 +287,9 @@ namespace fuse {
     //! @param part NodeState at this part
     //! @param pedge Lattice info along this pedge
     CommContextLattice* getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge);
-    CommContextNodeFact* getCommContextNodeFact(PartPtr part);
-    //! Checks if NonMPICommContext is preserved along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromNonMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if CommContext switches from NonMPI to MPI along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromNonMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if CommContext switches from MPI to NonMPI along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromMPItoNonMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    //! Checks if MPICommContext is preserved along edgefrom and edgeto
-    //! @param edgefromccl_p CommContextLattice on edgefrom
-    //! @param edgetoccl_p CommContextLattice on edgeto
-    bool contextFromMPItoMPI(CommContextLattice* edgefromccl_p, CommContextLattice* edgetoccl_p);
-    
-    CommATSPartPtr buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto);
-    CommATSPartEdgePtr buildCommATSPartEdge(PartEdgePtr pedge);
+
+    // CommATSPartPtr buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto);
+    // CommATSPartEdgePtr buildCommATSPartEdge(PartEdgePtr pedge);
   };
 };
 
