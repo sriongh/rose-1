@@ -151,6 +151,10 @@ namespace fuse {
     return mpiopabs_p == thatmcc_p->mpiopabs_p;
   }
 
+  CommContextPtr MPICommContext::copy() const {
+    return makePtr<MPICommContext>(*this);
+  }
+
   string MPICommContext::str(string indent) const {
     return "MPI";
   }
@@ -194,6 +198,10 @@ namespace fuse {
     NonMPICommContextPtr thatnmc_p = dynamicPtrCast<NonMPICommContext>(that);
     assert(thatnmc_p);
     return parentContext_p == thatnmc_p->parentContext_p;
+  }
+
+  CommContextPtr NonMPICommContext::copy() const {
+    return makePtr<NonMPICommContext>(*this);
   }
 
   string NonMPICommContext::str(string indent) const {
@@ -289,6 +297,10 @@ namespace fuse {
     ostringstream oss;
     oss << "[CommATSPart: " << context->str() << " " << base->str() << "]";
     return oss.str();
+  }
+
+  CommContextPtr CommATSPart::getCommContext() const {
+    return context;
   }
 
   /*******************
@@ -434,13 +446,13 @@ namespace fuse {
   string CommContextLattice::str(const CommATSPartSet& commATSPartSet) const {
     ostringstream oss;
     CommATSPartSet::const_iterator cs = commATSPartSet.begin();
-    oss << "{ ";
+    oss << "{\n";
     for( ; cs != commATSPartSet.end(); ) {
       oss << cs->str();
       ++cs;
       if(cs != commATSPartSet.end()) oss << cs->str() << ",\n";
     }
-    oss << " }";
+    oss << "\n}";
     return oss.str();
   }
 
@@ -452,20 +464,38 @@ namespace fuse {
     CommATSPartMap::const_iterator o = outgoing.begin();
     for( ; o != outgoing.end(); ++o) {
       oss << "<tr>";
-      oss << "<td>" << o->first->str() << "<\td>";
-      oss << "<td>" << str(o->second) << "<\td>";
-      oss << "<\tr>";
+      oss << "<td>" << o->first->str() << "</td>";
+      oss << "<td>" << str(o->second) << "</td>";
+      oss << "</tr>";
     }
     oss << "<tr> <th>" << "incoming(" << incoming.size() << "):" << "</th> </tr>";
     CommATSPartMap::const_iterator i = incoming.begin();
     for( ; i != incoming.end(); ++i) {
       oss << "<tr>";
-      oss << "<td>" << i->first->str() << "<\td>";
-      oss << "<td>" << str(i->second) << "<\td>";
-      oss << "<\tr>";
+      oss << "<td>" << i->first->str() << "</td>";
+      oss << "<td>" << str(i->second) << "</td>";
+      oss << "</tr>";
     }
     oss << "</table>";
     return oss.str();
+  }
+
+  bool CommContextLattice::insertOutGoing(CommATSPartPtr src, CommATSPartPtr tgt) {
+    pair<CommATSPartSet::iterator, bool> insertReturn = outgoing[src].insert(tgt);
+    return insertReturn.second;
+  }
+
+
+  /******************
+   * Helper Methods *
+   ******************/
+  bool isMPIFuncCall(CFGNode cfgn) {
+    ROSE_ASSERT(cfgn.getNode());
+    SgFunctionCallExp* fncall = isSgFunctionCallExp(cfgn.getNode());
+    ROSE_ASSERT(fncall);
+    Function func(fncall);
+    if(func.get_name().getString().find("MPI_",0) == 0) return true;
+    return false;
   }
 
   /*******************
@@ -474,21 +504,37 @@ namespace fuse {
   MPICommAnalysis::MPICommAnalysis() {
   }
 
-  void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {    
+  void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {
+    set<PartPtr>::iterator s = startingParts.begin();
+    for( ; s != startingParts.end(); ++s) {
+      // Build the CommATSPart for each starting part
+      // All ATS parts are assumed to start in NonMPICommContext
+      PartPtr baseStartPart = *s;
+      CommContextPtr ccp = makePtr<NonMPICommContext>(baseStartPart->getPartContext());
+      CommATSPartPtr srcCommATSPart = makePtr<CommATSPart>(baseStartPart, this, ccp);
+      NodeState* state = NodeState::getNodeState(this, baseStartPart);
+
+      // Build CommATSPart for its successors
+      list<PartEdgePtr> oedges = baseStartPart->outEdges();
+      list<PartEdgePtr>::iterator oe = oedges.begin();
+      for( ; oe != oedges.end(); ++oe) {
+        PartPtr succ = (*oe)->target();
+        CommATSPartPtr tgtCommATSPart = buildCommATSPart(succ, srcCommATSPart);
+        vector<Lattice*> dfInfo;
+        CommContextLattice* ccl = new CommContextLattice(*oe);        
+        ccl->insertOutGoing(srcCommATSPart, tgtCommATSPart);
+        dfInfo.push_back(ccl);
+        state->setLatticeBelow(this, *oe, dfInfo);
+      }
+      dbg << state->str() << endl;
+    }
   }
 
   void MPICommAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
                                        std::vector<Lattice*>& initLattices) {
     CommContextLattice* ccl_p = new CommContextLattice(pedge);
     initLattices.push_back(ccl_p);
-  }
-
-  bool MPICommAnalysis::isMPIFuncCall(SgFunctionCallExp* sgn) {
-    assert(sgn);
-    Function func(sgn);
-    if(func.get_name().getString().find("MPI_",0) == 0) return true;
-    return false;
-  }
+  }  
 
   //! Clone MPI functions giving them context using CommContext
   bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
@@ -562,14 +608,25 @@ namespace fuse {
     return ccl_p;
   }
 
-  // CommATSPartPtr MPICommAnalysis::buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto) {
-  //   CommContextLattice* efromccl_p = getCommContextLatticeAbove(base, efrom);
-  //   CommContextLattice* etoccl_p = getCommContextLatticeBelow(base, eto);
-
-  //   assert(0);
-  //   CommATSPartPtr commATSPart = makePtr<CommATSPart>(base, this, commContext);
-  //   return commATSPart;
-  // }
+  CommATSPartPtr MPICommAnalysis::buildCommATSPart(PartPtr base, CommATSPartPtr parentCommATSPart) {
+    // If its a MPI call create CommATSPart with MPICommContext
+    set<CFGNode> cfgnodes;
+    CommATSPartPtr commATSPart;
+    typedef bool (*isMPICallFuncPtr)(CFGNode);
+    isMPICallFuncPtr mpifnptr_p = isMPIFuncCall;
+    if(base->mustOutgoingFuncCall(cfgnodes) && base->filterAll(mpifnptr_p)) {
+      assert(0);
+    }
+    else if(parentCommATSPart->mustIncomingFuncCall(cfgnodes) && parentCommATSPart->filterAll(isMPIFuncCall)) {
+      assert(0);
+    }
+    else {
+      CommContextPtr cc = parentCommATSPart->getCommContext();
+      commATSPart = makePtr<CommATSPart>(base, this, cc);
+    }
+    ROSE_ASSERT(commATSPart.get());
+    return commATSPart;
+  }
 
 
   // CommATSPartEdgePtr MPICommAnalysis::buildCommATSPartEdge(PartEdgePtr baseEdge) {

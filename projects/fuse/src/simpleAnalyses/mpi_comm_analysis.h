@@ -86,27 +86,30 @@ namespace fuse {
   /***************
    * CommContext *
    ***************/
+  class CommContext;
+  typedef CompSharedPtr<CommContext> CommContextPtr;
   //! Contexts are additional information used to refine a function entry Part reachable through multiple edges.
   //! Abstract based class for context associated with parts of CommATS.
   //! Subclassed by two types of context MPICommContext and NonMPICommContext.
   //! MPICommContext are used only at call sites of MPI operations
   class CommContext : public PartContext {
   public:
-    std::list<PartContextPtr> getSubPartContexts() const=0;
+    virtual std::list<PartContextPtr> getSubPartContexts() const=0;
     //! For two parts that are equal both parts have NonMPICommContexts or MPICommContexts.
     //! This is due to association of MPICommContext only with MPI functions.
     //! The cases where two parts are equal and one having a NonMPICommContext and
     //! the other having MPICommContext is rare or impossible.
     //! However such a case should arise for two equal parts order its NonMPICommContext before its MPICommContext.
-    bool operator<(const PartContextPtr& that) const=0;
+    virtual bool operator<(const PartContextPtr& that) const=0;
     //! For two parts that are equal both parts have NonMPICommContexts or MPICommContexts.
     //! This is due to association of MPICommContext only with MPI functions.
     //! The cases where two parts are equal and one having a NonMPICommContext and
     //! the other having MPICommContext is rare or impossible.
     //! However such a case should arise for two equal parts order its NonMPICommContext before its MPICommContext.
-    bool operator==(const PartContextPtr& that) const=0;
-  };
-  typedef CompSharedPtr<CommContext> CommContextPtr;
+    virtual bool operator==(const PartContextPtr& that) const=0;
+    //! Return a copy of this CommContext
+    virtual CommContextPtr copy() const = 0;
+  };  
 
   /******************
    * MPICommContext *
@@ -125,6 +128,7 @@ namespace fuse {
     std::list<PartContextPtr> getSubPartContexts() const;
     bool operator<(const PartContextPtr& that) const;
     bool operator==(const PartContextPtr& that) const;
+    CommContextPtr copy() const;
     std::string str(std::string indent="") const;
   };
   typedef CompSharedPtr<MPICommContext> MPICommContextPtr;
@@ -142,6 +146,7 @@ namespace fuse {
     std::list<PartContextPtr> getSubPartContexts() const;
     bool operator<(const PartContextPtr& that) const;
     bool operator==(const PartContextPtr& that) const;
+    CommContextPtr copy() const;
     std::string str(std::string indent="") const;
   };
   typedef CompSharedPtr<NonMPICommContext> NonMPICommContextPtr;
@@ -178,6 +183,8 @@ namespace fuse {
     bool less(const PartPtr& that) const;
 
     std::string str(std::string indent="") const;
+
+    CommContextPtr getCommContext() const;
   };  
 
   /*******************
@@ -236,17 +243,20 @@ namespace fuse {
     bool isEmptyLat();
     bool setMLValueToFull(MemLocObjectPtr ml_p);
     std::string str(const CommATSPartSet& set) const;
-    std::string str(std::string indent="") const;    
+    std::string str(std::string indent="") const;
+
+    //! Helper methods
+    bool insertOutGoing(CommATSPartPtr src, CommATSPartPtr target);
   };
 
   /*******************
    * MPICommAnalysis *
    *******************/
-  class MPICommAnalysis : public FWDataflow {
-    typedef std::stack<PartPtr> MPICallStack;
-    
-    MPICallStack mpiCallStack;
+  // Helper methods
+  //! Checks if a given SgFunctionCallExp has MPI_ prefix
+  bool isMPIFuncCall(CFGNode cfgn);
 
+  class MPICommAnalysis : public FWDataflow {
   public:
     MPICommAnalysis();
     virtual void initAnalysis(std::set<PartPtr>& startingParts);
@@ -276,9 +286,6 @@ namespace fuse {
     // pretty print for the object
     std::string str(std::string indent="") const;
 
-    // Helper methods
-    //! Checks if a given SgFunctionCallExp has MPI_ prefix
-    bool isMPIFuncCall(SgFunctionCallExp* sgn);
     //! Get the CommContextLattice above from NodeState
     //! @param part NodeState at this part
     //! @param pedge Lattice info along this pedge
@@ -288,7 +295,7 @@ namespace fuse {
     //! @param pedge Lattice info along this pedge
     CommContextLattice* getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge);
 
-    // CommATSPartPtr buildCommATSPart(PartPtr base, PartEdgePtr efrom, PartEdgePtr eto);
+    CommATSPartPtr buildCommATSPart(PartPtr base, CommATSPartPtr parentCommATSPart);
     // CommATSPartEdgePtr buildCommATSPartEdge(PartEdgePtr pedge);
   };
 };
