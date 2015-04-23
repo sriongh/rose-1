@@ -6,6 +6,9 @@
  *****************************************/
 
 #include "compose.h"
+#include "boost/function.hpp"
+#include "boost/bind.hpp"
+
 
 namespace fuse {
 
@@ -246,7 +249,20 @@ namespace fuse {
     std::string str(std::string indent="") const;
 
     //! Helper methods
-    bool insertOutGoing(CommATSPartPtr src, CommATSPartPtr target);
+  private:
+    //! Insert target with src as key into commATSPartMap
+    bool insert(CommATSPartPtr src, CommATSPartPtr target, CommATSPartMap& commATSPartMap);
+  public:
+    //! Insert target with src as key into outgoing map
+    bool outGoingInsert(CommATSPartPtr src, CommATSPartPtr target);
+    //! Insert target with src as key into incoming map
+    bool inComingInsert(CommATSPartPtr src, CommATSPartPtr target);
+  private:
+    bool parentPartEqual(CommATSPartPtr caPartPtr, PartPtr parent);
+    std::list<CommATSPartPtr> applyMapFilter(CommATSPartMap& commATSPartMap, boost::function<bool (CommATSPartPtr)> filter);
+  public:
+    //! Find all CommATSPartPtr in outgoing map whose getParent()=parent
+    std::list<CommATSPartPtr> applyParentPartEqualFilterOutGoingMap(PartPtr parent);
   };
 
   /*******************
