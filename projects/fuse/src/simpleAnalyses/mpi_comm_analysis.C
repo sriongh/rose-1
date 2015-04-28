@@ -5,6 +5,7 @@
 #include "sage3basic.h"
 #include "mpi_comm_analysis.h"
 #include "latticeFull.h"
+#include <algorithm>
 
 using namespace std;
 using namespace sight;
@@ -433,10 +434,87 @@ namespace fuse {
     return false;
   }
 
+
+  //! Merge the items of setfrom into setto
+  bool CommContextLattice::mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom) {        
+    bool modified = false;
+    CommATSPartSet::iterator fsi = setfrom.begin(), tsi = setto.begin();
+    while(fsi != setfrom.end() && tsi != setto.end()) {
+      // If element is in setto but not in setfrom
+      if(*tsi < *fsi) {
+        ++tsi;
+      }
+      // If the element is in setfrom but not in setto
+      else if(*tsi > *fsi) {
+        // Insert the element
+        // Find the pos after which the element needs to inserted
+        // CommATSPartSet::iterator pos = tsi != setto.begin() ? pos = tsi-1 : pos = setto.begin();
+        CommATSPartSet::iterator pos = tsi;
+        tsi = setto.insert(pos, *fsi);
+        modified = true;
+        ++fsi;
+      }
+      else if(*fsi == *tsi) {
+        ++fsi; ++tsi;
+      }
+    }
+
+    // Copy the remaining elements of setfrom if any
+    CommATSPartSet::iterator pos = setto.end();
+    for( ; fsi != setfrom.end(); ++fsi) {
+      pos = setto.insert(pos, *fsi);
+      modified = true;
+    }
+    return modified;
+  }
+
+  //! Merge the elements of fromMap into toMap
+  bool CommContextLattice::mergeCommATSPartMaps(CommATSPartMap& toMap, CommATSPartMap& fromMap) {
+    CommATSPartMap::iterator fmi = fromMap.begin(), tmi = toMap.begin();
+    bool modified = false;
+    // Iterate through the maps
+    while(fmi != fromMap.end() && tmi != toMap.end()) {
+      // If the key is present in toMap but not in fromMap      
+      if(tmi->first < fmi->first) {
+        // Nothing to insert 
+        // Move the iterator of toMap
+        ++tmi;
+      }
+      // If the key is present in fromMap but not in toMap
+      else if(tmi->first > fmi->first) {
+        // Insert the <key,value> from fromMap
+        // Find the position after which the item needs to be inserted
+        // CommATSPartMap::iterator pos = tmi != toMap.begin() ? pos = tmi-1 : pos = toMap.begin();
+        CommATSPartMap::iterator pos = tmi;
+        tmi = toMap.insert(pos, *fmi);
+        // toMap[fmi->first] = fmi->second;
+        modified = true;
+        ++fmi;
+      }
+      // If the key is present in both maps
+      else if(fmi->first == tmi->first) {
+        // Merge the two sets
+        modified = mergeCommATSPartSets(tmi->second, fmi->second) || modified;
+        ++fmi; ++tmi;
+      }      
+    }
+    // Copy the remaining elements of fromMap
+    for( ; fmi != fromMap.end(); ++fmi) {
+      toMap[fmi->first] = fmi->second;
+      modified = true;
+    }
+    return modified;
+  }
+
   bool CommContextLattice::meetUpdate(Lattice* that) {
-    CommContextLattice* ccl = dynamic_cast<CommContextLattice*>(that);
-    ROSE_ASSERT(ccl);
-    assert(0);
+    scope reg("CommContextLattice::meetUpdate", scope::low, attrGE("mpiCommAnalysisDebugLevel", 3));
+    CommContextLattice* thatCCL = dynamic_cast<CommContextLattice*>(that);
+    ROSE_ASSERT(thatCCL);
+    bool modified = mergeCommATSPartMaps(outgoing, thatCCL->outgoing);
+    dbg << "After Meet: " << str() << endl;
+    // Update incoming based on modified outgoing
+    if(modified) assert(0);
+    return modified;
   }
 
   bool CommContextLattice::setMLValueToFull(MemLocObjectPtr ml_p) {

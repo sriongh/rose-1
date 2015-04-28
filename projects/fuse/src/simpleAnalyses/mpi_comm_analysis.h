@@ -263,6 +263,9 @@ namespace fuse {
   public:
     //! Find all CommATSPartPtr in outgoing map whose getParent()=parent
     std::list<CommATSPartPtr> applyParentPartEqualFilterOutGoingMap(PartPtr parent);
+  private:
+    bool mergeCommATSPartMaps(CommATSPartMap& toMap, CommATSPartMap& fromMap);
+    bool mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom);
   };
 
   /*******************
