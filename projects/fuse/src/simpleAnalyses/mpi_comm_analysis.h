@@ -238,6 +238,7 @@ namespace fuse {
     void initialize();
     bool setToFull();
     bool setToEmpty();
+    bool replaceML(Lattice* newL);
     bool meetUpdate(Lattice* that);
     Lattice* copy() const;
     void copy(Lattice* that);
@@ -266,6 +267,8 @@ namespace fuse {
   private:
     bool mergeCommATSPartMaps(CommATSPartMap& toMap, CommATSPartMap& fromMap);
     bool mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom);
+  public:
+    bool createIncomingMapfromOutgoingMap();
   };
 
   /*******************
