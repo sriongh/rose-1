@@ -612,7 +612,7 @@ namespace fuse {
   }
 
   //! Iterate through outgoing map applying the parentPart
-  list<CommATSPartPtr> CommContextLattice::applyParentPartEqualFilterOutGoingMap(PartPtr parent) {
+  list<CommATSPartPtr> CommContextLattice::parentPartFilterOutgoingMap(PartPtr parent) {
     boost::function<bool (CommATSPartPtr)> filter = boost::bind(&CommContextLattice::parentPartEqual, this, _1, parent);
     return applyMapFilter(outgoing, filter);
   }
@@ -691,7 +691,7 @@ namespace fuse {
     }
 
     // Collect all CommATSPart whose parent part is same as the current part
-    list<CommATSPartPtr> caPartList = inCCL->applyParentPartEqualFilterOutGoingMap(part);
+    list<CommATSPartPtr> caPartList = inCCL->parentPartFilterOutgoingMap(part);
     list<CommATSPartPtr>::iterator li = caPartList.begin();
 
     // We should find at least one CommATSPart in the outgoing map whose getParent() == current_part
@@ -752,29 +752,30 @@ namespace fuse {
     set<PartPtr> sParts = composer->GetStartAStates(this);
     set<PartPtr> sCommParts;
     set<PartPtr>::iterator s=sParts.begin();
+    // MPICommAnalysis::initAnalysis creates a starting CommATSPart for each parent starting part
+    // For each starting part get the CommContextLattice Above
+    // Iterate through all sets in the outgoing map 
+    // and find all CommATSPart corresponding to each starting part  
     for( ; s != sParts.end(); ++s) {
       PartPtr spart = *s;
-      NodeState* state = NodeState::getNodeState(this, spart);
-      CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(this, 
-                                                                                           spart->inEdgeFromAny(), 0));
-      ROSE_ASSERT(ccl_p);
-
-      assert(0);   
+      CommContextLattice* ccl_p = getCommContextLatticeAbove(spart, spart->inEdgeFromAny());
+      list<CommATSPartPtr> caPartList = ccl_p->parentPartFilterOutgoingMap(spart);
+      sCommParts.insert(caPartList.begin(), caPartList.end());
     }
     return sCommParts;
   }
 
+  // Iterate through all sets in the outgoing map 
+  // and find all CommATSPart corresponding to each ending part  
   set<PartPtr> MPICommAnalysis::GetEndAStates_Spec() {
     set<PartPtr> eParts = composer->GetEndAStates(this);
     set<PartPtr> eCommParts;
     set<PartPtr>::iterator e=eParts.begin();
     for( ; e != eParts.end(); ++e) {
       PartPtr epart = *e;
-      NodeState* state = NodeState::getNodeState(this, epart);
-      CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(this, 
-                                                                                           epart->inEdgeFromAny(), 0));
-      ROSE_ASSERT(ccl_p);
-      assert(0);
+      CommContextLattice* ccl_p = getCommContextLatticeAbove(epart, epart->inEdgeFromAny());
+      list<CommATSPartPtr> caPartList = ccl_p->parentPartFilterOutgoingMap(epart);
+      eCommParts.insert(caPartList.begin(), caPartList.end());
     }
     return eCommParts;
   }

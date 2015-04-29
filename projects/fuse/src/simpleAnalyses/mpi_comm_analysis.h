@@ -263,7 +263,7 @@ namespace fuse {
     std::list<CommATSPartPtr> applyMapFilter(CommATSPartMap& commATSPartMap, boost::function<bool (CommATSPartPtr)> filter);
   public:
     //! Find all CommATSPartPtr in outgoing map whose getParent()=parent
-    std::list<CommATSPartPtr> applyParentPartEqualFilterOutGoingMap(PartPtr parent);
+    std::list<CommATSPartPtr> parentPartFilterOutgoingMap(PartPtr parent);
   private:
     bool mergeCommATSPartMaps(CommATSPartMap& toMap, CommATSPartMap& fromMap);
     bool mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom);
