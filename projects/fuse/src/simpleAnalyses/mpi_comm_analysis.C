@@ -229,19 +229,36 @@ namespace fuse {
     return dynamicPtrCast<CommATSPart>(makePtrFromThis(shared_from_this()));
   }
 
+  // For each base outEdge retrive the CommContextLattice on that edge
+  // Iterate through outgoing map and create CommATSPartEdge for each pair of CommATSPart 
   list<PartEdgePtr> CommATSPart::outEdges() {
     scope reg("CommATSPart::outEdges()", scope::low, attrGE("mpiCommAnalysisDebugLevel", 3)); 
-    list<PartEdgePtr> caOutEdges;
+    list<PartEdgePtr> caPartOutEdges;
 
     list<PartEdgePtr> oedges = base->outEdges();
     list<PartEdgePtr>::iterator oe = oedges.begin();
 
-    assert(0);
-
+    NodeState* state = NodeState::getNodeState(mpicommanalysis_p, base);
     for( ; oe != oedges.end(); ++oe) {
-      PartPtr baseTarget = (*oe)->target();
+      CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state->getLatticeBelow(mpicommanalysis_p, *oe, 0));
+      ROSE_ASSERT(ccl_p);
+
+      // Get the CommATSPartSet from outgoing map for this CommATSPart
+      const CommATSPartSet& caPartSet = ccl_p->getOutGoingCommATSPartSet(get_shared_this());
+      // Set should be non-empty as the baseEdge *oe has non NULL targets
+      ROSE_ASSERT(caPartSet.size() > 0);
+      // For each element of the set build CommATSPartEdge
+      CommATSPartSet::const_iterator sit = caPartSet.begin();
+      for( ; sit != caPartSet.end(); ++sit) {
+        CommATSPartEdgePtr caPartEdge = makePtr<CommATSPartEdge>(*oe, mpicommanalysis_p, get_shared_this(), *sit);
+        if(mpiCommAnalysisDebugLevel() >= 3) {
+          dbg << "baseEdge=" << oe->str() << endl;
+          dbg << "CommATSPartEdge=" << caPartEdge->str() << endl;
+        }
+        caPartOutEdges.push_back(caPartEdge);
+      }      
     }
-    return caOutEdges;
+    return caPartOutEdges;
   } 
 
   list<PartEdgePtr> CommATSPart::inEdges() {
@@ -256,15 +273,20 @@ namespace fuse {
     return base->CFGNodes();
   }
 
+  //! No new CommATSParts are created for calling expressions
+  //! Wrap CommATSPart over base parts
   set<PartPtr> CommATSPart::matchingCallParts() const {
     set<PartPtr> baseMatchingParts;
     set<PartPtr> commATSMatchingParts;
     baseMatchingParts = base->matchingCallParts();
     set<PartPtr>::iterator bp = baseMatchingParts.begin();
-
-    assert(0);
-
     for( ; bp != baseMatchingParts.end(); ++bp) {
+      PartPtr basePart = *bp;
+      NodeState* state = NodeState::getNodeState(mpicommanalysis_p, basePart);
+      CommContextLattice* cclabove_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(mpicommanalysis_p, basePart->inEdgeFromAny(), 0));
+      ROSE_ASSERT(cclabove_p);
+      list<CommATSPartPtr> caPartList = cclabove_p->parentPartFilterOutgoingMap(basePart);
+      commATSMatchingParts.insert(caPartList.begin(), caPartList.end());
     }
     return commATSMatchingParts;
   }
@@ -331,15 +353,41 @@ namespace fuse {
     return tgt;
   }
 
+  //! MPICommAnalysis is not responsible for evaluating all possible paths
+  //! an operand reaches an expression.
+  //! Simply wrap parent OperandPartEdges with CommATSPartEdge
   list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
+    scope reg(txt() << "CommATSPart::getOperandPartEdge(anchor=" << SgNode2Str(anchor) << ", operand=" << SgNode2Str(operand) << ")", 
+              scope::low, attrGE("mpiCommAnalysisDebugLevel", 3)); 
     list<PartEdgePtr> baseOpPartEdges = base->getOperandPartEdge(anchor, operand);
     list<PartEdgePtr> commATSOpPartEdges;
     list<PartEdgePtr>::iterator be = baseOpPartEdges.begin();
-
-
-    assert(0);
-
+    // Iterate through each operandPartEdge
+    // For each edge extract the source from lattice above and target from lattice below
+    // Create CommATSPartEdge with source and target
     for( ; be != baseOpPartEdges.end(); ++be) {
+      if(mpiCommAnalysisDebugLevel() >= 3) {
+        dbg << "baseOperandPartEdge=" << be->str() << endl;
+      }
+      PartPtr bsource = (*be)->source();
+      PartPtr btarget = (*be)->target();
+      NodeState* state = NodeState::getNodeState(mpicommanalysis_p, bsource);
+      CommContextLattice* cclabove_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(mpicommanalysis_p, bsource->inEdgeFromAny(), 0));
+      CommContextLattice* cclbelow_p = dynamic_cast<CommContextLattice*>(state->getLatticeBelow(mpicommanalysis_p, *be, 0));
+      ROSE_ASSERT(cclabove_p && cclbelow_p);
+
+      list<CommATSPartPtr> sourceList = cclabove_p->parentPartFilterOutgoingMap(bsource);
+      list<CommATSPartPtr> targetList = cclbelow_p->parentPartFilterOutgoingMap(btarget);
+
+      ROSE_ASSERT(sourceList.size() == targetList.size() && sourceList.size() > 0);
+      list<CommATSPartPtr>::iterator si = sourceList.begin(), ti = targetList.begin();
+      for( ; si != sourceList.end() && ti != targetList.end(); ++si, ++ti) {
+        CommATSPartEdgePtr caPartEdgePtr = makePtr<CommATSPartEdge>(*be, mpicommanalysis_p, *si, *ti);
+        if(mpiCommAnalysisDebugLevel() >= 3) {
+          dbg << "commATSOperandPartEdge=" << caPartEdgePtr->str() << endl;
+        }
+        commATSOpPartEdges.push_back(caPartEdgePtr);
+      }
     }
     return commATSOpPartEdges;
   }
@@ -627,6 +675,23 @@ namespace fuse {
       }
     }
     return true;
+  }
+
+  const CommATSPartMap& CommContextLattice::getOutGoingMap() const {
+    return outgoing;
+  }
+  const CommATSPartMap& CommContextLattice::getInComingMap() const {
+    return incoming;
+  }
+  const CommATSPartSet& CommContextLattice::getOutGoingCommATSPartSet(CommATSPartPtr caPart) const {
+    CommATSPartMap::const_iterator it = outgoing.find(caPart);
+    ROSE_ASSERT(it != outgoing.end());
+    return it->second;
+  }
+  const CommATSPartSet& CommContextLattice::getInComingCommATSPartSet(CommATSPartPtr caPart) const {
+    CommATSPartMap::const_iterator it = incoming.find(caPart);
+    ROSE_ASSERT(it != incoming.end());
+    return it->second;
   }
 
   /******************

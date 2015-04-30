@@ -269,6 +269,11 @@ namespace fuse {
     bool mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom);
   public:
     bool createIncomingMapfromOutgoingMap();
+    //! Access methods
+    const CommATSPartMap& getOutGoingMap() const;
+    const CommATSPartMap& getInComingMap() const;
+    const CommATSPartSet& getOutGoingCommATSPartSet(CommATSPartPtr caPart) const;
+    const CommATSPartSet& getInComingCommATSPartSet(CommATSPartPtr caPart) const;
   };
 
   /*******************
