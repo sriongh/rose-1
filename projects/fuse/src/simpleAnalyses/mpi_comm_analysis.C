@@ -363,7 +363,7 @@ namespace fuse {
     list<PartEdgePtr> commATSOpPartEdges;
     list<PartEdgePtr>::iterator be = baseOpPartEdges.begin();
     // Iterate through each operandPartEdge
-    // For each edge extract the source from lattice above and target from lattice below
+    // For each edge extract the source from lattice above
     // Create CommATSPartEdge with source and target
     for( ; be != baseOpPartEdges.end(); ++be) {
       if(mpiCommAnalysisDebugLevel() >= 3) {
@@ -371,23 +371,31 @@ namespace fuse {
       }
       PartPtr bsource = (*be)->source();
       PartPtr btarget = (*be)->target();
+
       NodeState* state = NodeState::getNodeState(mpicommanalysis_p, bsource);
+      // To find the corresponding CommATSPartPtr for bsource look at the lattice information above bsource
       CommContextLattice* cclabove_p = dynamic_cast<CommContextLattice*>(state->getLatticeAbove(mpicommanalysis_p, bsource->inEdgeFromAny(), 0));
+      // Find the corresponding CommATSPartPtr for btarget by looking at the outgoing map from lattice below
       CommContextLattice* cclbelow_p = dynamic_cast<CommContextLattice*>(state->getLatticeBelow(mpicommanalysis_p, *be, 0));
       ROSE_ASSERT(cclabove_p && cclbelow_p);
 
+      // Find all CommATSParts that correspond to bsource
       list<CommATSPartPtr> sourceList = cclabove_p->parentPartFilterOutgoingMap(bsource);
-      list<CommATSPartPtr> targetList = cclbelow_p->parentPartFilterOutgoingMap(btarget);
 
-      ROSE_ASSERT(sourceList.size() == targetList.size() && sourceList.size() > 0);
-      list<CommATSPartPtr>::iterator si = sourceList.begin(), ti = targetList.begin();
-      for( ; si != sourceList.end() && ti != targetList.end(); ++si, ++ti) {
-        CommATSPartEdgePtr caPartEdgePtr = makePtr<CommATSPartEdge>(*be, mpicommanalysis_p, *si, *ti);
-        if(mpiCommAnalysisDebugLevel() >= 3) {
-          dbg << "commATSOperandPartEdge=" << caPartEdgePtr->str() << endl;
+      // For each CommATSPart of sourceList get its targets and find all that match btarget
+      list<CommATSPartPtr>::iterator si = sourceList.begin();
+
+      for( ; si != sourceList.end(); ++si) {
+        list<CommATSPartPtr> caPartTargetList = cclbelow_p->parentPartFilterOutgoingMap(*si, btarget);
+        list<CommATSPartPtr>::iterator ti = caPartTargetList.begin();
+        for( ; ti != caPartTargetList.end(); ++ti) {
+          CommATSPartEdgePtr caPartEdgePtr = makePtr<CommATSPartEdge>(*be, mpicommanalysis_p, *si, *ti);
+          if(mpiCommAnalysisDebugLevel() >= 3) {
+            dbg << "commATSOperandPartEdge=" << caPartEdgePtr->str() << endl;
+          }
+          commATSOpPartEdges.push_back(caPartEdgePtr);
         }
-        commATSOpPartEdges.push_back(caPartEdgePtr);
-      }
+      }    
     }
     return commATSOpPartEdges;
   }
@@ -642,6 +650,23 @@ namespace fuse {
     return false;
   }
 
+  //! Find the set with mapped to key from CommATSPartMap
+  //! If filter returns true add the element to the list to return
+  list<CommATSPartPtr> CommContextLattice::applyMapFilterWithKey(CommATSPartMap& commATSPartMap,
+                                                                 CommATSPartPtr key,
+                                                                 boost::function<bool (CommATSPartPtr)> filter) {
+    list<CommATSPartPtr> caParts;
+    CommATSPartMap::iterator found = commATSPartMap.find(key);
+    ROSE_ASSERT(found != commATSPartMap.end());
+    CommATSPartSet& commATSPartSet = found->second;
+    CommATSPartSet::iterator si = commATSPartSet.begin();
+    for( ; si != commATSPartSet.end(); ++si) {
+      CommATSPartPtr caPartPtr = *si;
+      if(filter(caPartPtr)) caParts.push_back(caPartPtr);
+    }
+    return caParts;
+  }
+
   //! Iterate through the map and apply the filter on each element of the CommATSPartSet
   //! If filter returns true add the element to the list to return
   list<CommATSPartPtr> CommContextLattice::applyMapFilter(CommATSPartMap& commATSPartMap,
@@ -663,6 +688,12 @@ namespace fuse {
   list<CommATSPartPtr> CommContextLattice::parentPartFilterOutgoingMap(PartPtr parent) {
     boost::function<bool (CommATSPartPtr)> filter = boost::bind(&CommContextLattice::parentPartEqual, this, _1, parent);
     return applyMapFilter(outgoing, filter);
+  }
+
+  //! Iterate through outgoing map applying the parentPart
+  list<CommATSPartPtr> CommContextLattice::parentPartFilterOutgoingMap(CommATSPartPtr key, PartPtr parent) {
+    boost::function<bool (CommATSPartPtr)> filter = boost::bind(&CommContextLattice::parentPartEqual, this, _1, parent);
+    return applyMapFilterWithKey(outgoing, key, filter);
   }
 
   bool CommContextLattice::createIncomingMapfromOutgoingMap() {

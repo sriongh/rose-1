@@ -260,10 +260,15 @@ namespace fuse {
     bool inComingInsert(CommATSPartPtr src, CommATSPartPtr target);
   private:
     bool parentPartEqual(CommATSPartPtr caPartPtr, PartPtr parent);
+    std::list<CommATSPartPtr> applyMapFilterWithKey(CommATSPartMap& commATSPartMap, 
+                                                    CommATSPartPtr key, 
+                                                    boost::function<bool (CommATSPartPtr)> filter);
     std::list<CommATSPartPtr> applyMapFilter(CommATSPartMap& commATSPartMap, boost::function<bool (CommATSPartPtr)> filter);
   public:
     //! Find all CommATSPartPtr in outgoing map whose getParent()=parent
     std::list<CommATSPartPtr> parentPartFilterOutgoingMap(PartPtr parent);
+    //! Find all CommATSPartPtr in outgoing map whose getParent()=parent
+    std::list<CommATSPartPtr> parentPartFilterOutgoingMap(CommATSPartPtr key, PartPtr parent);
   private:
     bool mergeCommATSPartMaps(CommATSPartMap& toMap, CommATSPartMap& fromMap);
     bool mergeCommATSPartSets(CommATSPartSet& setto, CommATSPartSet& setfrom);
