@@ -40,7 +40,7 @@ include_HEADERS =\
 	simpleAnalyses/dead_path_elim_analysis.h \
 	simpleAnalyses/live_dead_analysis.h \
 	simpleAnalyses/mpi_value_analysis.h \
-	simpleAnalyses/mpi_comm_analysis.h \
+	simpleAnalyses/mpi_comm_context_analysis.h \
 	simpleAnalyses/pointsToAnalysis.h \
 	simpleAnalyses/printAnalysisStates.h \
 	simpleAnalyses/saveDotAnalysis.h \
@@ -276,7 +276,7 @@ fuseMPI_SOURCES = \
 	simpleAnalyses/const_prop_analysis.C \
 	simpleAnalyses/dead_path_elim_analysis.C \
 	simpleAnalyses/live_dead_analysis.C \
-	simpleAnalyses/mpi_comm_analysis.C \
+	simpleAnalyses/mpi_comm_context_analysis.C \
 	simpleAnalyses/mpi_value_analysis.C \
 	simpleAnalyses/pointsToAnalysis.C \
 	simpleAnalyses/printAnalysisStates.C \

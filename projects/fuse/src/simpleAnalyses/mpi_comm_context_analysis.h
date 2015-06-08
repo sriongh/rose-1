@@ -12,7 +12,7 @@
 
 namespace fuse {
 
-  class MPICommAnalysis;
+  class MPICommContextAnalysis;
 
   /*********
    * MPIOp *
@@ -163,10 +163,10 @@ namespace fuse {
 
   class CommATSPart : public Part {
     CommContextPtr context;
-    MPICommAnalysis* mpicommanalysis_p;
+    MPICommContextAnalysis* mpicommanalysis_p;
     PartPtr base;
   public:
-    CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommContextPtr context);
+    CommATSPart(PartPtr base, MPICommContextAnalysis* analysis, CommContextPtr context);
     CommATSPart(const CommATSPart& that);
 
     CommATSPartPtr get_shared_this();
@@ -198,10 +198,10 @@ namespace fuse {
 
   class CommATSPartEdge : public PartEdge {
     PartEdgePtr base;
-    MPICommAnalysis* mpicommanalysis_p;
+    MPICommContextAnalysis* mpicommanalysis_p;
     CommATSPartPtr src, tgt;
   public:
-    CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target);
+    CommATSPartEdge(PartEdgePtr base, MPICommContextAnalysis* analysis, CommATSPartPtr source, CommATSPartPtr target);
     CommATSPartEdge(const CommATSPartEdge& that);
 
     PartPtr source() const;
@@ -274,18 +274,18 @@ namespace fuse {
   };
 
   /*******************
-   * MPICommAnalysis *
+   * MPICommContextAnalysis *
    *******************/
   // Helper methods
   //! Checks if a given SgFunctionCallExp has MPI_ prefix
   bool isMPIFuncCall(CFGNode cfgn);
 
-  class MPICommAnalysis : public FWDataflow {
+  class MPICommContextAnalysis : public FWDataflow {
   public:
-    MPICommAnalysis();
+    MPICommContextAnalysis();
     virtual void initAnalysis(std::set<PartPtr>& startingParts);
 
-    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(); }
+    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommContextAnalysis>(); }
 
     // Initializes the state of analysis lattices at the given function, part and edge into our out of the part
     // by setting initLattices to refer to freshly-allocated Lattice objects.

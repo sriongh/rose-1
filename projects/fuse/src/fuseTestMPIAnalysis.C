@@ -8,7 +8,7 @@
 #include "printAnalysisStates.h"
 #include "pointsToAnalysis.h"
 #include "mpi_value_analysis.h"
-#include "mpi_comm_analysis.h"
+#include "mpi_comm_context_analysis.h"
 #include "analysis_tester.h"
 #include "sight.h"
 #include "mpi.h"
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
   analyses.push_back(new MPIValueAnalysis());
   analyses.push_back(new ConstantPropagationAnalysis());
   // analyses.push_back(new DeadPathElimAnalysis());
-  analyses.push_back(new MPICommAnalysis());
+  analyses.push_back(new MPICommContextAnalysis());
   checkDataflowInfoPass* cdip = new checkDataflowInfoPass();
   ChainComposer cc(analyses, cdip, true);
   cc.runAnalysis();

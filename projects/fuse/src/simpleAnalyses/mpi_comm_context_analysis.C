@@ -3,7 +3,7 @@
  *****************************************/
 
 #include "sage3basic.h"
-#include "mpi_comm_analysis.h"
+#include "mpi_comm_context_analysis.h"
 #include "latticeFull.h"
 #include <algorithm>
 
@@ -219,7 +219,7 @@ namespace fuse {
   /***************
    * CommATSPart *
    ***************/
-  CommATSPart::CommATSPart(PartPtr base, MPICommAnalysis* analysis, CommContextPtr context)
+  CommATSPart::CommATSPart(PartPtr base, MPICommContextAnalysis* analysis, CommContextPtr context)
   : Part(analysis, base),
     base(base),
     mpicommanalysis_p(analysis),
@@ -269,7 +269,7 @@ namespace fuse {
   } 
 
   list<PartEdgePtr> CommATSPart::inEdges() {
-    // Look up predMap in MPICommAnalysis to find the predecessor of this CommATSPart
+    // Look up predMap in MPICommContextAnalysis to find the predecessor of this CommATSPart
     // Create CommATSPartEdge between this part and all the successors
     assert(0);
     return base->inEdges();
@@ -334,7 +334,7 @@ namespace fuse {
   /*******************
    * CommATSPartEdge *
    *******************/
-  CommATSPartEdge::CommATSPartEdge(PartEdgePtr base, MPICommAnalysis* analysis, CommATSPartPtr src, CommATSPartPtr tgt)
+  CommATSPartEdge::CommATSPartEdge(PartEdgePtr base, MPICommContextAnalysis* analysis, CommATSPartPtr src, CommATSPartPtr tgt)
   : PartEdge(analysis, base),
     base(base),
     mpicommanalysis_p(analysis),
@@ -358,7 +358,7 @@ namespace fuse {
     return tgt;
   }
 
-  //! MPICommAnalysis is not responsible for evaluating all possible paths
+  //! MPICommContextAnalysis is not responsible for evaluating all possible paths
   //! an operand reaches an expression.
   //! Simply wrap parent OperandPartEdges with CommATSPartEdge
   list<PartEdgePtr> CommATSPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand) {
@@ -746,12 +746,12 @@ namespace fuse {
   }
 
   /*******************
-   * MPICommAnalysis *
+   * MPICommContextAnalysis *
    *******************/
-  MPICommAnalysis::MPICommAnalysis() {
+  MPICommContextAnalysis::MPICommContextAnalysis() {
   }
 
-  void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {
+  void MPICommContextAnalysis::initAnalysis(set<PartPtr>& startingParts) {
     set<PartPtr>::iterator s = startingParts.begin();
     for( ; s != startingParts.end(); ++s) {
       // Build the CommATSPart for each starting part
@@ -769,7 +769,7 @@ namespace fuse {
     }
   }
 
-  void MPICommAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
+  void MPICommContextAnalysis::genInitLattice(PartPtr part, PartEdgePtr pedge, 
                                        std::vector<Lattice*>& initLattices) {
     CommContextLattice* ccl_p = new CommContextLattice(pedge);
     initLattices.push_back(ccl_p);
@@ -777,9 +777,9 @@ namespace fuse {
 
   //! For each outgoing edge create a new CommContextLattice.
   //! Populate the outgoing/incoming of the new CommContextLattice and insert it into dfInfo for each outgoing edge
-  bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
+  bool MPICommContextAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
                                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
-    scope reg("MPICommAnalysis::transfer", scope::low, attrGE("mpiCommAnalysisDebugLevel", 3));
+    scope reg("MPICommContextAnalysis::transfer", scope::low, attrGE("mpiCommAnalysisDebugLevel", 3));
     bool modified=false;
 
     CommContextLattice* inCCL = dynamic_cast<CommContextLattice*>(dfInfo[part->inEdgeFromAny()][0]);
@@ -807,7 +807,7 @@ namespace fuse {
     if(caPartSet.size() == 0) {
       // Error
       // Output debug information before failing
-      scope reg("MPICommAnalysis::Error", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 3));
+      scope reg("MPICommContextAnalysis::Error", scope::medium, attrGE("mpiCommAnalysisDebugLevel", 3));
       dbg << "<b>";
       dbg << "No CommATSPart in inCCL->outgoing with match condition CommATSPart::getParent() ==  current_part\n";
       dbg << "inCCL=" << inCCL->str() << endl;
@@ -848,11 +848,11 @@ namespace fuse {
     return modified;
   }
 
-  set<PartPtr> MPICommAnalysis::GetStartAStates_Spec() {
+  set<PartPtr> MPICommContextAnalysis::GetStartAStates_Spec() {
     set<PartPtr> sParts = composer->GetStartAStates(this);
     set<PartPtr> sCommParts;
     set<PartPtr>::iterator s=sParts.begin();
-    // MPICommAnalysis::initAnalysis creates a starting CommATSPart for each parent starting part
+    // MPICommContextAnalysis::initAnalysis creates a starting CommATSPart for each parent starting part
     // For each starting part get the CommContextLattice Above
     // Iterate through all sets in the outgoing map 
     // and find all CommATSPart corresponding to each starting part  
@@ -867,7 +867,7 @@ namespace fuse {
 
   // Iterate through all sets in the outgoing map 
   // and find all CommATSPart corresponding to each ending part  
-  set<PartPtr> MPICommAnalysis::GetEndAStates_Spec() {
+  set<PartPtr> MPICommContextAnalysis::GetEndAStates_Spec() {
     set<PartPtr> eParts = composer->GetEndAStates(this);
     set<PartPtr> eCommParts;
     set<PartPtr>::iterator e=eParts.begin();
@@ -880,25 +880,25 @@ namespace fuse {
     return eCommParts;
   }
 
-  string MPICommAnalysis::str(string indent) const {
-    return "MPICommAnalysis";
+  string MPICommContextAnalysis::str(string indent) const {
+    return "MPICommContextAnalysis";
   }
 
-  CommContextLattice* MPICommAnalysis::getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge) {
+  CommContextLattice* MPICommContextAnalysis::getCommContextLatticeAbove(PartPtr part, PartEdgePtr pedge) {
     NodeState* state_p = NodeState::getNodeState(this, part);
     CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeAbove(this, pedge, 0));
     ROSE_ASSERT(ccl_p);
     return ccl_p;
   }
 
-  CommContextLattice* MPICommAnalysis::getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge) {
+  CommContextLattice* MPICommContextAnalysis::getCommContextLatticeBelow(PartPtr part, PartEdgePtr pedge) {
     NodeState* state_p = NodeState::getNodeState(this, part);
     CommContextLattice* ccl_p = dynamic_cast<CommContextLattice*>(state_p->getLatticeBelow(this, pedge, 0));
     ROSE_ASSERT(ccl_p);
     return ccl_p;
   }
 
-  CommATSPartPtr MPICommAnalysis::buildCommATSPart(PartPtr base, CommATSPartPtr parentCommATSPart) {
+  CommATSPartPtr MPICommContextAnalysis::buildCommATSPart(PartPtr base, CommATSPartPtr parentCommATSPart) {
     // If its a MPI call create CommATSPart with MPICommContext
     set<CFGNode> cfgnodes;
     CommATSPartPtr commATSPart;
@@ -923,7 +923,7 @@ namespace fuse {
     return commATSPart;
   }
 
-  // CommATSPartEdgePtr MPICommAnalysis::buildCommATSPartEdge(PartEdgePtr baseEdge) {
+  // CommATSPartEdgePtr MPICommContextAnalysis::buildCommATSPartEdge(PartEdgePtr baseEdge) {
   //   PartPtr baseSource = baseEdge->source();
   //   PartPtr baseTarget = baseEdge->target();
   //   CommATSPartPtr commATSSource = buildCommATSPart(baseSource, baseSource->inEdgeFromAny(), baseEdge);
@@ -935,4 +935,4 @@ namespace fuse {
   // }
 }; // end namespace
 
-//  LocalWords:  MPICommAnalysis MPICommATSPartEdge CommATSPart
+//  LocalWords:  MPICommContextAnalysis MPICommATSPartEdge CommATSPart
