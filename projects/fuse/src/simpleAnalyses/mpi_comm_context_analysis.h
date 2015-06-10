@@ -1,5 +1,5 @@
-#ifndef _MPI_COMM_ANALYSIS_H
-#define _MPI_COMM_ANALYSIS_H
+#ifndef _MPI_COMM_CONTEXT_ANALYSIS_H
+#define _MPI_COMM_CONTEXT_ANALYSIS_H
 
 /****************************************
  * Author: Sriram Aananthakrishnan, 2014 *
