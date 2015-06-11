@@ -1901,19 +1901,6 @@ bool MappedValueObject<Key, mostAccurate>::isConcrete() {
 }
 
 template<class Key, bool mostAccurate>
-SgType* MappedValueObject<Key, mostAccurate>::getConcreteType() {
-  assert(isConcrete());
-  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
-  SgType* c_type = it->second->getConcreteType();
-  // assert that all other objects have the same type
-  for( ++it; it != valuesMap.end(); ++it) {
-    SgType* votype = it->second->getConcreteType();
-    assert(c_type == votype);
-  }
-  return c_type;
-}
-
-template<class Key, bool mostAccurate>
 bool MappedValueObject<Key, mostAccurate>::find(boost::shared_ptr<SgValueExp> item,
                                                 const set<boost::shared_ptr<SgValueExp> >& valueSet) {
   set<boost::shared_ptr<SgValueExp> >::const_iterator c_it = valueSet.begin();
@@ -1935,8 +1922,25 @@ set<boost::shared_ptr<SgValueExp> > MappedValueObject<Key, mostAccurate>::getCon
   // Iterate through the values set and build the set of concrete values (concValues).
   // Not very efficient as the objects to be compared are pointers.
   typename map<Key, ValueObjectPtr>::iterator v_it = valuesMap.begin();
+  //#SA: 6/10/2015
+  // Two cases to be considered
+  // 1. If the object is union_, all mapped objects should be concrete
+  // add the values denoted by them into a set
+  // add all the value objects into a set
+  // 2. If the object is intersect_, check if the mapped objects are concrete and add
+  // the concrete value denoted by the object into the set
   for( ; v_it != valuesMap.end(); ++v_it) {
-    set<boost::shared_ptr<SgValueExp> > c_valueSet = v_it->second->getConcreteValue();
+    set<boost::shared_ptr<SgValueExp> > c_valueSet;
+    if(union_) {
+      c_valueSet = v_it->second->getConcreteValue();
+    }
+    else if(intersect_) {
+      if(v_it->second->isConcrete())
+        c_valueSet = v_it->second->getConcreteValue();
+    }
+    else assert(0);
+
+    // Add the concrete values denoted by the object to the set
     set<boost::shared_ptr<SgValueExp> >::iterator s_it = c_valueSet.begin();
     for( ; s_it != c_valueSet.end(); ++s_it) {
       // if item not found add it to concValues
@@ -1945,6 +1949,36 @@ set<boost::shared_ptr<SgValueExp> > MappedValueObject<Key, mostAccurate>::getCon
   }
   return concValues;
 }
+
+template<class Key, bool mostAccurate>
+SgType* MappedValueObject<Key, mostAccurate>::getConcreteType() {
+  assert(isConcrete());
+  typename map<Key, ValueObjectPtr>::iterator it = valuesMap.begin();
+  //#SA: 6/10/2015
+  // Two cases to be considered
+  // 1. If the object is union_, all mapped objects should be concrete
+  // Get the type and check if its same as everything else
+  // 2. If the object is intersect_, check if the mapped objects are concrete and 
+  // get their type
+  SgType* c_type = 0;
+    
+  // assert that all other objects have the same type
+  for( ; it != valuesMap.end(); ++it) {
+    SgType* votype;
+    if(union_) {
+      votype = it->second->getConcreteType();
+    }
+    else if(intersect_) {
+      if(it->second->isConcrete())
+      votype = it->second->getConcreteType();
+    }
+    if(!c_type) c_type = votype;
+    assert(c_type == votype);
+  }
+  assert(!c_type);
+  return c_type;
+}
+
 
 template<class Key, bool mostAccurate>
 ValueObjectPtr MappedValueObject<Key, mostAccurate>::copyV() const {

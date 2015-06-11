@@ -15,7 +15,7 @@ using namespace sight;
 
 namespace fuse {
 
-  DEBUG_LEVEL(tightComposerDebugLevel, 2);
+  DEBUG_LEVEL(tightComposerDebugLevel, 0);
 
   /***************
    * Expr2AnyKey *
