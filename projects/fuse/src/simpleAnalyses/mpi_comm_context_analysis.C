@@ -409,7 +409,8 @@ namespace fuse {
   }
 
   map<CFGNode, shared_ptr<SgValueExp> > CommATSPartEdge::getPredicateValue() {
-    assert(0);
+    // this analysis does not add any predicates to edges
+    // return the parent edge predicate values
     return parent->getPredicateValue();
   }
 

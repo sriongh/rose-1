@@ -2,6 +2,7 @@
 #include "compose.h"
 #include "mpi_value_analysis.h"
 #include "const_prop_analysis.h"
+#include "dead_path_elim_analysis.h"
 #include "tight_composer.h"
 #include "mpi_comm_context_analysis.h"
 #include "mpi_comm_analysis.h"
@@ -25,10 +26,11 @@ int main(int argc, char* argv[])
   std::list<ComposedAnalysis*> scanalyses;
   std::list<ComposedAnalysis*> tcanalyses;
   
-  // Sequential composer  
-  // scanalyses.push_back(new ConstantPropagationAnalysis());
+  // Sequential composer    
   scanalyses.push_back(new MPICommContextAnalysis());
   scanalyses.push_back(new MPIValueAnalysis());
+  scanalyses.push_back(new ConstantPropagationAnalysis());
+  scanalyses.push_back(new DeadPathElimAnalysis());
 
   // Tight composition of analyses
   tcanalyses.push_back(new ConstantPropagationAnalysis());
@@ -41,6 +43,7 @@ int main(int argc, char* argv[])
   ChainComposer cc(scanalyses, cdip, true);
 
   cc.runAnalysis();
+
 
   if(cdip->getNumErrors() > 0) cout << cdip->getNumErrors() << " Errors Reported!"<<endl;
   else                         cout << "PASS"<<endl;
