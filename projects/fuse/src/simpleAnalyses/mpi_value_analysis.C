@@ -295,7 +295,9 @@ namespace fuse {
     MPI_Comm_rank(comm, &pid);
 
     // create MPIValueObject for the pid
-    CPConcreteKindPtr pidValKind = boost::make_shared<CPConcreteKind>(boost::shared_ptr<SgValueExp>(SageBuilder::buildIntVal(pid)));
+    // Build SgIntVal
+    boost::shared_ptr<SgValueExp> pidVal_sp(SageBuilder::buildIntVal(pid));
+    CPConcreteKindPtr pidValKind = boost::make_shared<CPConcreteKind>(pidVal_sp);
     MPIValueObjectPtr pidMVO = boost::make_shared<MPIValueObject>(pidValKind,
                                                                   part->inEdgeFromAny());
     // set the lattice for the second argument

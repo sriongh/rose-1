@@ -25,10 +25,10 @@ int main(int argc, char* argv[])
   std::list<ComposedAnalysis*> scanalyses;
   std::list<ComposedAnalysis*> tcanalyses;
   
-  // Sequential composer
-  scanalyses.push_back(new MPIValueAnalysis());
-  scanalyses.push_back(new ConstantPropagationAnalysis());
+  // Sequential composer  
+  // scanalyses.push_back(new ConstantPropagationAnalysis());
   scanalyses.push_back(new MPICommContextAnalysis());
+  scanalyses.push_back(new MPIValueAnalysis());
 
   // Tight composition of analyses
   tcanalyses.push_back(new ConstantPropagationAnalysis());

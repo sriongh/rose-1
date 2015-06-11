@@ -131,11 +131,11 @@ namespace fuse {
 
   bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
                                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
-    assert(0);
+    // assert(0);
   }
 
   ValueObjectPtr MPICommAnalysis::Expr2Val(SgNode* sgn, PartEdgePtr pedge) {
-    assert(0);
+    return boost::make_shared<FullValueObject>();
   }
 
   string MPICommAnalysis::str(std::string indent) const {
