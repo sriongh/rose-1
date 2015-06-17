@@ -113,6 +113,9 @@ class FuncEntryExitFunctor
 
           // Set the pointers of defining declaration to first non-defining and 
           // that of first non-defining to defining appropriately.
+          // SageBuilders interface is sufficient enough to create a function with
+          // an empty body and a basic block
+          // No need for separately creating SgFunctionDefinition
           definingDecl->set_firstNondefiningDeclaration(firstNonDefiningDecl);
           definingDecl->set_file_info(firstNonDefiningDecl->get_file_info());
           firstNonDefiningDecl->set_definingDeclaration(definingDecl);
