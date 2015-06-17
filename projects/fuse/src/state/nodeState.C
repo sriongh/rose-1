@@ -501,7 +501,7 @@ void NodeState::unionLattices(set<Analysis*>& unionSet, Analysis* master)
 bool NodeState::unionLatticeMaps(map<PartEdgePtr, vector<Lattice*> >& to, 
                                  const map<PartEdgePtr, vector<Lattice*> >& from)
 {
-  scope reg("NodeState::unionLatticeMaps()", scope::medium, attrGE("saveDotAnalysisDebugLevel", 2));
+  scope reg("NodeState::unionLatticeMaps()", scope::medium, attrGE("nodeStateDebugLevel", 2));
   // All the analyses in unionSet must have the same number of edges
   assert(to.size() == from.size());
 
