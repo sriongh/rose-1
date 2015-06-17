@@ -7,7 +7,6 @@
 #include <boost/make_shared.hpp>
 #include "VirtualCFGIterator.h"
 
-
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
@@ -118,20 +117,11 @@ class FuncEntryExitFunctor
           definingDecl->set_file_info(firstNonDefiningDecl->get_file_info());
           firstNonDefiningDecl->set_definingDeclaration(definingDecl);
 
-          // Create an empty function body
-          // Create an empty function definition
-          // Associate this newly created function definiton with definingDecl
-          SgBasicBlock* body = SageBuilder::buildBasicBlock();
-          SgFunctionDefinition* def = new SgFunctionDefinition(definingDecl, body);
-          def->setAttribute("fuse:UnknownSideEffects", new UnknownSideEffectsAttribute());
-          body->set_parent(def);
-          def->set_parent(definingDecl);
-          def->set_file_info(definingDecl->get_file_info());          
-
           // Re-initialize the Function with the new declaration
           func.init(definingDecl);
+          ROSE_ASSERT(func.get_definition());
 
-          Exit = CFGNode(def, 3);
+          Exit = CFGNode(func.get_definition(), 3);
           if(stxAnalysisDebugLevel()>=2) {
             dbg << "Creating function "<<func.get_name().getString()<<endl;
             dbg << "decl="<<func.get_declaration()<<"="<<SgNode2Str(func.get_declaration())<<endl;
@@ -141,7 +131,7 @@ class FuncEntryExitFunctor
           if(stxAnalysisDebugLevel()>=3) {
             dbg << "func2 Function "<<func.get_name().getString()<<endl;
 
-            for(back_CFGIterator it(def->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
+            for(back_CFGIterator it(func.get_definition()->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
               dbg << "it="<<CFGNode2Str(*it)<<endl;
             }
           }
