@@ -42,11 +42,77 @@ namespace fuse {
     std::string str(std::string indent="") const;
   };
 
-  class MPICommAnalysis : public FWDataflow {
-  public:
-    MPICommAnalysis();
+  struct MPICommOp {
+    enum OpType {SEND, 
+                 RECV,
+                 NOOP};
+  };
 
-    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(); }
+  class MPICommAnalysis;
+
+  class MPICommOpCallExp {
+    Function mpifunc;
+    SgFunctionCallExp* callexp;
+    MPICommAnalysis* analysis;
+    MPICommOp::OpType optype;
+
+    class Expr2ValVisitor : public ROSE_VisitorPatternDefaultBase {
+      ValueObjectPtr val;
+      MPICommAnalysis* analysis;
+    public:
+      Expr2ValVisitor() { }
+      void visit(SgCastExp* sgn);
+      void visit(SgAddressOfOp* sgn);
+      void visit(SgVarRefExp* sgn);
+      void visit(SgNode* sgn);
+    };
+        
+  public:
+    MPICommOpCallExp(const Function& func, SgFunctionCallExp* _callexp,  MPICommAnalysis* _analysis);
+    MPICommOpCallExp(const MPICommOpCallExp& that);
+    ValueObjectPtr getCommOpBufferValueObject();
+    ValueObjectPtr getCommOpDestValueObject();
+    ValueObjectPtr getCommOpTagValueObject();
+    bool isMPICommOp();
+  };
+
+  /**************************
+   * MPICommAnalysisTranfer *
+   **************************/
+
+  class MPICommAnalysis;
+
+  class MPICommAnalysisTransfer : public DFTransferVisitor {
+    // Protected member variable names are part, cn, nodeState, dfInfo
+    MPICommAnalysis* analysis;
+  public:
+    MPICommAnalysisTransfer(PartPtr part,
+                            CFGNode cfgn,
+                            NodeState& state,
+                            std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
+                            MPICommAnalysis* analysis);
+    void visit(SgFunctionParameterList* sgn);
+    void visit(SgFunctionCallExp* sgn);
+    void visit(SgNode* sgn);
+    bool finish();
+
+    //! Get the function from the parameter list
+    Function getFunction(SgFunctionParameterList* sgn);
+    Function getFunction(SgFunctionCallExp* sgn);
+    //! Check if this function is a MPI call 
+    bool isMPIFuncCall(const Function& func) const;
+  };
+
+  /*******************
+   * MPICommAnalysis *
+   *******************/
+
+  class MPICommAnalysis : public FWDataflow {
+    ComposedAnalysis* analysis;
+  public:
+    MPICommAnalysis(ComposedAnalysis* _analysis);
+
+    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(analysis); }
 
     // Initializes the state of analysis lattices at the given function, part and edge into our out of the part
     // by setting initLattices to refer to freshly-allocated Lattice objects.
@@ -54,7 +120,10 @@ namespace fuse {
                         std::vector<Lattice*>& initLattices);
 
     bool transfer(PartPtr part, CFGNode cn, NodeState& state, 
-                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
+                  std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) { assert(0); }
+
+    boost::shared_ptr<DFTransferVisitor> getTransferVisitor(PartPtr part, CFGNode cn, NodeState& state, 
+                                                            std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
    
     bool implementsExpr2MemRegion() { return false; }
     bool implementsExpr2MemLoc() { return false; }

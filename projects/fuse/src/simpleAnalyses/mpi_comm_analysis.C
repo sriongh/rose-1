@@ -11,6 +11,8 @@ using namespace boost;
 
 namespace fuse {
 
+  DEBUG_LEVEL(mpiCommAnalysisDebugLevel, 2);
+
   /**********************
    * MPICommValueObject *
    **********************/
@@ -110,10 +112,124 @@ namespace fuse {
     assert(0);
   }
 
+  /********************
+   * MPICommOpCallExp *
+   ********************/
+  MPICommOpCallExp::MPICommOpCallExp(const Function& _func,
+                                     SgFunctionCallExp* _callexp,
+                                     MPICommAnalysis* _analysis) 
+    : mpifunc(_func),
+      callexp(_callexp),
+      analysis(_analysis) {
+    string name = mpifunc.get_name().getString();
+    if(name.compare("MPI_Send") == 0) optype = MPICommOp::SEND;
+    else if(name.compare("MPI_Recv") == 0) optype = MPICommOp::RECV;
+    else optype = MPICommOp::NOOP;
+  }
+
+  MPICommOpCallExp::MPICommOpCallExp(const MPICommOpCallExp& that)
+    : mpifunc(that.mpifunc),
+      callexp(that.callexp),
+      analysis(that.analysis),
+      optype(that.optype) { }
+
+  void MPICommOpCallExp::Expr2ValVisitor::visit(SgCastExp* sgn) {
+    sgn->get_operand()->accept(*this);
+  }
+
+  void MPICommOpCallExp::Expr2ValVisitor::visit(SgAddressOfOp* sgn) {
+    sgn->get_operand()->accept(*this);
+  }
+
+  void MPICommOpCallExp::Expr2ValVisitor::visit(SgVarRefExp* sgn) {
+    dbg << SgNode2Str(sgn) << endl;
+    assert(0);
+  }
+
+  void MPICommOpCallExp::Expr2ValVisitor::visit(SgNode* sgn) {
+    dbg << "sgn=" << SgNode2Str(sgn) << endl;
+    assert(0);
+  }
+
+  ValueObjectPtr MPICommOpCallExp::getCommOpBufferValueObject() {
+    SgExpressionPtrList exprList = callexp->get_args()->get_expressions();
+    SgExpression* buffer = exprList[0];
+    Expr2ValVisitor expr2Val;
+    buffer->accept(expr2Val);    
+  }
+
+  ValueObjectPtr MPICommOpCallExp::getCommOpDestValueObject() {
+  }
+
+  ValueObjectPtr MPICommOpCallExp::getCommOpTagValueObject() {
+  }
+
+  bool MPICommOpCallExp::isMPICommOp() {
+    return optype != MPICommOp::NOOP;
+  }
+
+
+
+  /**************************
+   * MPICommAnalysisTranfer *
+   **************************/
+  MPICommAnalysisTransfer::MPICommAnalysisTransfer(PartPtr part,
+                                                   CFGNode cfgn,
+                                                   NodeState& state,
+                                                   std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
+                                                   MPICommAnalysis* _analysis)
+    : DFTransferVisitor(part, cfgn, state, dfInfo), analysis(_analysis) { 
+  }
+
+  Function MPICommAnalysisTransfer::getFunction(SgFunctionParameterList* sgn) {
+    SgFunctionDeclaration* decl = isSgFunctionDeclaration(sgn->get_parent());
+    ROSE_ASSERT(decl);
+    Function func(decl);
+    return func;
+  }
+
+  Function MPICommAnalysisTransfer::getFunction(SgFunctionCallExp* sgn) {
+    SgFunctionDeclaration* decl = isSgFunctionDeclaration(sgn->getAssociatedFunctionDeclaration());
+    ROSE_ASSERT(decl);
+    Function func(decl);
+    return func;
+  }
+
+  bool MPICommAnalysisTransfer::isMPIFuncCall(const Function& func) const {
+    if(func.get_name().getString().find("MPI_") != string::npos) return true;
+    return false;
+  }
+
+  void MPICommAnalysisTransfer::visit(SgFunctionCallExp* sgn) {
+    Function func = getFunction(sgn);
+    if(isMPIFuncCall(func)) {
+      MPICommOpCallExp commOpCallExp(func, sgn, analysis);
+      // Check if this CFGNode is a outgoing function call cfgIndex=2
+      if(Part::isOutgoingFuncCall(cn) && commOpCallExp.isMPICommOp()) {
+        // Determine the type of MPI operation
+        ValueObjectPtr bufferVO = commOpCallExp.getCommOpBufferValueObject();
+      }
+    }
+  }
+  
+  void MPICommAnalysisTransfer::visit(SgFunctionParameterList* sgn) {
+    Function func = getFunction(sgn);
+    if(isMPIFuncCall(func)) {
+    }
+  }
+
+  void MPICommAnalysisTransfer::visit(SgNode* sgn) {
+    // identity transfer
+  }
+
+  bool MPICommAnalysisTransfer::finish() {
+  }
+
+
   /*******************
    * MPICommAnalysis *
    *******************/
-  MPICommAnalysis::MPICommAnalysis() {
+  MPICommAnalysis::MPICommAnalysis(ComposedAnalysis* _analysis) : analysis(_analysis) {
   }
 
   // void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {
@@ -129,9 +245,11 @@ namespace fuse {
     initLattices.push_back(aomap);
   }
 
-  bool MPICommAnalysis::transfer(PartPtr part, CFGNode cn, NodeState& state, 
-                                 std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) {
-    // assert(0);
+  boost::shared_ptr<DFTransferVisitor> MPICommAnalysis::getTransferVisitor(PartPtr part, 
+                                                                           CFGNode cn, 
+                                                                           NodeState& state, 
+                                                                           map<PartEdgePtr, vector<Lattice*> >& dfInfo) {
+    return boost::shared_ptr<MPICommAnalysisTransfer>(new MPICommAnalysisTransfer(part, cn, state, dfInfo, this));
   }
 
   ValueObjectPtr MPICommAnalysis::Expr2Val(SgNode* sgn, PartEdgePtr pedge) {
