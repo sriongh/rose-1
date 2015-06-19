@@ -651,7 +651,7 @@ namespace fuse {
     list<ComposedAnalysis*>::iterator a = allAnalyses.begin();
     for( ; a != allAnalyses.end(); ++a) {
       scope reg(txt() << "TightComposer::transferPropagateAState",
-                scope::medium, attrGE("tightComposerDebugLevel", 2));
+                scope::medium, attrGE("composedAnalysisDebugLevel", 2));
       dbg << "ComposedAnalysis=" << (*a)->str() << endl;
       ComposedAnalysis::transferPropagateAState(*a, part, visited, firstVisit, initialized, curNodeIt, curPartAnchor, 
                                                 worklistGraph, toAnchors, fromAnchors);

@@ -29,12 +29,13 @@ int main(int argc, char* argv[])
   // Sequential composer    
   scanalyses.push_back(new MPICommContextAnalysis());
   scanalyses.push_back(new MPIValueAnalysis());
-  scanalyses.push_back(new ConstantPropagationAnalysis());
-  scanalyses.push_back(new DeadPathElimAnalysis());
+  // scanalyses.push_back(new ConstantPropagationAnalysis());
+  // scanalyses.push_back(new DeadPathElimAnalysis());
 
   // Tight composition of analyses
-  tcanalyses.push_back(new ConstantPropagationAnalysis());
-  tcanalyses.push_back(new MPICommAnalysis());
+  ConstantPropagationAnalysis* cp = new ConstantPropagationAnalysis();
+  tcanalyses.push_back(cp);
+  tcanalyses.push_back(new MPICommAnalysis(cp));
   TightComposer* tightcomposer = new TightComposer(tcanalyses);
 
   // Add the tight composer to sequential composer
