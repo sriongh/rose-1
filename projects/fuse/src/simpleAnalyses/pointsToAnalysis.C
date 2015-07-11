@@ -22,7 +22,15 @@ namespace fuse
      modified(false)
   {
     // Set the pointer of the map for this PartEdge
-    initLattice();
+    // Incoming dfInfo is associated with inEdgeFromAny
+    assert(dfInfo.size()==1);    
+    assert(dfInfo[part->inEdgeFromAny()].size()==1);
+    assert(*dfInfo[part->inEdgeFromAny()].begin());
+
+    Lattice *l = *dfInfo[part->inEdgeFromAny()].begin();
+    latticeMap = (dynamic_cast<AbstractObjectMap*>(l));
+
+    assert(latticeMap);
   }
 
   bool PointsToAnalysisTransfer::finish()
@@ -30,126 +38,140 @@ namespace fuse
     return modified;
   }
 
-  void PointsToAnalysisTransfer::initLattice()
-  {     
-    // Incoming dfInfo is associated with inEdgeFromAny
-    assert(dfInfo.size()==1);    
-    assert(dfInfo[part->inEdgeFromAny()].size()==1);
-    assert(*dfInfo[part->inEdgeFromAny()].begin());
-
-    Lattice *l = *dfInfo[part->inEdgeFromAny()].begin();
-    productLattice = (dynamic_cast<AbstractObjectMap*>(l));
-
-    assert(productLattice);
+  LatticePtr PointsToAnalysisTransfer::getLattice(MemLocObjectPtr ml) {
+    LatticePtr lat = latticeMap->get(ml);
+    assert(lat);
+    return lat;
   }
 
-  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLattice(SgExpression* sgexp) 
-  {
-    MemLocObjectPtr ml= composer->Expr2MemLoc(sgexp, part->inEdgeFromAny(), analysis);
-    return getLatticeCommon(ml);
+  bool PointsToAnalysisTransfer::setLattice(MemLocObjectPtr ml, LatticePtr lat) {
+    assert(lat);
+    return latticeMap->insert(ml, lat);
   }
 
+  bool PointsToAnalysisTransfer::updateLatticeMap(PointsToRelation& prel) {    
+    return setLattice(prel.first, prel.second);
+  }
+
+  PointsToRelation PointsToAnalysisTransfer::make_pointsto(MemLocObjectPtr key,
+                                                           boost::shared_ptr<AbstractObjectSet> latticeElem) {
+    assert(key && latticeElem);
+    return std::make_pair(key, latticeElem);
+  }
   
-  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLatticeOperand(SgNode* sgn, SgExpression* operand) 
-  { 
-    MemLocObjectPtr oml = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis); 
-    return getLatticeCommon(oml);
+  // PointsTo LatticeMap key is a MemLocObjectPtr
+  // Given an pointer type expression return the MemLocObjectPtr to be used as key in LatticeMap
+  MemLocObjectPtr PointsToAnalysisTransfer::getLatticeMapKey(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge) {
+    //operand is of pointer type
+    assert(operand->get_type()->variantT() == V_SgPointerType);
+    MemLocObjectPtr ml;
+
+    // SgVarRefExp, SgDotExp do not require any processing
+    // Array operandessions may require additional processing from other analyses
+    // Pointer dereferencing operandessions requires additional LatticeMap lookup.
+    // example *p = &x and p -> q where MemLocObject(*p) = MemLocObject(q)
+    switch(operand->variantT()) {      
+    case V_SgVarRefExp:
+    case V_SgDotExp:
+      ml = composer->OperandExpr2MemLoc(anchor, operand, pedge, analysis);
+      break;    
+    case V_SgPntrArrRefExp:
+    case V_SgPointerDerefExp:
+    default: 
+      dbg << "Unhandled operand in PointsToAnalysisTransfer::getLatticeMapKey(operand=" << SgNode2Str(operand) << ")\n";
+      assert(false);
+    };
+    return ml;
   }
 
-  PointsToAnalysisTransfer::AbstractObjectSetPtr PointsToAnalysisTransfer::getLatticeCommon(MemLocObjectPtr ml)
-  {
-    return boost::dynamic_pointer_cast<AbstractObjectSet>(productLattice->get(ml));
+  boost::shared_ptr<AbstractObjectSet>
+  PointsToAnalysisTransfer::getLatticeElem(MemLocObjectPtr key) {
+    boost::shared_ptr<AbstractObjectSet> lat = boost::dynamic_pointer_cast<AbstractObjectSet>(getLattice(key));
+    assert(lat);
+    return lat;
   }
 
-  bool PointsToAnalysisTransfer::setLattice(SgExpression* sgexp, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)
-  {
-    MemLocObjectPtr ml = composer->Expr2MemLoc(sgexp, part->inEdgeFromAny(), analysis);
-    return setLatticeCommon(ml, lat);
-  }
-
-  bool PointsToAnalysisTransfer::setLatticeOperand(SgNode* sgn, SgExpression* operand, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)                                                   
-  {
-    MemLocObjectPtr ml = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis);
-    return setLatticeCommon(ml, lat);
-  }
-
-  bool PointsToAnalysisTransfer::setLatticeCommon(MemLocObjectPtr ml, PointsToAnalysisTransfer::AbstractObjectSetPtr lat)
-  {
-    return productLattice->insert(ml, lat);
-    if(pointsToAnalysisDebugLevel() >= 3) {
-      dbg << productLattice->strp(part->inEdgeFromAny());
-    }    
-  }
-
-  // NOTE: requires extension for a full blown analysis
-  void PointsToAnalysisTransfer::visit(SgAssignOp* sgn)
-  {
-    SgExpression* rhs_operand = sgn->get_rhs_operand();
-    SgExpression* lhs_operand = sgn->get_lhs_operand();
-
-    // Handle p = &x
-    // NOTE: rhs can be a complex expression but code below only handles the trivial case
-    if(isSgAddressOfOp(rhs_operand)) {
-      // Operand of SgAddressOfOp should be a variable
-      SgVarRefExp* sgvexp = isSgVarRefExp(isSgAddressOfOp(rhs_operand)->get_operand()); 
-      assert(sgvexp);    
-      MemLocObjectPtr ml = composer->OperandExpr2MemLoc(sgn, sgvexp, part->inEdgeFromAny(), analysis); 
-      assert(ml);
-
-      // Get the AbstractObjectSet (lattice) for lhs_operand
-      AbstractObjectSetPtr aos_p = getLatticeOperand(sgn, lhs_operand);
-
-      // Pointer is reset as as result of this assignment
-      // Discard previous elements of this set
-      if(aos_p->size() > 0) aos_p->setToEmpty();
-
-      // Insert memory object for rhs_operand into this lattice
-      aos_p->insert(ml);
-
-      // If a new element is inserted into set, AbstractObjectMap corresponding to lhs needs update.
-      // AbstractObjetMap::get only returns a copy of the set.
-      // AbstractObjectMap should be updated with the set* methods.     
-      modified = setLatticeOperand(sgn, lhs_operand, aos_p) || modified;
+  boost::shared_ptr<AbstractObjectSet>
+  PointsToAnalysisTransfer::getLatticeElem(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge) {
+    MemLocObjectPtr keyML;
+    switch(operand->variantT()) {
+    case V_SgVarRefExp:
+    case V_SgDotExp: {
+      // operand is a pointer variable
+      keyML = composer->OperandExpr2MemLoc(anchor, operand, pedge, analysis);      
+      break;
     }
-    //TODO: handle p = q
-    else if(isSgPointerType(lhs_operand->get_type()) &&
-            isSgPointerType(rhs_operand->get_type())) {
-      AbstractObjectSetPtr laos_p = getLatticeOperand(sgn, lhs_operand); 
-      AbstractObjectSetPtr raos_p = getLatticeOperand(sgn, rhs_operand);
+    case V_SgPointerDerefExp:
+    case V_SgPntrArrRefExp:
+    default: {
+      dbg << "Unhandled operand in PointsToAnalysisTransfer::getLatticeElem(operand=" << SgNode2Str(operand) << ")\n";
+      assert(false);
+    }
+    };
+    
+    assert(keyML);    
+    return getLatticeElem(keyML);
+  }
 
-      if(pointsToAnalysisDebugLevel() >= 3) {
-        dbg << "laos_p=" << laos_p->str() << endl;
-        dbg << "raos_p=" << raos_p->str() << endl;
-      }
+  // an expression of pointer type can get assigned in many ways
+  // p = &expr where expr: SgVarRefExp | SgDotExp | SgPntrArrRefExp | SgFunctionRefExp
+  // p = q where q: another pointer variable
+  // *p = expr where expr is SgPointerType expression
+  void PointsToAnalysisTransfer::visit(SgAssignOp* sgn) {
+    SgExpression* lexpr = sgn->get_lhs_operand();
+    SgExpression* rexpr = sgn->get_rhs_operand();
 
-      // Union the information
-      // NOTE: points to information can be NULL
-      // Merge pointsToSet from rhs if available
-      assert(laos_p && raos_p);
-      if(raos_p->size() > 0) {
-        modified = laos_p->meetUpdate(dynamic_cast<Lattice*>(raos_p.get()));
+    // both expressions are of pointer types
+    if(isSgPointerType(lexpr->get_type()) &&
+       isSgPointerType(rexpr->get_type())) {
+      MemLocObjectPtr keyML = getLatticeMapKey(sgn, lexpr, part->inEdgeFromAny());
+      PointsToRelation prel;
+      switch(rexpr->variantT()) {
+      case V_SgAddressOfOp: {
+        boost::shared_ptr<AbstractObjectSet> lat = getLatticeElem(sgn, lexpr, part->inEdgeFromAny());
+        lat->setToEmpty();
+        MemLocObjectPtr toML = composer->OperandExpr2MemLoc(sgn, isSgAddressOfOp(rexpr)->get_operand(),
+                                                            part->inEdgeFromAny(), analysis);
+        lat->insert(toML);
+        prel = make_pointsto(keyML, lat);
+        break;
       }
-      
-      if(pointsToAnalysisDebugLevel() >= 3) {
-        dbg << "modified=" << modified << ", laos_p=" << laos_p->str() << endl;
+      case V_SgVarRefExp: {
+        boost::shared_ptr<AbstractObjectSet> llat = getLatticeElem(keyML);
+        llat->setToEmpty();
+        boost::shared_ptr<AbstractObjectSet> rlat = getLatticeElem(sgn, rexpr, part->inEdgeFromAny());
+        llat->copy(rlat.get());
+        prel = make_pointsto(keyML, llat);
       }
+      default:
+        assert(false);
+      };
+      modified = updateLatticeMap(prel);
+    }
+    modified = false;
+  }
 
-      // If the set was updated then update the map as well.
-      if(modified)
-        modified = setLatticeOperand(sgn, lhs_operand, laos_p) || modified;
+  void PointsToAnalysisTransfer::visit(SgFunctionCallExp* sgn) {
+    if(Part::isOutgoingFuncCall(cn)) {
+      SgExprListExp* args = sgn->get_args();
+      SgExpressionPtrList& argsList = args->get_expressions();
+      SgExpressionPtrList::iterator a = argsList.begin();
+      for(int i=0 ; a != argsList.end(); ++a, ++i) {
+        SgExpression* arg = *a;
+        // If its a cast expression strip the cast
+        if(isSgCastExp(arg)) {
+          arg = isSgCastExp(arg)->get_operand();
+        }
+        ROSE_ASSERT(!isSgCastExp(arg));
+        if(isSgAddressOfOp(arg)) {
+          SgType* argType = arg->get_type();
+          dbg << "argtype=" << SgNode2Str(argType) << endl;
+        }
+      }
     }
   }
 
   void PointsToAnalysisTransfer::visit(SgPointerDerefExp* sgn) {
-    // scope reg(txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
-    // AbstractObjectSetPtr operandLat = getLatticeOperand(sgn, sgn->get_operand());
-    // MemLocObjectPtr opML_p = composer->OperandExpr2MemLoc(sgn, sgn->get_operand(), part->inEdgeFromAny(), analysis);
-    // // MemLocObjectPtr ml_p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
-    // if(pointsToAnalysisDebugLevel() >= 2) {
-    //   dbg << "ML(op)=" << opML_p->str() << endl;
-    //   dbg << "operandLat=" << operandLat->str() << endl;
-    // }
-    // setLattice(sgn, operandLat);
   }
 
   /********************

@@ -1,12 +1,12 @@
 #ifndef _POINTSTOANALYSIS_H
 #define _POINTSTOANALYSIS_H
 
-/*
- * Simple  PointsTo Analysis
- * AbstractObjectMap (ProductLattice) stores an AbstractObjectSet for each MemLocObjectPtr
- * author: sriram@cs.utah.edu
- */
+/*********************************
+ * Sriram Aananthakrishnan, 2013 *
+ *********************************/
 
+/* A simple pointer analysis computing PointsTo relation
+ */
 #include "compose.h"
 #include "abstract_object_map.h"
 #include "abstract_object_set.h"
@@ -19,15 +19,15 @@ namespace fuse
    * PointsToAnalysisTransfer *
    ****************************/
 
+  typedef std::pair<MemLocObjectPtr, boost::shared_ptr<AbstractObjectSet> > PointsToRelation;
+
   //! Transfer functions for the PointsTo analysis
   class PointsToAnalysisTransfer : public DFTransferVisitor
   {
-    typedef boost::shared_ptr<AbstractObjectSet> AbstractObjectSetPtr;
-
     Composer* composer;
     PointsToAnalysis* analysis;
     // pointer to node state of the analysis at this part
-    AbstractObjectMap* productLattice;
+    AbstractObjectMap* latticeMap;
     // used by the analysis to determine if the states modified or not
     bool modified;
   public:
@@ -35,25 +35,22 @@ namespace fuse
                              std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
                              Composer* composer, PointsToAnalysis* analysis);                             
 
-    // Set the pointer of AbstractObjectMap at this PartEdge
-    void initLattice();
+    // AbstractObjectMap access methods
+    LatticePtr getLattice(MemLocObjectPtr ml);
+    bool setLattice(MemLocObjectPtr ml, LatticePtr lat);
+    bool updateLatticeMap(PointsToRelation& prel);
 
-    bool finish();
-
-    // Lattice access functions from the map (product lattice)
-    AbstractObjectSetPtr getLattice(SgExpression* sgexp);
-    AbstractObjectSetPtr getLatticeOperand(SgNode* sgn, SgExpression* operand);
-    AbstractObjectSetPtr getLatticeCommon(MemLocObjectPtr ml);
-    // Lattice* getLattice(const AbstractObjectPtr o);
-
-    bool setLattice(SgExpression* sgexp, AbstractObjectSetPtr lat);
-    bool setLatticeOperand(SgNode* sgn, SgExpression* operand, AbstractObjectSetPtr lat);
-    bool setLatticeCommon(MemLocObjectPtr ml, AbstractObjectSetPtr lat);
-    // void setLattice(const AbstractObjectPtr o, Lattice* aos);
+    PointsToRelation make_pointsto(MemLocObjectPtr key, boost::shared_ptr<AbstractObjectSet> latticeElem);
+    MemLocObjectPtr getLatticeMapKey(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
+    boost::shared_ptr<AbstractObjectSet> getLatticeElem(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
+    boost::shared_ptr<AbstractObjectSet> getLatticeElem(MemLocObjectPtr key);
 
     // Transfer functions
     void visit(SgAssignOp* sgn);
     void visit(SgPointerDerefExp* sgn);
+    void visit(SgFunctionCallExp* sgn);
+
+    bool finish();
   };
 
   /********************
