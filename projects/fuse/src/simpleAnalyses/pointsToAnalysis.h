@@ -36,21 +36,42 @@ namespace fuse
                              Composer* composer, PointsToAnalysis* analysis);                             
 
     // AbstractObjectMap access methods
-    LatticePtr getLattice(MemLocObjectPtr ml);
+    boost::shared_ptr<AbstractObjectSet> getLattice(MemLocObjectPtr ml);
     bool setLattice(MemLocObjectPtr ml, LatticePtr lat);
     bool updateLatticeMap(PointsToRelation& prel);
 
     PointsToRelation make_pointsto(MemLocObjectPtr key, boost::shared_ptr<AbstractObjectSet> latticeElem);
-    MemLocObjectPtr getLatticeMapKey(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
-    boost::shared_ptr<AbstractObjectSet> getLatticeElem(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
-    boost::shared_ptr<AbstractObjectSet> getLatticeElem(MemLocObjectPtr key);
+    MemLocObjectPtr getLatticeMapKeyML(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
 
     // Transfer functions
     void visit(SgAssignOp* sgn);
     void visit(SgPointerDerefExp* sgn);
+
+    class PointerTypeArg {
+    };
+
+    class PointerTypeParam {
+    };
+
+    //! Functor to extract matching pointer type expressions from SgFunctionCallExp
+    //! and the matching pointer type paramters from SgFunctionParameterList
+    class PointerTypeArgsParamMapper {
+      SgFunctionCallExp* callexp;
+      PointsToAnalysisTransfer& pointsToAnalysisTransfer;
+      typedef std::pair<SgExpression*, SgInitializedName*> PointerArgParamMapping;
+      std::set<PointerArgParamMapping> argParamMappingSet;
+    public:
+      PointerTypeArgsParamMapper(SgFunctionCallExp* call, PointsToAnalysisTransfer& ref) : callexp(call), pointsToAnalysisTransfer(ref) { }
+      void operator()(PartPtr funcEntryPart);
+    };
     void visit(SgFunctionCallExp* sgn);
+    void visit(SgFunctionParameterList* sgn);
 
     bool finish();
+
+    // Helper methods
+    void getFuncEntryParts(std::list<PartEdgePtr>& funcEntryEdges, std::list<PartPtr>& funcEntryParts);
+    SgFunctionParameterList* getSgFuncParamList(PartPtr part);
   };
 
   /********************
