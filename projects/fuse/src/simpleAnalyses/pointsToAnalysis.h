@@ -26,34 +26,55 @@ namespace fuse
   {
     Composer* composer;
     PointsToAnalysis* analysis;
-    // pointer to node state of the analysis at this part
-    AbstractObjectMap* latticeMap;
+    AbstractObjectMap* latticeMapIn;
     // used by the analysis to determine if the states modified or not
     bool modified;
+    friend class PointerExprTransfer;
   public:
     PointsToAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state,
                              std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
                              Composer* composer, PointsToAnalysis* analysis);                             
 
-    // AbstractObjectMap access methods
-    boost::shared_ptr<AbstractObjectSet> getLattice(MemLocObjectPtr ml);
-    bool setLattice(MemLocObjectPtr ml, LatticePtr lat);
-    bool updateLatticeMap(PointsToRelation& prel);
 
-    PointsToRelation make_pointsto(MemLocObjectPtr key, boost::shared_ptr<AbstractObjectSet> latticeElem);
-    MemLocObjectPtr getLatticeMapKeyML(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
+    //! Visitor pattern to process sub-expressions of expressions involving pointer assignment.
+    //! Determine the set of memory locations denoted by the sub-expression.
+    class PointerExprTransfer : public ROSE_VisitorPatternDefaultBase {      
+      boost::shared_ptr<AbstractObjectSet> latElem;  //!< set to insert the MemLocObjectPtr denoted by the sub-expression
+      SgExpression* anchor;                          //!< anchor expression that the sub-expression is part of
+      PartEdgePtr pedge;
+      AbstractObjectMap* latticeMap;
+      PointsToAnalysisTransfer& pointsToAnalysisTransfer;
+      bool modified;
+    public:
+      PointerExprTransfer(boost::shared_ptr<AbstractObjectSet> latElem,
+                          SgExpression* anchor,
+                          PartEdgePtr pedge,
+                          AbstractObjectMap* latticeMap,
+                          PointsToAnalysisTransfer& pointsToAnalysisTransfer);
+      void visit(SgAddressOfOp*);
+      void visit(SgVarRefExp*);
+      void visit(SgDotExp*);
+      void visit(SgPointerDerefExp*);
+
+      bool isLatElemModified() const;
+      MemLocObjectPtr getExpr2MemLoc(SgExpression* sgn, PartEdgePtr pedge);
+    };
 
     // Transfer functions
     void visit(SgAssignOp* sgn);
     void visit(SgPointerDerefExp* sgn);
     void visit(SgFunctionCallExp* sgn);
 
-    bool finish();
+    // AbstractObjectMap access methods
+    bool updateLatticeMap(AbstractObjectMap* latticeMap, PointsToRelation& prel);
 
     // Helper methods
+    PointsToRelation make_pointsto(MemLocObjectPtr key, boost::shared_ptr<AbstractObjectSet> latticeElem);
+    MemLocObjectPtr getLatticeMapKeyML(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
     typedef std::pair<SgExpression*, SgInitializedName*> ArgParamMapping;
     typedef std::list<ArgParamMapping> ArgParamMappingList;
     void getArgParamMapping(SgFunctionCallExp* sgnCallExp, SgFunctionParameterList* sgnFuncEntry, ArgParamMappingList& argParamMappingList);
+    bool finish();
   };
 
   /********************
