@@ -46,32 +46,14 @@ namespace fuse
     // Transfer functions
     void visit(SgAssignOp* sgn);
     void visit(SgPointerDerefExp* sgn);
-
-    class PointerTypeArg {
-    };
-
-    class PointerTypeParam {
-    };
-
-    //! Functor to extract matching pointer type expressions from SgFunctionCallExp
-    //! and the matching pointer type paramters from SgFunctionParameterList
-    class PointerTypeArgsParamMapper {
-      SgFunctionCallExp* callexp;
-      PointsToAnalysisTransfer& pointsToAnalysisTransfer;
-      typedef std::pair<SgExpression*, SgInitializedName*> PointerArgParamMapping;
-      std::set<PointerArgParamMapping> argParamMappingSet;
-    public:
-      PointerTypeArgsParamMapper(SgFunctionCallExp* call, PointsToAnalysisTransfer& ref) : callexp(call), pointsToAnalysisTransfer(ref) { }
-      void operator()(PartPtr funcEntryPart);
-    };
     void visit(SgFunctionCallExp* sgn);
-    void visit(SgFunctionParameterList* sgn);
 
     bool finish();
 
     // Helper methods
-    void getFuncEntryParts(std::list<PartEdgePtr>& funcEntryEdges, std::list<PartPtr>& funcEntryParts);
-    SgFunctionParameterList* getSgFuncParamList(PartPtr part);
+    typedef std::pair<SgExpression*, SgInitializedName*> ArgParamMapping;
+    typedef std::list<ArgParamMapping> ArgParamMappingList;
+    void getArgParamMapping(SgFunctionCallExp* sgnCallExp, SgFunctionParameterList* sgnFuncEntry, ArgParamMappingList& argParamMappingList);
   };
 
   /********************

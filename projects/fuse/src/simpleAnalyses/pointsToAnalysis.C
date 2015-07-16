@@ -126,27 +126,12 @@ namespace fuse
     modified = false;
   }
 
-  void PointsToAnalysisTransfer::getFuncEntryParts(list<PartEdgePtr>& funcEntryEdges, list<PartPtr>& funcEntryParts) {
-    list<PartEdgePtr>::iterator ei = funcEntryEdges.begin();
-    for( ; ei != funcEntryEdges.end(); ++ei) {
-      PartPtr target = (*ei)->target();
-      set<CFGNode> funcEntryCFGN = target->CFGNodes();
-      assert(target->mustFuncEntry(funcEntryCFGN));
-      funcEntryParts.push_back(target);
-    }
-  }
-
-  SgFunctionParameterList* PointsToAnalysisTransfer::getSgFuncParamList(PartPtr part) {
-    SgFunctionParameterList* entry = part->mustSgNodeAll<SgFunctionParameterList>();
-    assert(entry);
-    return entry;
-  }
-
-  void PointsToAnalysisTransfer::PointerTypeArgsParamMapper::operator()(PartPtr funcEntryPart) {
-    SgFunctionParameterList* entryCFGN = pointsToAnalysisTransfer.getSgFuncParamList(funcEntryPart);
-    SgExprListExp* callExpArgs = callexp->get_args();
+  void PointsToAnalysisTransfer::getArgParamMapping(SgFunctionCallExp* sgnCallExp,
+                                                    SgFunctionParameterList* sgnFuncEntry,
+                                                    ArgParamMappingList& argParamMappingList) {
+    SgExprListExp* callExpArgs = sgnCallExp->get_args();
     SgExpressionPtrList& argsList = callExpArgs->get_expressions();
-    SgInitializedNamePtrList& paramList = entryCFGN->get_args();
+    SgInitializedNamePtrList& paramList = sgnFuncEntry->get_args();
     SgExpressionPtrList::iterator ai = argsList.begin();
     SgInitializedNamePtrList::iterator pi = paramList.begin();
     assert(argsList.size() == paramList.size());
@@ -155,10 +140,10 @@ namespace fuse
       SgType* ptype = (*pi)->get_type();
       if(atype->variantT() == V_SgPointerType &&
          ptype->variantT() == V_SgPointerType) {
-        PointerArgParamMapping argParamMapping = std::make_pair(*ai, *pi);
-        argParamMappingSet.insert(argParamMapping);
+        ArgParamMapping argParamMapping = std::make_pair(*ai, *pi);
+        argParamMappingList.push_back(argParamMapping);
       }
-    }
+    }    
   }
 
   // Build PointsToRelation between pointer type expressions
@@ -167,22 +152,27 @@ namespace fuse
   void PointsToAnalysisTransfer::visit(SgFunctionCallExp* sgn) {
     // Find all the parts that this function has edge to
     list<PartEdgePtr> succEdges = part->outEdges();
-    list<PartPtr> entryParts;
-    getFuncEntryParts(succEdges, entryParts);
-    list<PartPtr>::iterator pi = entryParts.begin();
-    PointerTypeArgsParamMapper argsParamMapper(sgn, *this);
-    for( ; pi != entryParts.end(); ++pi) {
-      argsParamMapper(*pi);
-    }   
-  }
+    dfInfo.clear();
 
-  void PointsToAnalysisTransfer::visit(SgFunctionParameterList* sgn) {
-    SgInitializedNamePtrList& inames = sgn->get_args();
-    SgInitializedNamePtrList::iterator ii = inames.begin();
-    for( ; ii != inames.end(); ++ii) {
-      dbg << "param=" << SgNode2Str(*ii) << endl;
-      MemLocObjectPtr ml = composer->OperandExpr2MemLoc(sgn, *ii, part->inEdgeFromAny());
-      dbg << "ml=" << ml->str() << endl;
+    list<PartEdgePtr>::iterator peIt = succEdges.begin();
+    for( ; peIt != succEdges.end(); ++peIt) {
+      dbg << "PartEdge=" << (*peIt)->str();
+      // Create a new lattice for this edge based on incoming information
+      AbstractObjectMap* newL = new AbstractObjectMap(*latticeMap);
+      newL->setPartEdge(*peIt);
+
+      // Edge successors should be function entry parts
+      PartPtr funcEntryPart = (*peIt)->target();
+      SgFunctionParameterList* sgnFuncEntry = funcEntryPart->mustSgNodeAll<SgFunctionParameterList>();
+      assert(sgnFuncEntry);
+      ArgParamMappingList argParamMappingList;
+      getArgParamMapping(sgn, sgnFuncEntry, argParamMappingList);
+      ArgParamMappingList::iterator apmIt = argParamMappingList.begin();
+      for( ; apmIt != argParamMappingList.end(); ++apmIt) {
+        ArgParamMapping& mapping = *apmIt;
+        dbg << "arg=" << SgNode2Str(mapping.first) << endl;
+        dbg << "param=" << SgNode2Str(mapping.second) << endl;
+      }
     }
   }
 
