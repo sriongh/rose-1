@@ -17,6 +17,7 @@ include_HEADERS =\
 	analysis/abstract_object.h \
 	analysis/abstract_object_map.h \
 	analysis/abstract_object_set.h \
+	analysis/address_taken_analysis.h \
 	analysis/analysis.h \
 	analysis/analysis_tester.h \
 	analysis/compose.h \
@@ -171,7 +172,8 @@ clean-fuse:
 #############
 # FUSETIGHT #
 #############
-fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\""
+fuseTight_SKIP_FLAGS =-DFUSE_SKIP_LIB_GLOBAL_DECLS -DFUSE_START_FROM_MAIN
+fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\"" $(fuseTight_SKIP_FLAGS)
 fuseTight_LDADD = -lrose
 fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
@@ -259,6 +261,7 @@ fuseMPI_SOURCES = \
 	analysis/abstract_object.C \
 	analysis/abstract_object_map.C \
 	analysis/abstract_object_set.C \
+	analysis/address_taken_analysis.C \
 	analysis/analysis.C \
 	analysis/analysis_tester.C \
 	analysis/compose.C \

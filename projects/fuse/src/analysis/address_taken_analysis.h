@@ -62,6 +62,12 @@ namespace fuse {
     // example: &(*p)
     VariableIdSet addressTakenSet;
     bool sound;
+    //friend class OperandToVariableId;
+  public:
+    ComputeAddressTakenInfo(VariableIdMapping& _vidm) : vidm(_vidm)
+    {
+      sound = true;
+    }
 
     // address can be taken for any expression that is lvalue
     // The purpose of this class is to traverse arbitrary
@@ -97,11 +103,7 @@ namespace fuse {
       void visit(SgNode* sgn);
       void debugPrint(SgNode* sgn);
     };
-  public:
-    ComputeAddressTakenInfo(VariableIdMapping& _vidm) : vidm(_vidm)
-    {
-      sound = true;
-    }
+
     void computeAddressTakenInfo(SgNode* root);
     VariableIdSet getAddressTakenSet();
     bool isSound();
@@ -149,10 +151,17 @@ namespace fuse {
 
   public:
     FlowInsensitivePointerAnalysis(SgProject* project);
+    FlowInsensitivePointerAnalysis(const FlowInsensitivePointerAnalysis& that);
 
+    ComposedAnalysisPtr copy();
     void runAnalysis();
     ~FlowInsensitivePointerAnalysis();
-    
+    std::string str(std::string indent="") const;
+
+  };
+
+  class FIPMemRegionObject : public MemRegionObject {
+    VariableId id;
   };
 }
 #endif

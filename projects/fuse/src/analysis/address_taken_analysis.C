@@ -10,25 +10,27 @@
 
 namespace fuse {
 
+  DEBUG_LEVEL(addressTakenAnalysisDebugLevel, 2);
+
   /*******************
    * VariableIdUtils *
    *******************/
-  std::string VariableIdSetPrettyPrint::str(VariableIdSet& vset, VariableIdMapping& vidm)
+  string VariableIdSetPrettyPrint::str(VariableIdSet& vset, VariableIdMapping& vidm)
   {
     std::ostringstream ostr;
     ostr << "[";
     VariableIdSet::iterator it = vset.begin();
-    for( ; it != vset.end(); )
-      {
-        ostr << "<" << (*it).toString() << ", " << vidm.variableName(*it)  << ">";
-        it++;
+    for( ; it != vset.end(); ) {
+        ostr << "(" << (*it).toString() << ", " << vidm.variableName(*it)  << ")";
+        ++it;
         if(it != vset.end())
           ostr << ", ";
-      }
+    }
     ostr << "]";
     return ostr.str();
   }
-  std::string VariableIdSetPrettyPrint::str(VariableIdSet& vset)
+
+  string VariableIdSetPrettyPrint::str(VariableIdSet& vset)
   {
     std::ostringstream ostr;
     ostr << "[";
@@ -124,11 +126,11 @@ namespace fuse {
 
   void ComputeAddressTakenInfo::OperandToVariableId::debugPrint(SgNode* sgn)
   {
-    // std::cerr << sgn->class_name() << ": " << astTermWithNullValuesToString(sgn) << ", " \
-    // << sgn->unparseToString() << ", " \
-    // << sgn->get_file_info()->get_filenameString() << ", " \
-    // << sgn->get_file_info()->get_line() << ", " \
-    // << endl;
+    dbg << sgn->class_name() << ": " << SgNode2Str(sgn) << ", " \
+    << sgn->unparseToString() << ", " \
+    << sgn->get_file_info()->get_filenameString() << ", " \
+    << sgn->get_file_info()->get_line() << ", " \
+    << endl;
   }
 
   // base case for the recursion
@@ -424,11 +426,24 @@ namespace fuse {
     vidm_p->computeVariableSymbolMapping(root);
   }
 
+  FlowInsensitivePointerAnalysis::FlowInsensitivePointerAnalysis(const FlowInsensitivePointerAnalysis& that)
+    : root(that.root), vidm_p(that.vidm_p), 
+      addressTakenSet(that.addressTakenSet),
+      pointerTypeSet(that.pointerTypeSet),
+      arrayTypeSet(that.arrayTypeSet),
+      referenceTypeSet(that.referenceTypeSet) { }
+
   FlowInsensitivePointerAnalysis::~FlowInsensitivePointerAnalysis() {
     delete vidm_p;
   }
 
+  ComposedAnalysisPtr FlowInsensitivePointerAnalysis::copy() {
+    return boost::make_shared<FlowInsensitivePointerAnalysis>(*this);
+  }
+
   void FlowInsensitivePointerAnalysis::runAnalysis() {
+    scope reg("FlowInsensitivePointerAnalysis::runAnalysis()", scope::medium, attrGE("addressTakenAnalysisDebugLevel", 2));
+
     ComputeAddressTakenInfo cati(*vidm_p);
     cati.computeAddressTakenInfo(isSgNode(root));
     addressTakenSet = cati.getAddressTakenSet();
@@ -440,5 +455,16 @@ namespace fuse {
     pointerTypeSet = collectTypeInfo.getPointerTypeSet();
     arrayTypeSet = collectTypeInfo.getArrayTypeSet();
     referenceTypeSet = collectTypeInfo.getReferenceTypeSet();
+
+    if(addressTakenAnalysisDebugLevel() >= 2) {
+      dbg << "addressTakenSet:" << VariableIdSetPrettyPrint::str(addressTakenSet, *vidm_p) << "\n";
+      dbg << "pointerTypeSet:" << VariableIdSetPrettyPrint::str(pointerTypeSet, *vidm_p) << "\n";
+      dbg << "arrayTypeSet:" << VariableIdSetPrettyPrint::str(arrayTypeSet, *vidm_p) << "\n";
+      dbg << "referenceTypeSet:" << VariableIdSetPrettyPrint::str(referenceTypeSet, *vidm_p) << "\n";
+    }
+  }
+
+  string FlowInsensitivePointerAnalysis::str(string indent) const {
+    return "FlowInsensitivePointerAnalysis";
   }
 }
