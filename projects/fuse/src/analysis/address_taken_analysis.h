@@ -2,7 +2,7 @@
 #define _ADDRESSTAKENANALYSIS_H
 
 /*************************************************************
- * Copyright: (C) 2013 by Sriram Aananthakrishnan            *
+ * Copyright: (C) 2015 by Sriram Aananthakrishnan            *
  * Author   : Sriram Aananthakrishnan                        *
  * email    : aananthakris1@llnl.gov                         *
  *************************************************************/
@@ -157,11 +157,54 @@ namespace fuse {
     void runAnalysis();
     ~FlowInsensitivePointerAnalysis();
     std::string str(std::string indent="") const;
-
+    bool implementsExpr2Val() { return false; }
+    bool implementsExpr2MemRegion() { return true; }
+    bool implementsExpr2MemLoc() { return true; }
+    bool implementsATSGraph() { return false; }
+    MemRegionPtr Expr2MemRegion(SgNode* node, PartEdgePtr pedge);
+    MemLocObjectPtr Expr2MemLoc(SgNode* node, PartEdgePtr pedge);    
   };
 
-  class FIPMemRegionObject : public MemRegionObject {
+  class FlowInSensMRType : public sight::printable {
+    MemRegionPtr parent;
+  public:
+    FlowInSensMRType(MemRegionPtr parent);
+    FlowInSensMRType(const FlowInSensMRType& that);
+    
+    virtual mayEqualMRType(FlowInSensMRType& that)=0;
+    virtual mustEqualMRType(FlowInSensMRType& that)=0;
+    virtual equalSetMRType(FlowInSensMRType& that)=0;
+    virtual subSetMRType(FlowInSensMRType& that)=0;
+    virtual isLiveMRType()=0;
+    virtual isFullMRType()=0;
+    virtual isEmptyMRType()=0;
+    virtual setToFullMRType()=0;
+    virtual setToEmptyMRType()=0;
+    virtual std::string str(std::string indent="") const=0;
+  };
+
+  //1. Type for all expressions identifiable by a single VariableId
+  // SgInitializedName, SgVarRefExp, all sub-expressions that has SgVarRefExp as leaf
+  class FlowInSensNamedMRType {
     VariableId id;
   };
-}
+
+  //2. Type for all expressions that is a set of all address taken variables
+  // SgPointerDerefExp
+  class FlowInSensPointerMRType {
+    set<VariableId> addrTakenVars;
+  };
+
+  //3. Type for all temporary memory locations
+  class FlowInSensExprMRType {
+  };
+
+  //4. Type for heap regions?
+  class FlowInSensUnknownMRType {
+  };
+
+  class FlowInSensMR : public MemRegionObject {
+  };
+    
+
 #endif
