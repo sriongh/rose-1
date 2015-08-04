@@ -418,31 +418,31 @@ namespace fuse {
   }
 
   /**********************************
-   * FlowInsensitivePointerAnalysis *
+   * FlowInSensAddrTakenAnalysis *
    **********************************/
-  FlowInsensitivePointerAnalysis::FlowInsensitivePointerAnalysis(SgProject* root)
+  FlowInSensAddrTakenAnalysis::FlowInSensAddrTakenAnalysis(SgProject* root)
     : root(root), sound(true) {
     vidm_p = new VariableIdMapping();
     vidm_p->computeVariableSymbolMapping(root);
   }
 
-  FlowInsensitivePointerAnalysis::FlowInsensitivePointerAnalysis(const FlowInsensitivePointerAnalysis& that)
+  FlowInSensAddrTakenAnalysis::FlowInSensAddrTakenAnalysis(const FlowInSensAddrTakenAnalysis& that)
     : root(that.root), vidm_p(that.vidm_p), 
       addressTakenSet(that.addressTakenSet),
       pointerTypeSet(that.pointerTypeSet),
       arrayTypeSet(that.arrayTypeSet),
       referenceTypeSet(that.referenceTypeSet) { }
 
-  FlowInsensitivePointerAnalysis::~FlowInsensitivePointerAnalysis() {
+  FlowInSensAddrTakenAnalysis::~FlowInSensAddrTakenAnalysis() {
     delete vidm_p;
   }
 
-  ComposedAnalysisPtr FlowInsensitivePointerAnalysis::copy() {
-    return boost::make_shared<FlowInsensitivePointerAnalysis>(*this);
+  ComposedAnalysisPtr FlowInSensAddrTakenAnalysis::copy() {
+    return boost::make_shared<FlowInSensAddrTakenAnalysis>(*this);
   }
 
-  void FlowInsensitivePointerAnalysis::runAnalysis() {
-    scope reg("FlowInsensitivePointerAnalysis::runAnalysis()", scope::medium, attrGE("addressTakenAnalysisDebugLevel", 2));
+  void FlowInSensAddrTakenAnalysis::runAnalysis() {
+    scope reg("FlowInSensAddrTakenAnalysis::runAnalysis()", scope::medium, attrGE("addressTakenAnalysisDebugLevel", 2));
 
     ComputeAddressTakenInfo cati(*vidm_p);
     cati.computeAddressTakenInfo(isSgNode(root));
@@ -464,7 +464,96 @@ namespace fuse {
     }
   }
 
-  string FlowInsensitivePointerAnalysis::str(string indent) const {
-    return "FlowInsensitivePointerAnalysis";
+  string FlowInSensAddrTakenAnalysis::str(string indent) const {
+    return "FlowInSensAddrTakenAnalysis";
   }
-}
+
+  /****************
+   * ATAnalMRType *
+   ****************/
+  ATAnalMRType::ATAnalMRType() { }
+  ATAnalMRType::ATAnalMRType(const ATAnalMRType& that) { }
+
+  /*********************
+   * ATAnalNamedMRType *
+   *********************/
+  ATAnalNamedMRType::ATAnalNamedMRType(VariableId id, MemRegionPtr parent)
+    : id(id) { }
+
+  ATAnalNamedMRType::ATAnalNamedMRType(const ATAnalNamedMRType& that)
+    : id(that.id) { }
+
+  ATAnalNamedMRTypePtr isATAnalNamedMRType(ATAnalMRTypePtr type) {
+    return boost::dynamic_pointer_cast<ATAnalNamedMRType>(type);
+  }
+
+  ATAnalMRTypePtr ATAnalNamedMRType::copyATAnalMRType() {
+    return boost::make_shared<ATAnalNamedMRType>(*this);
+  }
+
+  VariableId ATAnalNamedMRType::getId() const {
+    return id;
+  }
+
+  bool ATAnalNamedMRType::mayEqualMRType(ATAnalMRTypePtr that){
+    // if that is a named type
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+      return id == ntype->getId();
+    }
+    // if that is a pointer type
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+      if(atype->contains(id)) return true;
+    }
+    // if that is unknown type
+    else if(isATAnalUnknownMRType(that)) return true;
+    // if that is a expr type or
+    // pointer type where pointer type does not contain this id
+    else return false;
+  }
+  
+  bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that){
+    // if that is a named type
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+      return id == ntype->getId();
+    }
+    // if that is a pointer type
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+      if(atype->contains(id) && atype->singleton()) return true;
+    }
+    // if that is a unknown type or expr type
+    else return false;
+  }
+
+  bool ATAnalNamedMRType::equalSetMRType(ATAnalMRTypePtr that){
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+      return id == ntype->getId();
+    }
+    // if that is a pointer type
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+      if(atype->contains(id) && atype->singleton()) return true;
+    }
+    // if that is a unknown type or expr type
+    else return false;
+  }
+
+  bool ATAnalNamedMRType::subSetMRType(ATAnalMRTypePtr that){
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+      return id == ntype->getId();
+    }
+    // if that is a pointer type
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+      if(atype->contains(id)) return true;
+    }
+    // if that is unknown type
+    else if(isATAnalUnknownMRType(that)) return true;
+    // if that is expr type
+    else return false;
+  }
+
+  string ATAnalNamedMRType::str(std::string indent="") const{ }
+
+  MemRegionPtr FlowInsensitivePointerAnalysis::Expr2MemRegion(SgNode* node, PartEdgePtr pedge) {
+    
+  }
+}// end namespace
+

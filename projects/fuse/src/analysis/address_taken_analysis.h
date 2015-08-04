@@ -136,10 +136,13 @@ namespace fuse {
     VariableIdSet getReferenceTypeSet();
   };
 
-  /*************************************************
-   ********** FlowInsensitivePointerInfo  **********
-   *************************************************/
-  class FlowInsensitivePointerAnalysis : public UndirDataflow
+  /**************************************************
+   ********** FlowInSensAddrTakenAnalysis  **********
+   **************************************************/
+  class ATAnalMRType;
+  boost::shared_ptr<ATAnalMRType> ATAnalMRTypePtr;
+  
+  class FlowInSensAddrTakenAnalysis : public UndirDataflow
   {
     SgProject* root;
     VariableIdMapping* vidm_p;
@@ -150,61 +153,131 @@ namespace fuse {
     bool sound;
 
   public:
-    FlowInsensitivePointerAnalysis(SgProject* project);
-    FlowInsensitivePointerAnalysis(const FlowInsensitivePointerAnalysis& that);
+    FlowInSensAddrTakenAnalysis(SgProject* project);
+    FlowInSensAddrTakenAnalysis(const FlowInSensAddrTakenAnalysis& that);
 
     ComposedAnalysisPtr copy();
     void runAnalysis();
-    ~FlowInsensitivePointerAnalysis();
+    ~FlowInSensAddrTakenAnalysis();
     std::string str(std::string indent="") const;
     bool implementsExpr2Val() { return false; }
     bool implementsExpr2MemRegion() { return true; }
     bool implementsExpr2MemLoc() { return true; }
     bool implementsATSGraph() { return false; }
     MemRegionPtr Expr2MemRegion(SgNode* node, PartEdgePtr pedge);
-    MemLocObjectPtr Expr2MemLoc(SgNode* node, PartEdgePtr pedge);    
+    MemLocObjectPtr Expr2MemLoc(SgNode* node, PartEdgePtr pedge);
   };
 
-  class FlowInSensMRType : public sight::printable {
-    MemRegionPtr parent;
+  /****************
+   * ATAnalMRType *
+   ****************/
+  class ATAnalMRType : public sight::printable {
   public:
-    FlowInSensMRType(MemRegionPtr parent);
-    FlowInSensMRType(const FlowInSensMRType& that);
+    ATAnalMRType();
+    ATAnalMRType(const ATAnalMRType& that);
+    virtual ATAnalMRTypePtr copyATAnalMRType()=0;
     
-    virtual mayEqualMRType(FlowInSensMRType& that)=0;
-    virtual mustEqualMRType(FlowInSensMRType& that)=0;
-    virtual equalSetMRType(FlowInSensMRType& that)=0;
-    virtual subSetMRType(FlowInSensMRType& that)=0;
-    virtual isLiveMRType()=0;
-    virtual isFullMRType()=0;
-    virtual isEmptyMRType()=0;
-    virtual setToFullMRType()=0;
-    virtual setToEmptyMRType()=0;
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that)=0;
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that)=0;
+    virtual bool equalSetMRType(ATAnalMRTypePtr that)=0;
+    virtual bool subSetMRType(ATAnalMRTypePtr that)=0;
     virtual std::string str(std::string indent="") const=0;
   };
 
-  //1. Type for all expressions identifiable by a single VariableId
-  // SgInitializedName, SgVarRefExp, all sub-expressions that has SgVarRefExp as leaf
-  class FlowInSensNamedMRType {
+  /*********************
+   * ATAnalNamedMRType *
+   *********************/
+
+  // Type for all expressions identifiable by a single VariableId
+  // SgInitializedName
+  // SgVarRefExp
+  // SgDotExp, SgArrowExp where leaf=SgVarRefExp
+  class ATAnalNamedMRType : public ATAnalMRType {
     VariableId id;
-  };
+  public:
+    ATAnalNamedMRType(VariableId id);
+    ATAnalNamedMRType(const ATAnalNamedMRType& that);
+    virtual ATAnalMRTypePtr copyATAnalMRType();
 
-  //2. Type for all expressions that is a set of all address taken variables
+    int getId()const;
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that);
+    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual std::string str(std::string indent="") const;
+  };
+  typedef boost::shared_ptr<ATAnalNamedMRType> ATAnalNamedMRTypePtr;
+  ATAnalNamedMRTypePtr isATAnalNamedMRType(ATAnalMRTypePtr type);
+
+  /************************
+   * ATAnalAliasingMRType *
+   ************************/
+
+  // Type for all expressions that is a set of all address taken variables
   // SgPointerDerefExp
-  class FlowInSensPointerMRType {
-    set<VariableId> addrTakenVars;
+  class ATAnalAliasingMRType {
+    set<VariableId> aliasingSet;
+  public:
+    ATAnalAliasingMRType(set<VariableId> aliasingSet, MemRegionPtr parent);
+    ATAnalAliasingMRType(const ATAnalAliasingMRType& that);
+    virtual ATAnalMRTypePtr copyATAnalMRType();
+
+    bool contains(VariableId id) const;
+    bool singleton() const;
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that);
+    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual std::string str(std::string indent="") const
   };
 
-  //3. Type for all temporary memory locations
-  class FlowInSensExprMRType {
-  };
+  typedef boost::shared_ptr<ATAnalAliasingMRType> ATAnalAliasingMRTypePtr;
+  ATAnalAliasingMRTypePtr isATAnalAliasingMRType(ATAnalMRTypePtr type);
 
-  //4. Type for heap regions?
-  class FlowInSensUnknownMRType {
-  };
-
-  class FlowInSensMR : public MemRegionObject {
-  };
+  /********************
+   * ATAnalExprMRType *
+   ********************/
+  // Type for all temporary memory locations
+  class ATAnalExprMRType : public ATAnalMRType {
+  public:
+    ATAnalExprMRType(MemRegionPtr parent);
+    ATAnalExprMRType(const ATAnalExprMRType& that);
+    virtual ATAnalMRTypePtr copyATAnalMRType();
     
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that);
+    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual std::string str(std::string indent="") const
+  };
 
+  typedef boost::shared_ptr<ATAnalExprMRType> ATAnalExprMRTypePtr;
+  ATAnalExprMRTypePtr isATAnalExprMRType(ATAnalMRTypePtr type);
+
+  /***********************
+   * ATAnalUnknownMRType *
+   ***********************/
+  // Type for heap regions?
+  class ATAnalUnknownMRType : public ATAnalMRType {
+  public:
+    ATAnalUnknownMRType(MemRegionPtr parent);
+    ATAnalUnknownMRType(const ATAnalUnknownMRType& that);
+    virtual ATAnalMRTypePtr copyATAnalMRType();
+    
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that);
+    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual std::string str(std::string indent="") const
+  };
+
+  typedef boost::shared_ptr<ATAnalUnknownMRType> ATAnalUnknownMRTypePtr;
+  ATAnalUnknownMRTypePtr isATAnalUnknownMRType(ATAnalMRTypePtr type);
+
+  /**********************
+   * FlowInSensATAnalMR *
+   **********************/
+  class FlowInSensATAnalMR: public MemRegionObject {
+    ATAnalMRTypePtr type;
+  };
 #endif
