@@ -472,6 +472,10 @@ namespace fuse {
     
   }
 
+  MemLocObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemLoc(SgNode* node, PartEdgePtr pedge) {
+    
+  }
+
   /****************
    * ATAnalMRType *
    ****************/
@@ -500,57 +504,65 @@ namespace fuse {
     return id;
   }
 
-  bool ATAnalNamedMRType::mayEqualMRType(ATAnalMRTypePtr that){
-    // if that is a named type
-    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+  bool ATAnalNamedMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::unknown) return true;
+    else if(that->getType() == ATAnalMRType::aliasing) {
+      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+      assert(atype);
+      return atype->contains(id);
+    }
+    else if(that->getType() == ATAnalMRType::named) {
+    // if that is a named type    
+      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
+      assert(ntype);
       return id == ntype->getId();
     }
-    // if that is a pointer type
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      if(atype->contains(id)) return true;
-    }
-    // if that is unknown type
-    else if(isATAnalUnknownMRType(that)) return true;
-    // if that is a expr type or
-    // pointer type where pointer type does not contain this id
-    else return false;
+    // that is expr type or
+    return false;
   }
   
-  bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that){
-    // if that is a named type
-    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+  bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::aliasing) {
+      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+      assert(atype);
+      return (atype->contains(id) && atype->singleton());
+    }
+    else if(that->getType() == ATAnalMRType::named) {
+      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
+      assert(ntype);
+      return id == ntype->getId();
+    }
+    return false;
+  }
+
+  bool ATAnalNamedMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::named) {
+      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
       return id == ntype->getId();
     }
     // if that is a pointer type
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      if(atype->contains(id) && atype->singleton()) return true;
+    else if(that->getType() == ATAnalMRType::aliasing) {
+      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+      return (atype->contains(id) && atype->singleton());
     }
     // if that is a unknown type or expr type
     else return false;
   }
 
-  bool ATAnalNamedMRType::equalSetMRType(ATAnalMRTypePtr that){
-    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+  bool ATAnalNamedMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) { 
+    if(that->getType() == ATAnalMRType::named) {
+      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
+      assert(ntype);
       return id == ntype->getId();
     }
     // if that is a pointer type
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      if(atype->contains(id) && atype->singleton()) return true;
-    }
-    // if that is a unknown type or expr type
-    else return false;
-  }
-
-  bool ATAnalNamedMRType::subSetMRType(ATAnalMRTypePtr that){
-    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
-      return id == ntype->getId();
-    }
-    // if that is a pointer type
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      if(atype->contains(id)) return true;
+    else if(that->getType() == ATAnalMRType::aliasing) {
+      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+      assert(atype);
+      return atype->contains(id);
     }
     // if that is unknown type
-    else if(isATAnalUnknownMRType(that)) return true;
+    else if(that->getType() == ATAnalMRType::unknown) return true;
     // if that is expr type
     else return false;
   }
@@ -583,6 +595,15 @@ namespace fuse {
     return (aliasingSet.size() == 1);
   }
 
+  bool ATAnalAliasingMRType::set_intersect(ATAnalAliasingMRTypePtr that) const {
+    VariableIdSet::const_iterator thisI = aliasingSet.begin();
+    // if we find even one intersecting element return true
+    for( ; thisI != aliasingSet.end(); ++thisI) {
+      if(that->contains(*thisI)) return true;
+    }
+    return false;
+  }
+
   bool ATAnalAliasingMRType::set_equal(ATAnalAliasingMRTypePtr that) const {
     const VariableIdSet& thatAliasingSet = that->getAliasingSet();
 
@@ -607,30 +628,31 @@ namespace fuse {
     return true;    
   }
 
-  bool ATAnalAliasingMRType::mayEqualMRType(ATAnalMRTypePtr that) {
+  bool ATAnalAliasingMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // AliasingType are not equal to temporary expr 
-    if(isATAnalExprMRType(that)) return false;
+    if(that->getType() == ATAnalMRType::expr) return false;
     // If that is unknown type
-    else if(isATAnalUnknownMRType(that)) return true;
-    // If both are aliasing type
-    // Check for set intersection
-    // All aliasing objects will have the same set
-    // Check for equal set instead
-    //! NOTE: Instead of having identical set can we just keep one copy of the set?
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      return set_equal(atype); 
-    }
-    else {
-      // If named type check if VariableId is present in this set
+    else if(that->getType() == ATAnalMRType::unknown) return true;
+    else if(that->getType() == ATAnalMRType::named) {
+       // If named type check if VariableId is present in this set
       ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
       assert(ntype);
       return contains(ntype->getId());
     }
+    // If both are aliasing type
+    // Check for set intersection
+    //! NOTE: Instead of having identical set can we just keep one copy of the set?
+    else {
+      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+      assert(atype);
+      return set_intersect(atype); 
+    }
   }
 
-  bool ATAnalAliasingMRType::mustEqualMRType(ATAnalMRTypePtr that) {
+  bool ATAnalAliasingMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // Does not must equals expr or unknown type
-    if(isATAnalExprMRType(that) || isATAnalUnknownMRType(that)) return false;
+    if(that->getType() == ATAnalMRType::expr ||
+       that->getType() == ATAnalMRType::unknown) return false;
     // both are aliasing type
     // check they are equal and singleton
     else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
@@ -644,9 +666,10 @@ namespace fuse {
     }
   }
 
-  bool ATAnalAliasingMRType::equalSetMRType(ATAnalMRTypePtr that) {
+  bool ATAnalAliasingMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // not equal sets with expr or unknown type
-    if(isATAnalExprMRType(that) || isATAnalUnknownMRType(that)) return false;
+    if(that->getType() == ATAnalMRType::expr ||
+       that->getType() == ATAnalMRType::unknown) return false;
     // check for set equality
     else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that))
       return set_equal(atype);
@@ -658,11 +681,11 @@ namespace fuse {
     }
   }
 
-  bool ATAnalAliasingMRType::subSetMRType(ATAnalMRTypePtr that) {
+  bool ATAnalAliasingMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // not a subset of expr type
-    if(isATAnalExprMRType(that)) return false;
+    if(that->getType() == ATAnalMRType::expr) return false;
     // all types are subset of unknown
-    else if(isATAnalUnknownMRType(that)) return true;
+    else if(that->getType() == ATAnalMRType::unknown) return true;
     // check for set_subset
     else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return set_subset(atype);
@@ -676,6 +699,99 @@ namespace fuse {
   }
 
   string ATAnalAliasingMRType::str(string indent) const {
+  }
+
+  /********************
+   * ATAnalExprMRType *
+   ********************/
+  ATAnalExprMRType::ATAnalExprMRType(MRType type, MemRegionObjectPtr parent)
+    : ATAnalMRType(type), parent(parent) { }
+
+  ATAnalExprMRType::ATAnalExprMRType(const ATAnalExprMRType& that)
+    : ATAnalMRType(that), parent(that.parent) { }
+
+  ATAnalMRTypePtr ATAnalExprMRType::copyATAnalMRType() {
+    return boost::make_shared<ATAnalExprMRType>(*this);
+  }
+
+  MemRegionObjectPtr ATAnalExprMRType::getParent() const {
+    return parent;
+  }
+
+  bool ATAnalExprMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType()==ATAnalMRType::named ||
+       that->getType()==ATAnalMRType::aliasing) return false;
+    else if(that->getType()==ATAnalMRType::unknown) return true;
+    else {
+      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
+      assert(etype);
+      return parent->mayEqualMR(etype->getParent(), pedge);
+    }
+  }
+
+  bool ATAnalExprMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::named ||
+       that->getType() == ATAnalMRType::aliasing ||
+       that->getType() == ATAnalMRType::unknown) return false;
+    else {
+      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
+      assert(etype);
+      return parent->mustEqualMR(etype->getParent(), pedge);
+    }
+  }
+
+  bool ATAnalExprMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::named ||
+       that->getType() == ATAnalMRType::aliasing ||
+       that->getType() == ATAnalMRType::unknown) return false;
+    else {
+      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
+      assert(etype);
+      return parent->equalSetMR(etype->getParent(), pedge);
+    }
+  }
+
+  bool ATAnalExprMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    if(that->getType() == ATAnalMRType::named ||
+       that->getType() == ATAnalMRType::aliasing) return false;
+    else if(that->getType() == ATAnalMRType::unknown) return true;
+    else {
+      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
+      assert(etype);
+      return parent->subSetMR(etype->getParent(), pedge);
+    }
+  }
+
+  string ATAnalExprMRType::str(string indent) const {
+  }
+
+  /***********************
+   * ATAnalUnknownMRType *
+   ***********************/
+  ATAnalUnknownMRType::ATAnalUnknownMRType(MRType type) : ATAnalMRType(type) { }
+  ATAnalUnknownMRType::ATAnalUnknownMRType(const ATAnalUnknownMRType& that) : ATAnalMRType(that) { }
+
+  ATAnalMRTypePtr ATAnalUnknownMRType::copyATAnalMRType() {
+    return boost::make_shared<ATAnalUnknownMRType>(*this);
+  }
+  
+  bool ATAnalUnknownMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    return true;
+  }
+  
+  bool ATAnalUnknownMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    return false;
+  }
+  
+  bool ATAnalUnknownMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    return that->getType() == ATAnalMRType::unknown;
+  }
+  
+  bool ATAnalUnknownMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
+    return that->getType() == ATAnalMRType::unknown;
+  }
+  
+  string ATAnalUnknownMRType::str(string indent) const {
   }
 
 

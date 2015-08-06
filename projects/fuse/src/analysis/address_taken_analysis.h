@@ -185,10 +185,10 @@ namespace fuse {
     virtual ATAnalMRTypePtr copyATAnalMRType()=0;
 
     MRType getType() const;
-    virtual bool mayEqualMRType(ATAnalMRTypePtr that)=0;
-    virtual bool mustEqualMRType(ATAnalMRTypePtr that)=0;
-    virtual bool equalSetMRType(ATAnalMRTypePtr that)=0;
-    virtual bool subSetMRType(ATAnalMRTypePtr that)=0;
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
+    virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
+    virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual std::string str(std::string indent="") const=0;
   };
 
@@ -207,10 +207,10 @@ namespace fuse {
     virtual ATAnalMRTypePtr copyATAnalMRType();
 
     VariableId getId()const;
-    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
-    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
-    virtual bool equalSetMRType(ATAnalMRTypePtr that);
-    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
   typedef boost::shared_ptr<ATAnalNamedMRType> ATAnalNamedMRTypePtr;
@@ -236,11 +236,12 @@ namespace fuse {
     bool singleton() const;
     bool set_equal(ATAnalAliasingMRTypePtr that) const;
     bool set_subset(ATAnalAliasingMRTypePtr that) const;
+    bool set_intersect(ATAnalAliasingMRTypePtr that) const;
     
-    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
-    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
-    virtual bool equalSetMRType(ATAnalMRTypePtr that);
-    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -252,15 +253,17 @@ namespace fuse {
    ********************/
   // Type for all temporary memory locations
   class ATAnalExprMRType : public ATAnalMRType {
+    MemRegionObjectPtr parent;
   public:
-    ATAnalExprMRType(MRType type);
+    ATAnalExprMRType(MRType type, MemRegionObjectPtr parent);
     ATAnalExprMRType(const ATAnalExprMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
+    MemRegionObjectPtr getParent() const;
     
-    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
-    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
-    virtual bool equalSetMRType(ATAnalMRTypePtr that);
-    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -277,10 +280,10 @@ namespace fuse {
     ATAnalUnknownMRType(const ATAnalUnknownMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
     
-    virtual bool mayEqualMRType(ATAnalMRTypePtr that);
-    virtual bool mustEqualMRType(ATAnalMRTypePtr that);
-    virtual bool equalSetMRType(ATAnalMRTypePtr that);
-    virtual bool subSetMRType(ATAnalMRTypePtr that);
+    virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
