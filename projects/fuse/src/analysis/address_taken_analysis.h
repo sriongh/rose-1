@@ -140,7 +140,7 @@ namespace fuse {
    ********** FlowInSensAddrTakenAnalysis  **********
    **************************************************/
   class ATAnalMRType;
-  boost::shared_ptr<ATAnalMRType> ATAnalMRTypePtr;
+  typedef boost::shared_ptr<ATAnalMRType> ATAnalMRTypePtr;
   
   class FlowInSensAddrTakenAnalysis : public UndirDataflow
   {
@@ -164,7 +164,7 @@ namespace fuse {
     bool implementsExpr2MemRegion() { return true; }
     bool implementsExpr2MemLoc() { return true; }
     bool implementsATSGraph() { return false; }
-    MemRegionPtr Expr2MemRegion(SgNode* node, PartEdgePtr pedge);
+    MemRegionObjectPtr Expr2MemRegion(SgNode* node, PartEdgePtr pedge);
     MemLocObjectPtr Expr2MemLoc(SgNode* node, PartEdgePtr pedge);
   };
 
@@ -172,11 +172,19 @@ namespace fuse {
    * ATAnalMRType *
    ****************/
   class ATAnalMRType : public sight::printable {
+  protected:
+    enum MRType{named,
+                aliasing,
+                expr,
+                unknown
+    };
+    MRType type;
   public:
-    ATAnalMRType();
+    ATAnalMRType(MRType type);
     ATAnalMRType(const ATAnalMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType()=0;
-    
+
+    MRType getType() const;
     virtual bool mayEqualMRType(ATAnalMRTypePtr that)=0;
     virtual bool mustEqualMRType(ATAnalMRTypePtr that)=0;
     virtual bool equalSetMRType(ATAnalMRTypePtr that)=0;
@@ -187,7 +195,6 @@ namespace fuse {
   /*********************
    * ATAnalNamedMRType *
    *********************/
-
   // Type for all expressions identifiable by a single VariableId
   // SgInitializedName
   // SgVarRefExp
@@ -195,11 +202,11 @@ namespace fuse {
   class ATAnalNamedMRType : public ATAnalMRType {
     VariableId id;
   public:
-    ATAnalNamedMRType(VariableId id);
+    ATAnalNamedMRType(MRType type, VariableId id);
     ATAnalNamedMRType(const ATAnalNamedMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
 
-    int getId()const;
+    VariableId getId()const;
     virtual bool mayEqualMRType(ATAnalMRTypePtr that);
     virtual bool mustEqualMRType(ATAnalMRTypePtr that);
     virtual bool equalSetMRType(ATAnalMRTypePtr that);
@@ -215,23 +222,29 @@ namespace fuse {
 
   // Type for all expressions that is a set of all address taken variables
   // SgPointerDerefExp
-  class ATAnalAliasingMRType {
-    set<VariableId> aliasingSet;
+  class ATAnalAliasingMRType;
+  typedef boost::shared_ptr<ATAnalAliasingMRType> ATAnalAliasingMRTypePtr;
+  class ATAnalAliasingMRType : public ATAnalMRType {
+    VariableIdSet aliasingSet;
   public:
-    ATAnalAliasingMRType(set<VariableId> aliasingSet, MemRegionPtr parent);
+    ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet);
     ATAnalAliasingMRType(const ATAnalAliasingMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
 
+    const VariableIdSet& getAliasingSet() const;
     bool contains(VariableId id) const;
     bool singleton() const;
+    bool set_equal(ATAnalAliasingMRTypePtr that) const;
+    bool set_subset(ATAnalAliasingMRTypePtr that) const;
+    
     virtual bool mayEqualMRType(ATAnalMRTypePtr that);
     virtual bool mustEqualMRType(ATAnalMRTypePtr that);
     virtual bool equalSetMRType(ATAnalMRTypePtr that);
     virtual bool subSetMRType(ATAnalMRTypePtr that);
-    virtual std::string str(std::string indent="") const
+    virtual std::string str(std::string indent="") const;
   };
 
-  typedef boost::shared_ptr<ATAnalAliasingMRType> ATAnalAliasingMRTypePtr;
+
   ATAnalAliasingMRTypePtr isATAnalAliasingMRType(ATAnalMRTypePtr type);
 
   /********************
@@ -240,7 +253,7 @@ namespace fuse {
   // Type for all temporary memory locations
   class ATAnalExprMRType : public ATAnalMRType {
   public:
-    ATAnalExprMRType(MemRegionPtr parent);
+    ATAnalExprMRType(MRType type);
     ATAnalExprMRType(const ATAnalExprMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
     
@@ -248,7 +261,7 @@ namespace fuse {
     virtual bool mustEqualMRType(ATAnalMRTypePtr that);
     virtual bool equalSetMRType(ATAnalMRTypePtr that);
     virtual bool subSetMRType(ATAnalMRTypePtr that);
-    virtual std::string str(std::string indent="") const
+    virtual std::string str(std::string indent="") const;
   };
 
   typedef boost::shared_ptr<ATAnalExprMRType> ATAnalExprMRTypePtr;
@@ -260,7 +273,7 @@ namespace fuse {
   // Type for heap regions?
   class ATAnalUnknownMRType : public ATAnalMRType {
   public:
-    ATAnalUnknownMRType(MemRegionPtr parent);
+    ATAnalUnknownMRType(MRType type);
     ATAnalUnknownMRType(const ATAnalUnknownMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType();
     
@@ -268,7 +281,7 @@ namespace fuse {
     virtual bool mustEqualMRType(ATAnalMRTypePtr that);
     virtual bool equalSetMRType(ATAnalMRTypePtr that);
     virtual bool subSetMRType(ATAnalMRTypePtr that);
-    virtual std::string str(std::string indent="") const
+    virtual std::string str(std::string indent="") const;
   };
 
   typedef boost::shared_ptr<ATAnalUnknownMRType> ATAnalUnknownMRTypePtr;
@@ -280,4 +293,6 @@ namespace fuse {
   class FlowInSensATAnalMR: public MemRegionObject {
     ATAnalMRTypePtr type;
   };
+  
+}// end namespace
 #endif
