@@ -17,14 +17,6 @@ namespace fuse {
   /*******************
    * VariableIdUtils *
    *******************/
-  // some utility functions for sets of VariableId
-
-  class VariableIdSetPrettyPrint
-  {
-  public:
-    std::string static str(VariableIdSet& vset, VariableIdMapping& vidm);
-    std::string static str(VariableIdSet& vset);
-  };
 
   // utility function to union two VariableIdSet into rset
   void set_union(const VariableIdSet& set1, const VariableIdSet& set2, VariableIdSet& rset);
@@ -49,6 +41,8 @@ namespace fuse {
     void printMatchResult();
     void clearMatchResult();
   };
+
+  typedef boost::shared_ptr<VariableIdMapping> VariableIdMappingPtr;
 
   /*************************************************
    ************* ComputeAddressTakenInfo  **********
@@ -145,11 +139,12 @@ namespace fuse {
   class FlowInSensAddrTakenAnalysis : public UndirDataflow
   {
     SgProject* root;
-    VariableIdMapping* vidm_p;
+    VariableIdMappingPtr vidm_p;
     VariableIdSet addressTakenSet;
     VariableIdSet arrayTypeSet;
     VariableIdSet pointerTypeSet;
     VariableIdSet referenceTypeSet;
+    VariableIdSet aliasingSet;
     bool sound;
 
   public:
@@ -158,12 +153,34 @@ namespace fuse {
 
     ComposedAnalysisPtr copy();
     void runAnalysis();
-    ~FlowInSensAddrTakenAnalysis();
     std::string str(std::string indent="") const;
     bool implementsExpr2Val() { return false; }
     bool implementsExpr2MemRegion() { return true; }
-    bool implementsExpr2MemLoc() { return true; }
+    bool implementsExpr2MemLoc() { return false; }
     bool implementsATSGraph() { return false; }
+
+    class Expr2MemRegionCreate : public ROSE_VisitorPatternDefaultBase {
+      FlowInSensAddrTakenAnalysis& addrTakenAnalysis;
+      Composer* composer;
+      PartEdgePtr pedge;
+      ATAnalMRTypePtr type;
+    public:
+      Expr2MemRegionCreate(FlowInSensAddrTakenAnalysis& addrTakenAnalysis, Composer* composer, PartEdgePtr pedge);
+      ATAnalMRTypePtr getATAnalMRType() const;
+      bool contains(const VariableIdSet& vIdSet, VariableId id) const;
+      void createATAnalNamedMRType(VariableId id);
+      
+      void visit(SgVarRefExp* sgn);
+      void visit(SgInitializedName* sgn);
+      void visit(SgDotExp* sgn);
+      void visit(SgArrowExp* sgn);
+      void visit(SgPointerDerefExp* sgn);
+      void visit(SgExpression* sgn);
+    };
+
+    VariableIdMappingPtr getVariableIdMapping() const;
+
+    friend class Expr2MemRegionCreate;
     MemRegionObjectPtr Expr2MemRegion(SgNode* node, PartEdgePtr pedge);
     MemLocObjectPtr Expr2MemLoc(SgNode* node, PartEdgePtr pedge);
   };
@@ -172,23 +189,25 @@ namespace fuse {
    * ATAnalMRType *
    ****************/
   class ATAnalMRType : public sight::printable {
-  protected:
+  public:
     enum MRType{named,
                 aliasing,
                 expr,
                 unknown
     };
+  protected:
     MRType type;
   public:
     ATAnalMRType(MRType type);
     ATAnalMRType(const ATAnalMRType& that);
-    virtual ATAnalMRTypePtr copyATAnalMRType()=0;
+    virtual ATAnalMRTypePtr copyATAnalMRType() const=0;
 
     MRType getType() const;
     virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
+    virtual bool isFullMRType(PartEdgePtr pedge)=0;
     virtual std::string str(std::string indent="") const=0;
   };
 
@@ -201,16 +220,19 @@ namespace fuse {
   // SgDotExp, SgArrowExp where leaf=SgVarRefExp
   class ATAnalNamedMRType : public ATAnalMRType {
     VariableId id;
+    bool addrtaken;
+    VariableIdMappingPtr vidm_p;
   public:
-    ATAnalNamedMRType(MRType type, VariableId id);
+    ATAnalNamedMRType(MRType type, VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p);
     ATAnalNamedMRType(const ATAnalNamedMRType& that);
-    virtual ATAnalMRTypePtr copyATAnalMRType();
+    virtual ATAnalMRTypePtr copyATAnalMRType() const;
 
     VariableId getId()const;
     virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool isFullMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
   typedef boost::shared_ptr<ATAnalNamedMRType> ATAnalNamedMRTypePtr;
@@ -226,10 +248,11 @@ namespace fuse {
   typedef boost::shared_ptr<ATAnalAliasingMRType> ATAnalAliasingMRTypePtr;
   class ATAnalAliasingMRType : public ATAnalMRType {
     VariableIdSet aliasingSet;
+    VariableIdMappingPtr vidm_p;
   public:
-    ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet);
+    ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p);
     ATAnalAliasingMRType(const ATAnalAliasingMRType& that);
-    virtual ATAnalMRTypePtr copyATAnalMRType();
+    virtual ATAnalMRTypePtr copyATAnalMRType() const;
 
     const VariableIdSet& getAliasingSet() const;
     bool contains(VariableId id) const;
@@ -242,6 +265,7 @@ namespace fuse {
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool isFullMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -254,16 +278,18 @@ namespace fuse {
   // Type for all temporary memory locations
   class ATAnalExprMRType : public ATAnalMRType {
     MemRegionObjectPtr parent;
+    SgExpression* expr;
   public:
-    ATAnalExprMRType(MRType type, MemRegionObjectPtr parent);
+    ATAnalExprMRType(MRType type, MemRegionObjectPtr parent, SgExpression* expr);
     ATAnalExprMRType(const ATAnalExprMRType& that);
-    virtual ATAnalMRTypePtr copyATAnalMRType();
+    virtual ATAnalMRTypePtr copyATAnalMRType() const;
     MemRegionObjectPtr getParent() const;
     
     virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool isFullMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -278,12 +304,13 @@ namespace fuse {
   public:
     ATAnalUnknownMRType(MRType type);
     ATAnalUnknownMRType(const ATAnalUnknownMRType& that);
-    virtual ATAnalMRTypePtr copyATAnalMRType();
+    virtual ATAnalMRTypePtr copyATAnalMRType() const;
     
     virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
+    virtual bool isFullMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -294,8 +321,29 @@ namespace fuse {
    * FlowInSensATAnalMR *
    **********************/
   class FlowInSensATAnalMR: public MemRegionObject {
+    SgNode* sgn;
     ATAnalMRTypePtr type;
+    MemRegionObjectPtr parent;
+  public:
+    FlowInSensATAnalMR(SgNode* sgn, ATAnalMRTypePtr type, MemRegionObjectPtr parent);
+    FlowInSensATAnalMR(const FlowInSensATAnalMR& that);
+    MemRegionObjectPtr copyMR() const;
+    ATAnalMRTypePtr getATAnalMRTypePtr() const;
+    
+    bool mayEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool mustEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool equalSetMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool subSetMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool isLiveMR(PartEdgePtr pedge);
+    bool meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge);
+    bool isEmptyMR(PartEdgePtr pedge);
+    bool isFullMR(PartEdgePtr pedge);
+    ValueObjectPtr getRegionSize(PartEdgePtr pedge) const;
+    std::string str(std::string indent="") const;
   };
+
+  typedef boost::shared_ptr<FlowInSensATAnalMR> FlowInSensATAnalMRPtr;
+  FlowInSensATAnalMRPtr isFlowInSensATAnalMR(MemRegionObjectPtr that);
   
 }// end namespace
 #endif

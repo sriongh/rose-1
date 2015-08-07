@@ -15,37 +15,6 @@ namespace fuse {
   /*******************
    * VariableIdUtils *
    *******************/
-  string VariableIdSetPrettyPrint::str(VariableIdSet& vset, VariableIdMapping& vidm)
-  {
-    std::ostringstream ostr;
-    ostr << "[";
-    VariableIdSet::iterator it = vset.begin();
-    for( ; it != vset.end(); ) {
-        ostr << "(" << (*it).toString() << ", " << vidm.variableName(*it)  << ")";
-        ++it;
-        if(it != vset.end())
-          ostr << ", ";
-    }
-    ostr << "]";
-    return ostr.str();
-  }
-
-  string VariableIdSetPrettyPrint::str(VariableIdSet& vset)
-  {
-    std::ostringstream ostr;
-    ostr << "[";
-    VariableIdSet::iterator it = vset.begin();
-    for( ; it != vset.end(); )
-      {
-        ostr << (*it).toString();
-        it++;
-        if(it != vset.end())
-          ostr << ", ";
-      }
-    ostr << "]";
-    return ostr.str();
-  }
-
   void set_union(const VariableIdSet& set1, const VariableIdSet& set2, VariableIdSet& rset)
   {
     VariableIdSet::const_iterator it1 = set1.begin();
@@ -376,7 +345,6 @@ namespace fuse {
     return referenceTypeSet;
   }
 
-
   void CollectTypeInfo::collectTypes()
   {
     if(varsUsed.size() == 0) {
@@ -422,7 +390,7 @@ namespace fuse {
    **********************************/
   FlowInSensAddrTakenAnalysis::FlowInSensAddrTakenAnalysis(SgProject* root)
     : root(root), sound(true) {
-    vidm_p = new VariableIdMapping();
+    vidm_p = boost::make_shared<VariableIdMapping>();
     vidm_p->computeVariableSymbolMapping(root);
   }
 
@@ -432,10 +400,6 @@ namespace fuse {
       pointerTypeSet(that.pointerTypeSet),
       arrayTypeSet(that.arrayTypeSet),
       referenceTypeSet(that.referenceTypeSet) { }
-
-  FlowInSensAddrTakenAnalysis::~FlowInSensAddrTakenAnalysis() {
-    delete vidm_p;
-  }
 
   ComposedAnalysisPtr FlowInSensAddrTakenAnalysis::copy() {
     return boost::make_shared<FlowInSensAddrTakenAnalysis>(*this);
@@ -456,25 +420,86 @@ namespace fuse {
     arrayTypeSet = collectTypeInfo.getArrayTypeSet();
     referenceTypeSet = collectTypeInfo.getReferenceTypeSet();
 
-    if(addressTakenAnalysisDebugLevel() >= 2) {
-      dbg << "addressTakenSet:" << VariableIdSetPrettyPrint::str(addressTakenSet, *vidm_p) << "\n";
-      dbg << "pointerTypeSet:" << VariableIdSetPrettyPrint::str(pointerTypeSet, *vidm_p) << "\n";
-      dbg << "arrayTypeSet:" << VariableIdSetPrettyPrint::str(arrayTypeSet, *vidm_p) << "\n";
-      dbg << "referenceTypeSet:" << VariableIdSetPrettyPrint::str(referenceTypeSet, *vidm_p) << "\n";
+    set_union(addressTakenSet, arrayTypeSet, aliasingSet);
+  }
+
+  VariableIdMappingPtr FlowInSensAddrTakenAnalysis::getVariableIdMapping() const {
+    return vidm_p;
+  }
+
+  FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::Expr2MemRegionCreate(FlowInSensAddrTakenAnalysis& addrTakenAnalysis,
+                                                                          Composer* composer,
+                                                                          PartEdgePtr pedge)
+    : addrTakenAnalysis(addrTakenAnalysis), composer(composer), pedge(pedge) { }
+
+  bool FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::contains(const VariableIdSet& vidSet, VariableId id) const {
+    VariableIdSet::const_iterator cIt;
+    cIt = vidSet.find(id);
+    return (cIt != vidSet.end());
+  }
+
+  ATAnalMRTypePtr FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::getATAnalMRType() const {
+    return type;
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::createATAnalNamedMRType(VariableId id) {
+    assert(id.isValid());
+    const VariableIdSet& aliasingSet = addrTakenAnalysis.aliasingSet;
+    
+    if(contains(aliasingSet, id)) {
+      type = boost::make_shared<ATAnalNamedMRType>(ATAnalMRType::named, id, true, addrTakenAnalysis.vidm_p);
     }
+    else {
+      type = boost::make_shared<ATAnalNamedMRType>(ATAnalMRType::named, id, false, addrTakenAnalysis.vidm_p);
+    }
+    
+    assert(type);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgVarRefExp* sgn) {
+    VariableId id = addrTakenAnalysis.vidm_p->variableId(sgn);
+    createATAnalNamedMRType(id);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgInitializedName* sgn) {
+    VariableId id = addrTakenAnalysis.vidm_p->variableId(sgn);
+    createATAnalNamedMRType(id);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgDotExp* sgn) {
+    assert(false);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgArrowExp* sgn) {
+    assert(false);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgPointerDerefExp* sgn) {
+    type = boost::make_shared<ATAnalAliasingMRType>(ATAnalMRType::aliasing, addrTakenAnalysis.aliasingSet, addrTakenAnalysis.vidm_p);
+    assert(type);
+  }
+
+  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgExpression* sgn) {
+    MemRegionObjectPtr parent = composer->Expr2MemRegion(sgn, pedge, &addrTakenAnalysis);
+    type = boost::make_shared<ATAnalExprMRType>(ATAnalMRType::expr, parent, sgn);
+  }
+
+  MemRegionObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemRegion(SgNode* sgn, PartEdgePtr pedge) {
+    Expr2MemRegionCreate createMemRegion(*this, getComposer(), pedge);
+    sgn->accept(createMemRegion);
+    ATAnalMRTypePtr type = createMemRegion.getATAnalMRType();
+    MemRegionObjectPtr parent = getComposer()->Expr2MemRegion(sgn, pedge, this);
+    return boost::make_shared<FlowInSensATAnalMR>(sgn, type, parent);
+  }
+
+  MemLocObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemLoc(SgNode* node, PartEdgePtr pedge) {
+    return boost::make_shared<FullMemLocObject>();
   }
 
   string FlowInSensAddrTakenAnalysis::str(string indent) const {
     return "FlowInSensAddrTakenAnalysis";
   }
 
-  MemRegionObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemRegion(SgNode* node, PartEdgePtr pedge) {
-    
-  }
-
-  MemLocObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemLoc(SgNode* node, PartEdgePtr pedge) {
-    
-  }
 
   /****************
    * ATAnalMRType *
@@ -490,13 +515,13 @@ namespace fuse {
   /*********************
    * ATAnalNamedMRType *
    *********************/
-  ATAnalNamedMRType::ATAnalNamedMRType(MRType type, VariableId id)
-    : ATAnalMRType(type), id(id) { }
+  ATAnalNamedMRType::ATAnalNamedMRType(MRType type, VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p)
+    : ATAnalMRType(type), id(id), addrtaken(addrtaken), vidm_p(vidm_p) { }
 
   ATAnalNamedMRType::ATAnalNamedMRType(const ATAnalNamedMRType& that)
-    : ATAnalMRType(that), id(that.id) { }
+    : ATAnalMRType(that), id(that.id), addrtaken(that.addrtaken), vidm_p(that.vidm_p) { }
 
-  ATAnalMRTypePtr ATAnalNamedMRType::copyATAnalMRType() {
+  ATAnalMRTypePtr ATAnalNamedMRType::copyATAnalMRType() const {
     return boost::make_shared<ATAnalNamedMRType>(*this);
   }
 
@@ -506,15 +531,11 @@ namespace fuse {
 
   bool ATAnalNamedMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     if(that->getType() == ATAnalMRType::unknown) return true;
-    else if(that->getType() == ATAnalMRType::aliasing) {
-      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
-      assert(atype);
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return atype->contains(id);
     }
-    else if(that->getType() == ATAnalMRType::named) {
-    // if that is a named type    
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    // if that is a named type
+    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return id == ntype->getId();
     }
     // that is expr type or
@@ -522,27 +543,21 @@ namespace fuse {
   }
   
   bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::aliasing) {
-      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
-      assert(atype);
+    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return (atype->contains(id) && atype->singleton());
     }
-    else if(that->getType() == ATAnalMRType::named) {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return id == ntype->getId();
     }
     return false;
   }
 
   bool ATAnalNamedMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::named) {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return id == ntype->getId();
     }
     // if that is a pointer type
-    else if(that->getType() == ATAnalMRType::aliasing) {
-      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return (atype->contains(id) && atype->singleton());
     }
     // if that is a unknown type or expr type
@@ -550,15 +565,11 @@ namespace fuse {
   }
 
   bool ATAnalNamedMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) { 
-    if(that->getType() == ATAnalMRType::named) {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return id == ntype->getId();
     }
     // if that is a pointer type
-    else if(that->getType() == ATAnalMRType::aliasing) {
-      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
-      assert(atype);
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return atype->contains(id);
     }
     // if that is unknown type
@@ -567,18 +578,26 @@ namespace fuse {
     else return false;
   }
 
-  string ATAnalNamedMRType::str(string indent) const{ }
+  bool ATAnalNamedMRType::isFullMRType(PartEdgePtr pedge) {
+    return false;
+  }
+
+  string ATAnalNamedMRType::str(string indent) const{
+    ostringstream oss;
+    oss << "named: " << vidm_p->variableName(id);
+    return oss.str();
+  }
 
   /************************
    * ATAnalAliasingMRType *
    ************************/
-  ATAnalAliasingMRType::ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet)
-    : ATAnalMRType(type), aliasingSet(aliasingSet) { }
+  ATAnalAliasingMRType::ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p)
+    : ATAnalMRType(type), aliasingSet(aliasingSet), vidm_p(vidm_p) { }
 
   ATAnalAliasingMRType::ATAnalAliasingMRType(const ATAnalAliasingMRType& that)
-    : ATAnalMRType(that), aliasingSet(that.aliasingSet){ }
+    : ATAnalMRType(that), aliasingSet(that.aliasingSet), vidm_p(vidm_p) { }
 
-  ATAnalMRTypePtr ATAnalAliasingMRType::copyATAnalMRType() {
+  ATAnalMRTypePtr ATAnalAliasingMRType::copyATAnalMRType() const {
     return boost::make_shared<ATAnalAliasingMRType>(*this);
   }
 
@@ -633,10 +652,8 @@ namespace fuse {
     if(that->getType() == ATAnalMRType::expr) return false;
     // If that is unknown type
     else if(that->getType() == ATAnalMRType::unknown) return true;
-    else if(that->getType() == ATAnalMRType::named) {
-       // If named type check if VariableId is present in this set
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    // If named type check if VariableId is present in this set
+    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return contains(ntype->getId());
     }
     // If both are aliasing type
@@ -698,19 +715,33 @@ namespace fuse {
     }
   }
 
+  bool ATAnalAliasingMRType::isFullMRType(PartEdgePtr pedge) {
+    return false;
+  }
+
   string ATAnalAliasingMRType::str(string indent) const {
+    ostringstream oss;
+    oss << "aliasing: {";
+    VariableIdSet::const_iterator cit = aliasingSet.begin();
+    for( ; cit != aliasingSet.end(); ) {
+      oss << vidm_p->variableName(*cit);
+      ++cit;
+      if(cit != aliasingSet.end()) oss << ", ";
+    }
+    oss << "}";
+    return oss.str();
   }
 
   /********************
    * ATAnalExprMRType *
    ********************/
-  ATAnalExprMRType::ATAnalExprMRType(MRType type, MemRegionObjectPtr parent)
-    : ATAnalMRType(type), parent(parent) { }
+  ATAnalExprMRType::ATAnalExprMRType(MRType type, MemRegionObjectPtr parent, SgExpression* expr)
+    : ATAnalMRType(type), parent(parent), expr(expr) { }
 
   ATAnalExprMRType::ATAnalExprMRType(const ATAnalExprMRType& that)
-    : ATAnalMRType(that), parent(that.parent) { }
+    : ATAnalMRType(that), parent(that.parent), expr(that.expr) { }
 
-  ATAnalMRTypePtr ATAnalExprMRType::copyATAnalMRType() {
+  ATAnalMRTypePtr ATAnalExprMRType::copyATAnalMRType() const {
     return boost::make_shared<ATAnalExprMRType>(*this);
   }
 
@@ -762,7 +793,14 @@ namespace fuse {
     }
   }
 
+  bool ATAnalExprMRType::isFullMRType(PartEdgePtr pedge) {
+    return false;
+  }
+
   string ATAnalExprMRType::str(string indent) const {
+    ostringstream oss;
+    oss << "expr: " << SgNode2Str(expr);
+    return oss.str();
   }
 
   /***********************
@@ -771,7 +809,7 @@ namespace fuse {
   ATAnalUnknownMRType::ATAnalUnknownMRType(MRType type) : ATAnalMRType(type) { }
   ATAnalUnknownMRType::ATAnalUnknownMRType(const ATAnalUnknownMRType& that) : ATAnalMRType(that) { }
 
-  ATAnalMRTypePtr ATAnalUnknownMRType::copyATAnalMRType() {
+  ATAnalMRTypePtr ATAnalUnknownMRType::copyATAnalMRType() const {
     return boost::make_shared<ATAnalUnknownMRType>(*this);
   }
   
@@ -790,8 +828,13 @@ namespace fuse {
   bool ATAnalUnknownMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     return that->getType() == ATAnalMRType::unknown;
   }
+
+  bool ATAnalUnknownMRType::isFullMRType(PartEdgePtr pedge) {
+    return true;
+  }
   
   string ATAnalUnknownMRType::str(string indent) const {
+    return "unknown";
   }
 
 
@@ -812,6 +855,86 @@ namespace fuse {
 
   ATAnalUnknownMRTypePtr isATAnalUnknownMRType(ATAnalMRTypePtr type) {
     return boost::dynamic_pointer_cast<ATAnalUnknownMRType>(type);
+  }
+
+  /**********************
+   * FlowInSensATAnalMR *
+   **********************/
+  FlowInSensATAnalMR::FlowInSensATAnalMR(SgNode* sgn,
+                                         ATAnalMRTypePtr type,
+                                         MemRegionObjectPtr parent)
+    : MemRegionObject(sgn), type(type), parent(parent) { }
+  
+  FlowInSensATAnalMR::FlowInSensATAnalMR(const FlowInSensATAnalMR& that) :
+    MemRegionObject(that),
+    sgn(that.sgn),
+    type(that.type),
+    parent(parent) { }
+
+  MemRegionObjectPtr FlowInSensATAnalMR::copyMR() const {
+    return boost::make_shared<FlowInSensATAnalMR>(sgn, type->copyATAnalMRType(), parent);
+  }
+  
+  ATAnalMRTypePtr FlowInSensATAnalMR::getATAnalMRTypePtr() const {
+    return type;
+  }
+    
+  bool FlowInSensATAnalMR::mayEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    if(FlowInSensATAnalMRPtr thatMR = isFlowInSensATAnalMR(that))
+      return type->mayEqualMRType(thatMR->getATAnalMRTypePtr(), pedge);
+    // if thatMR is not FlowInSensATAnalMR
+    else assert(false);
+  }
+
+  bool FlowInSensATAnalMR::mustEqualMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    if(FlowInSensATAnalMRPtr thatMR = isFlowInSensATAnalMR(that))
+      return type->mustEqualMRType(thatMR->getATAnalMRTypePtr(), pedge);    
+    // if thatMR is not FlowInSensATAnalMR
+    else assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::equalSetMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    if(FlowInSensATAnalMRPtr thatMR = isFlowInSensATAnalMR(that))
+      return type->equalSetMRType(thatMR->getATAnalMRTypePtr(), pedge);
+    // if thatMR is not FlowInSensATAnalMR
+    else assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::subSetMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    if(FlowInSensATAnalMRPtr thatMR = isFlowInSensATAnalMR(that))
+      return type->subSetMRType(thatMR->getATAnalMRTypePtr(), pedge);
+    // if thatMR is not FlowInSensATAnalMR
+    else assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::isLiveMR(PartEdgePtr pedge) {
+    assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
+    assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::isEmptyMR(PartEdgePtr pedge) {
+    assert(false);
+  }
+  
+  bool FlowInSensATAnalMR::isFullMR(PartEdgePtr pedge) {
+    return type->isFullMRType(pedge);
+  }
+  
+  ValueObjectPtr FlowInSensATAnalMR::getRegionSize(PartEdgePtr pedge) const {
+    assert(false);
+  }
+  
+  string FlowInSensATAnalMR::str(string indent) const {
+    ostringstream oss;
+    oss << "[FlowInSensATAnalMR: " << type->str() << "]";
+    return oss.str();
+  }
+
+  FlowInSensATAnalMRPtr isFlowInSensATAnalMR(MemRegionObjectPtr that) {
+    return boost::dynamic_pointer_cast<FlowInSensATAnalMR>(that);
   }
  
 }// end namespace
