@@ -442,28 +442,26 @@ namespace fuse {
     return type;
   }
 
-  void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::createATAnalNamedMRType(VariableId id) {
-    assert(id.isValid());
-    const VariableIdSet& aliasingSet = addrTakenAnalysis.aliasingSet;
-    
-    if(contains(aliasingSet, id)) {
-      type = boost::make_shared<ATAnalNamedMRType>(ATAnalMRType::named, id, true, addrTakenAnalysis.vidm_p);
-    }
-    else {
-      type = boost::make_shared<ATAnalNamedMRType>(ATAnalMRType::named, id, false, addrTakenAnalysis.vidm_p);
-    }
-    
-    assert(type);
-  }
-
   void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgVarRefExp* sgn) {
     VariableId id = addrTakenAnalysis.vidm_p->variableId(sgn);
-    createATAnalNamedMRType(id);
+    MemRegionObjectPtr parent = composer->Expr2MemRegion(sgn, pedge, &addrTakenAnalysis);
+    const VariableIdSet& addrTakenSet = addrTakenAnalysis.aliasingSet;
+    if(contains(addrTakenSet, id))
+      type = boost::make_shared<ATAnalNamedMRType>(parent, sgn, id, true, addrTakenAnalysis.vidm_p);
+    else
+      type = boost::make_shared<ATAnalNamedMRType>(parent, sgn, id, false, addrTakenAnalysis.vidm_p);
+    assert(type);
   }
 
   void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgInitializedName* sgn) {
     VariableId id = addrTakenAnalysis.vidm_p->variableId(sgn);
-    createATAnalNamedMRType(id);
+    MemRegionObjectPtr parent = composer->Expr2MemRegion(sgn, pedge, &addrTakenAnalysis);
+    const VariableIdSet& addrTakenSet = addrTakenAnalysis.aliasingSet;
+    if(contains(addrTakenSet, id))
+      type = boost::make_shared<ATAnalNamedMRType>(parent, sgn, id, true, addrTakenAnalysis.vidm_p);
+    else
+      type = boost::make_shared<ATAnalNamedMRType>(parent, sgn, id, false, addrTakenAnalysis.vidm_p);
+    assert(type);
   }
 
   void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgDotExp* sgn) {
@@ -475,13 +473,14 @@ namespace fuse {
   }
 
   void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgPointerDerefExp* sgn) {
-    type = boost::make_shared<ATAnalAliasingMRType>(ATAnalMRType::aliasing, addrTakenAnalysis.aliasingSet, addrTakenAnalysis.vidm_p);
+    MemRegionObjectPtr parent = composer->Expr2MemRegion(sgn, pedge, &addrTakenAnalysis);
+    type = boost::make_shared<ATAnalAliasingMRType>( parent, sgn, addrTakenAnalysis.aliasingSet, addrTakenAnalysis.vidm_p);
     assert(type);
   }
 
   void FlowInSensAddrTakenAnalysis::Expr2MemRegionCreate::visit(SgExpression* sgn) {
     MemRegionObjectPtr parent = composer->Expr2MemRegion(sgn, pedge, &addrTakenAnalysis);
-    type = boost::make_shared<ATAnalExprMRType>(ATAnalMRType::expr, parent, sgn);
+    type = boost::make_shared<ATAnalExprMRType>(parent, sgn);
   }
 
   MemRegionObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemRegion(SgNode* sgn, PartEdgePtr pedge) {
@@ -492,8 +491,12 @@ namespace fuse {
     return boost::make_shared<FlowInSensATAnalMR>(sgn, type, parent);
   }
 
-  MemLocObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemLoc(SgNode* node, PartEdgePtr pedge) {
-    return boost::make_shared<FullMemLocObject>();
+  MemLocObjectPtr FlowInSensAddrTakenAnalysis::Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge) {
+    MemLocObjectPtr parentML = composer->Expr2MemLoc(sgn, pedge, this);
+    ValueObjectPtr index = parentML->getIndex();
+
+    MemRegionObjectPtr region = this->Expr2MemRegion(sgn, pedge);
+    return boost::make_shared<MemLocObject>(region, index, sgn);
   }
 
   string FlowInSensAddrTakenAnalysis::str(string indent) const {
@@ -504,20 +507,18 @@ namespace fuse {
   /****************
    * ATAnalMRType *
    ****************/
-  ATAnalMRType::ATAnalMRType(MRType type) : type(type) { }
+  ATAnalMRType::ATAnalMRType(MemRegionObjectPtr parent, SgNode* base) : parent(parent), base(base) { }
   
-  ATAnalMRType::ATAnalMRType(const ATAnalMRType& that) : type(that.type)  { }
+  ATAnalMRType::ATAnalMRType(const ATAnalMRType& that) : parent(that.parent), base(that.base)  { }
   
-  ATAnalMRType::MRType ATAnalMRType::getType() const {
-    return type;
-  }
-
   /*********************
    * ATAnalNamedMRType *
    *********************/
-  ATAnalNamedMRType::ATAnalNamedMRType(MRType type, VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p)
-    : ATAnalMRType(type), id(id), addrtaken(addrtaken), vidm_p(vidm_p) { }
+  ATAnalNamedMRType::ATAnalNamedMRType(MemRegionObjectPtr parent, SgNode* base, VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p)
+    : ATAnalMRType(parent, base), id(id), addrtaken(addrtaken), vidm_p(vidm_p) {
+  }
 
+  
   ATAnalNamedMRType::ATAnalNamedMRType(const ATAnalNamedMRType& that)
     : ATAnalMRType(that), id(that.id), addrtaken(that.addrtaken), vidm_p(that.vidm_p) { }
 
@@ -530,16 +531,16 @@ namespace fuse {
   }
 
   bool ATAnalNamedMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::unknown) return true;
+    // if that is a named type
+    if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
+      return id == ntype->getId();
+    }
     else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return atype->contains(id);
     }
-    // if that is a named type
-    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
-      return id == ntype->getId();
-    }
-    // that is expr type or
-    return false;
+    else if(isATAnalUnknownMRType(that)) return true;
+    // that is expr type
+    else return false;
   }
   
   bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
@@ -573,13 +574,34 @@ namespace fuse {
       return atype->contains(id);
     }
     // if that is unknown type
-    else if(that->getType() == ATAnalMRType::unknown) return true;
+    else if(isATAnalUnknownMRType(that)) return true;
     // if that is expr type
     else return false;
   }
 
   bool ATAnalNamedMRType::isFullMRType(PartEdgePtr pedge) {
     return false;
+  }
+
+  bool isSymbolInScope(SgScopeStatement* symbolScope, const CFGNode& n) {
+    SgScopeStatement* partScope = SageInterface::getScope(n.getNode());
+    if(symbolScope == partScope) return true;
+    else return SageInterface::isAncestor(symbolScope, partScope);
+  }
+
+  bool ATAnalNamedMRType::isLiveMRType(PartEdgePtr pedge) {
+    if(addrtaken) return true;
+    else {
+      SgSymbol* symbol = vidm_p->getSymbol(id);
+      assert(symbol);
+      if(isSgFunctionSymbol(symbol)) return true;
+      SgScopeStatement* symbolScope = symbol->get_scope();
+      assert(symbolScope);
+      PartPtr part = pedge->target()? pedge->target() : pedge->source();
+      assert(part);
+      boost::function<bool (const CFGNode&)> isVarSymbolInScope = boost::bind(isSymbolInScope, symbolScope, _1);
+      return part->mapCFGNodeANY<bool>(isVarSymbolInScope);
+    }
   }
 
   string ATAnalNamedMRType::str(string indent) const{
@@ -591,8 +613,8 @@ namespace fuse {
   /************************
    * ATAnalAliasingMRType *
    ************************/
-  ATAnalAliasingMRType::ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p)
-    : ATAnalMRType(type), aliasingSet(aliasingSet), vidm_p(vidm_p) { }
+  ATAnalAliasingMRType::ATAnalAliasingMRType(MemRegionObjectPtr parent, SgNode* base, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p)
+    : ATAnalMRType(parent, base), aliasingSet(aliasingSet), vidm_p(vidm_p) { }
 
   ATAnalAliasingMRType::ATAnalAliasingMRType(const ATAnalAliasingMRType& that)
     : ATAnalMRType(that), aliasingSet(that.aliasingSet), vidm_p(vidm_p) { }
@@ -649,9 +671,7 @@ namespace fuse {
 
   bool ATAnalAliasingMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // AliasingType are not equal to temporary expr 
-    if(that->getType() == ATAnalMRType::expr) return false;
-    // If that is unknown type
-    else if(that->getType() == ATAnalMRType::unknown) return true;
+    if(isATAnalExprMRType(that)) return false;
     // If named type check if VariableId is present in this set
     else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return contains(ntype->getId());
@@ -659,64 +679,88 @@ namespace fuse {
     // If both are aliasing type
     // Check for set intersection
     //! NOTE: Instead of having identical set can we just keep one copy of the set?
-    else {
-      ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that);
-      assert(atype);
+    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return set_intersect(atype); 
     }
+    // that type is unknown type
+    else return true;
   }
 
   bool ATAnalAliasingMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    // Does not must equals expr or unknown type
-    if(that->getType() == ATAnalMRType::expr ||
-       that->getType() == ATAnalMRType::unknown) return false;
-    // both are aliasing type
     // check they are equal and singleton
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return singleton() && set_equal(atype);
     }
-    // same as above
-    else {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    // for named types
+    else if (ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)){
       return singleton() && contains(ntype->getId());
     }
+    // for expr and unknown types
+    else return false;
   }
 
   bool ATAnalAliasingMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     // not equal sets with expr or unknown type
-    if(that->getType() == ATAnalMRType::expr ||
-       that->getType() == ATAnalMRType::unknown) return false;
     // check for set equality
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that))
+    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that))
       return set_equal(atype);
     // check if singleton and contains for named type
-    else {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return singleton() && contains(ntype->getId());
     }
+    // for expr and unknown types
+    else return false;
   }
 
-  bool ATAnalAliasingMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    // not a subset of expr type
-    if(that->getType() == ATAnalMRType::expr) return false;
-    // all types are subset of unknown
-    else if(that->getType() == ATAnalMRType::unknown) return true;
+  bool ATAnalAliasingMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {  
     // check for set_subset
-    else if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
       return set_subset(atype);
     }
     // only case that this is a subset of named type is when they are equal
-    else {
-      ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that);
-      assert(ntype);
+    else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return singleton() && contains(ntype->getId());
     }
+    else if(isATAnalExprMRType(that)) return false;
+    // for unknown type
+    else return true;
   }
-
+  
   bool ATAnalAliasingMRType::isFullMRType(PartEdgePtr pedge) {
     return false;
+  }
+
+  bool isExprInScope(SgExpression* expr, const CFGNode& n) {
+    // exprr is in-scope at n if they're inside the same statement or n is an SgIfStmt, SgForStatement, SgWhileStmt 
+    // or SgDoWhileStmt and exprr is inside its sub-statements
+    return (SageInterface::getEnclosingStatement(n.getNode()) == 
+            SageInterface::getEnclosingStatement(expr)) ||
+      (isSgIfStmt(n.getNode()) && 
+       isSgIfStmt(n.getNode())->get_conditional()==
+       SageInterface::getEnclosingStatement(expr)) ||
+      (isSgWhileStmt(n.getNode()) && 
+       isSgWhileStmt(n.getNode())->get_condition()==
+       SageInterface::getEnclosingStatement(expr)) ||
+      (isSgDoWhileStmt(n.getNode()) && 
+       isSgDoWhileStmt(n.getNode())->get_condition()==
+       SageInterface::getEnclosingStatement(expr)) ||
+      (isSgForStatement(n.getNode()) && 
+       (isSgForStatement(n.getNode())->get_for_init_stmt()==SageInterface::getEnclosingStatement(expr) ||
+        isSgForStatement(n.getNode())->get_test()         ==SageInterface::getEnclosingStatement(expr)));
+  }
+
+
+  bool ATAnalAliasingMRType::isLiveMRType(PartEdgePtr pedge) {
+    return true;
+    //RULE: This expression *p is in-scope at a Part if they're inside the same statement
+    //        This rule is fairly loose but at least it is easy to compute. The right rule
+    //        would have been that the part is on some path between the expression and its
+    //        parent but this would require an expensive graph search
+    PartPtr part = pedge->target()? pedge->target() : pedge->source();
+    assert(part);
+    SgExpression* expr = isSgExpression(base);
+    boost::function<bool (const CFGNode&)> _isExprInScope = boost::bind(isExprInScope, expr, _1);
+    return part->mapCFGNodeANY<bool>(_isExprInScope);    
   }
 
   string ATAnalAliasingMRType::str(string indent) const {
@@ -735,11 +779,14 @@ namespace fuse {
   /********************
    * ATAnalExprMRType *
    ********************/
-  ATAnalExprMRType::ATAnalExprMRType(MRType type, MemRegionObjectPtr parent, SgExpression* expr)
-    : ATAnalMRType(type), parent(parent), expr(expr) { }
+  ATAnalExprMRType::ATAnalExprMRType(MemRegionObjectPtr parent, SgNode* base)
+    : ATAnalMRType(parent, base) {
+    expr = isSgExpression(base);
+    assert(expr);
+  }
 
   ATAnalExprMRType::ATAnalExprMRType(const ATAnalExprMRType& that)
-    : ATAnalMRType(that), parent(that.parent), expr(that.expr) { }
+    : ATAnalMRType(that), expr(that.expr) { }
 
   ATAnalMRTypePtr ATAnalExprMRType::copyATAnalMRType() const {
     return boost::make_shared<ATAnalExprMRType>(*this);
@@ -750,51 +797,47 @@ namespace fuse {
   }
 
   bool ATAnalExprMRType::mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType()==ATAnalMRType::named ||
-       that->getType()==ATAnalMRType::aliasing) return false;
-    else if(that->getType()==ATAnalMRType::unknown) return true;
-    else {
-      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
-      assert(etype);
+    // if that is expr type
+    if(ATAnalExprMRTypePtr etype = isATAnalExprMRType(that)) {
       return parent->mayEqualMR(etype->getParent(), pedge);
     }
+    // if that is unknown type
+    else if(isATAnalUnknownMRType(that)) return true;
+    // if that is named or aliasing type
+    else return false;
   }
 
   bool ATAnalExprMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::named ||
-       that->getType() == ATAnalMRType::aliasing ||
-       that->getType() == ATAnalMRType::unknown) return false;
-    else {
-      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
-      assert(etype);
+    if(ATAnalExprMRTypePtr etype = isATAnalExprMRType(that)) {
       return parent->mustEqualMR(etype->getParent(), pedge);
     }
+    // if that is unknown, named or aliasing type
+    else return false;
   }
 
   bool ATAnalExprMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::named ||
-       that->getType() == ATAnalMRType::aliasing ||
-       that->getType() == ATAnalMRType::unknown) return false;
-    else {
-      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
-      assert(etype);
+    if(ATAnalExprMRTypePtr etype = isATAnalExprMRType(that)) {
       return parent->equalSetMR(etype->getParent(), pedge);
     }
+    // if that is unknown, named or aliasing type
+    else return false;
   }
 
-  bool ATAnalExprMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    if(that->getType() == ATAnalMRType::named ||
-       that->getType() == ATAnalMRType::aliasing) return false;
-    else if(that->getType() == ATAnalMRType::unknown) return true;
-    else {
-      ATAnalExprMRTypePtr etype = isATAnalExprMRType(that);
-      assert(etype);
+  bool ATAnalExprMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {   
+    if(ATAnalExprMRTypePtr etype = isATAnalExprMRType(that)) {
       return parent->subSetMR(etype->getParent(), pedge);
     }
+    else if(isATAnalUnknownMRType(that)) return true;
+    // if that is named or aliasing type
+    else return false;
   }
 
   bool ATAnalExprMRType::isFullMRType(PartEdgePtr pedge) {
     return false;
+  }
+
+  bool ATAnalExprMRType::isLiveMRType(PartEdgePtr pedge) {
+    return parent->isLiveMR(pedge);
   }
 
   string ATAnalExprMRType::str(string indent) const {
@@ -806,7 +849,7 @@ namespace fuse {
   /***********************
    * ATAnalUnknownMRType *
    ***********************/
-  ATAnalUnknownMRType::ATAnalUnknownMRType(MRType type) : ATAnalMRType(type) { }
+  ATAnalUnknownMRType::ATAnalUnknownMRType(MemRegionObjectPtr parent, SgNode* base) : ATAnalMRType(parent, base) { }
   ATAnalUnknownMRType::ATAnalUnknownMRType(const ATAnalUnknownMRType& that) : ATAnalMRType(that) { }
 
   ATAnalMRTypePtr ATAnalUnknownMRType::copyATAnalMRType() const {
@@ -822,14 +865,18 @@ namespace fuse {
   }
   
   bool ATAnalUnknownMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    return that->getType() == ATAnalMRType::unknown;
+    return (isATAnalUnknownMRType(that) != NULL);
   }
   
   bool ATAnalUnknownMRType::subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    return that->getType() == ATAnalMRType::unknown;
+    return (isATAnalUnknownMRType(that) != NULL);
   }
 
   bool ATAnalUnknownMRType::isFullMRType(PartEdgePtr pedge) {
+    return true;
+  }
+
+  bool ATAnalUnknownMRType::isLiveMRType(PartEdgePtr pedge) {
     return true;
   }
   
@@ -908,7 +955,7 @@ namespace fuse {
   }
   
   bool FlowInSensATAnalMR::isLiveMR(PartEdgePtr pedge) {
-    assert(false);
+    return type->isLiveMRType(pedge);
   }
   
   bool FlowInSensATAnalMR::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
@@ -916,7 +963,7 @@ namespace fuse {
   }
   
   bool FlowInSensATAnalMR::isEmptyMR(PartEdgePtr pedge) {
-    assert(false);
+    return false;
   }
   
   bool FlowInSensATAnalMR::isFullMR(PartEdgePtr pedge) {

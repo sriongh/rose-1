@@ -156,7 +156,7 @@ namespace fuse {
     std::string str(std::string indent="") const;
     bool implementsExpr2Val() { return false; }
     bool implementsExpr2MemRegion() { return true; }
-    bool implementsExpr2MemLoc() { return false; }
+    bool implementsExpr2MemLoc() { return true; }
     bool implementsATSGraph() { return false; }
 
     class Expr2MemRegionCreate : public ROSE_VisitorPatternDefaultBase {
@@ -168,7 +168,7 @@ namespace fuse {
       Expr2MemRegionCreate(FlowInSensAddrTakenAnalysis& addrTakenAnalysis, Composer* composer, PartEdgePtr pedge);
       ATAnalMRTypePtr getATAnalMRType() const;
       bool contains(const VariableIdSet& vIdSet, VariableId id) const;
-      void createATAnalNamedMRType(VariableId id);
+      void createATAnalNamedMRType(VariableId id, MemRegionObjectPtr parent, SgNode* sgn);
       
       void visit(SgVarRefExp* sgn);
       void visit(SgInitializedName* sgn);
@@ -189,25 +189,20 @@ namespace fuse {
    * ATAnalMRType *
    ****************/
   class ATAnalMRType : public sight::printable {
-  public:
-    enum MRType{named,
-                aliasing,
-                expr,
-                unknown
-    };
   protected:
-    MRType type;
+    MemRegionObjectPtr parent;
+    SgNode* base;
   public:
-    ATAnalMRType(MRType type);
+    ATAnalMRType(MemRegionObjectPtr parent, SgNode* base);
     ATAnalMRType(const ATAnalMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType() const=0;
 
-    MRType getType() const;
     virtual bool mayEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge)=0;
     virtual bool isFullMRType(PartEdgePtr pedge)=0;
+    virtual bool isLiveMRType(PartEdgePtr pedge)=0;
     virtual std::string str(std::string indent="") const=0;
   };
 
@@ -223,7 +218,7 @@ namespace fuse {
     bool addrtaken;
     VariableIdMappingPtr vidm_p;
   public:
-    ATAnalNamedMRType(MRType type, VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p);
+    ATAnalNamedMRType(MemRegionObjectPtr parent, SgNode* base,  VariableId id, bool addrtaken, VariableIdMappingPtr vidm_p);
     ATAnalNamedMRType(const ATAnalNamedMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType() const;
 
@@ -233,6 +228,7 @@ namespace fuse {
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool isFullMRType(PartEdgePtr pedge);
+    virtual bool isLiveMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
   typedef boost::shared_ptr<ATAnalNamedMRType> ATAnalNamedMRTypePtr;
@@ -250,7 +246,7 @@ namespace fuse {
     VariableIdSet aliasingSet;
     VariableIdMappingPtr vidm_p;
   public:
-    ATAnalAliasingMRType(MRType type, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p);
+    ATAnalAliasingMRType(MemRegionObjectPtr parent, SgNode* base, VariableIdSet aliasingSet, VariableIdMappingPtr vidm_p);
     ATAnalAliasingMRType(const ATAnalAliasingMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType() const;
 
@@ -266,6 +262,7 @@ namespace fuse {
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool isFullMRType(PartEdgePtr pedge);
+    virtual bool isLiveMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -277,10 +274,9 @@ namespace fuse {
    ********************/
   // Type for all temporary memory locations
   class ATAnalExprMRType : public ATAnalMRType {
-    MemRegionObjectPtr parent;
     SgExpression* expr;
   public:
-    ATAnalExprMRType(MRType type, MemRegionObjectPtr parent, SgExpression* expr);
+    ATAnalExprMRType(MemRegionObjectPtr parent, SgNode* base);
     ATAnalExprMRType(const ATAnalExprMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType() const;
     MemRegionObjectPtr getParent() const;
@@ -290,6 +286,7 @@ namespace fuse {
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool isFullMRType(PartEdgePtr pedge);
+    virtual bool isLiveMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
@@ -302,7 +299,7 @@ namespace fuse {
   // Type for heap regions?
   class ATAnalUnknownMRType : public ATAnalMRType {
   public:
-    ATAnalUnknownMRType(MRType type);
+    ATAnalUnknownMRType(MemRegionObjectPtr parent, SgNode* base);
     ATAnalUnknownMRType(const ATAnalUnknownMRType& that);
     virtual ATAnalMRTypePtr copyATAnalMRType() const;
     
@@ -311,6 +308,7 @@ namespace fuse {
     virtual bool equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool subSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge);
     virtual bool isFullMRType(PartEdgePtr pedge);
+    virtual bool isLiveMRType(PartEdgePtr pedge);
     virtual std::string str(std::string indent="") const;
   };
 
