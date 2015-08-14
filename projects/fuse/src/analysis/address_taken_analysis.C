@@ -545,7 +545,8 @@ namespace fuse {
   
   bool ATAnalNamedMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
     if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      return (atype->contains(id) && atype->singleton());
+      return false;
+      //      return (atype->contains(id) && atype->singleton());
     }
     else if(ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)) {
       return id == ntype->getId();
@@ -687,16 +688,17 @@ namespace fuse {
   }
 
   bool ATAnalAliasingMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    // check they are equal and singleton
-    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-      return singleton() && set_equal(atype);
-    }
-    // for named types
-    else if (ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)){
-      return singleton() && contains(ntype->getId());
-    }
-    // for expr and unknown types
-    else return false;
+    return false;
+    // // check they are equal and singleton
+    // if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+    //   return singleton() && set_equal(atype);
+    // }
+    // // for named types
+    // else if (ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)){
+    //   return singleton() && contains(ntype->getId());
+    // }
+    // // for expr and unknown types
+    // else return false;
   }
 
   bool ATAnalAliasingMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
