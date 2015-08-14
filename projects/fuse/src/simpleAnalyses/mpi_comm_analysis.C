@@ -18,14 +18,12 @@ namespace fuse {
    **********************/
   MPICommValueObject::MPICommValueObject(PartEdgePtr pedge)
     : Lattice(pedge),
-      FiniteLattice(pedge),
-      ValueObject() {
+      FiniteLattice(pedge) {
   }
 
   MPICommValueObject::MPICommValueObject(const MPICommValueObject& that)
     : Lattice(that),
-      FiniteLattice(that),
-      ValueObject(that) {
+      FiniteLattice(that) {
   }
 
   void MPICommValueObject::initialize() {
@@ -64,50 +62,6 @@ namespace fuse {
     assert(0);
   }
 
-  bool MPICommValueObject::mayEqualV(ValueObjectPtr thatV, PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::mustEqualV(ValueObjectPtr thatV, PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::equalSetV(ValueObjectPtr thatV, PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::subSetV(ValueObjectPtr thatV, PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::meetUpdateV(ValueObjectPtr thatV, PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::isEmptyV(PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::isFullV(PartEdgePtr pedge) {
-    assert(0);
-  }
-
-  bool MPICommValueObject::isConcrete() {
-    assert(0);
-  }
-
-  SgType* MPICommValueObject::getConcreteType() {
-    assert(0);
-  }
-
-  set<boost::shared_ptr<SgValueExp> > MPICommValueObject::getConcreteValue() {
-    assert(0);
-  }
-
-  ValueObjectPtr MPICommValueObject::copyV() const {
-    assert(0);
-  }
-
   string MPICommValueObject::str(string indent) const  {
     assert(0);
   }
@@ -115,12 +69,10 @@ namespace fuse {
   /********************
    * MPICommOpCallExp *
    ********************/
-  MPICommOpCallExp::MPICommOpCallExp(const Function& _func,
-                                     SgFunctionCallExp* _callexp,
-                                     MPICommAnalysis* _analysis) 
-    : mpifunc(_func),
-      callexp(_callexp),
-      analysis(_analysis) {
+  MPICommOpCallExp::MPICommOpCallExp(const Function& func,
+                                     SgExprListExp* arglist) 
+    : mpifunc(func),
+      argList(arglist) {
     string name = mpifunc.get_name().getString();
     if(name.compare("MPI_Send") == 0) optype = MPICommOp::SEND;
     else if(name.compare("MPI_Recv") == 0) optype = MPICommOp::RECV;
@@ -129,46 +81,62 @@ namespace fuse {
 
   MPICommOpCallExp::MPICommOpCallExp(const MPICommOpCallExp& that)
     : mpifunc(that.mpifunc),
-      callexp(that.callexp),
-      analysis(that.analysis),
+      argList(that.argList),
       optype(that.optype) { }
 
-  void MPICommOpCallExp::Expr2ValVisitor::visit(SgCastExp* sgn) {
-    sgn->get_operand()->accept(*this);
+
+  SgExpression* MPICommOpCallExp::getCommOpBufferExpr() {
+    SgExpressionPtrList& exprPtrList = argList->get_expressions();
+    SgExpression* expr0 = exprPtrList[0];
+    SgExpression* buffExpr;
+    buffExpr = expr0;
+    // switch(expr0->variantT()) {
+    // case V_SgCastExp:
+    //   buffExpr = isSgCastExp(expr0)->get_operand();
+    //   break;
+    // case V_SgVarRefExp:
+    //   buffExpr = expr0;
+    //   break;
+    // default: assert(0);
+    // }
+    return buffExpr;
   }
 
-  void MPICommOpCallExp::Expr2ValVisitor::visit(SgAddressOfOp* sgn) {
-    sgn->get_operand()->accept(*this);
+  SgExpression* MPICommOpCallExp::getCommOpDestExpr() {
+    SgExpressionPtrList& exprPtrList = argList->get_expressions();
+    SgExpression* expr3 = exprPtrList[3];
+    SgExpression* destExpr;
+    switch(expr3->variantT()) {
+    case V_SgIntVal:
+    case V_SgVarRefExp:
+    case V_SgAddOp:
+    case V_SgSubtractOp:
+      destExpr = expr3;
+      break;
+    default: 
+      dbg << "destExpr=" << SgNode2Str(expr3) << endl;
+      assert(0);
+    }
+    return destExpr;
   }
 
-  void MPICommOpCallExp::Expr2ValVisitor::visit(SgVarRefExp* sgn) {
-    dbg << SgNode2Str(sgn) << endl;
-    assert(0);
-  }
-
-  void MPICommOpCallExp::Expr2ValVisitor::visit(SgNode* sgn) {
-    dbg << "sgn=" << SgNode2Str(sgn) << endl;
-    assert(0);
-  }
-
-  ValueObjectPtr MPICommOpCallExp::getCommOpBufferValueObject() {
-    SgExpressionPtrList exprList = callexp->get_args()->get_expressions();
-    SgExpression* buffer = exprList[0];
-    Expr2ValVisitor expr2Val;
-    buffer->accept(expr2Val);    
-  }
-
-  ValueObjectPtr MPICommOpCallExp::getCommOpDestValueObject() {
-  }
-
-  ValueObjectPtr MPICommOpCallExp::getCommOpTagValueObject() {
+  SgExpression* MPICommOpCallExp::getCommOpTagExpr() {
+    SgExpressionPtrList& exprPtrList = argList->get_expressions();
+    SgExpression* expr4 = exprPtrList[4];
+    SgExpression* tagExpr;
+    switch(expr4->variantT()) {
+    case V_SgIntVal:
+    case V_SgVarRefExp:
+      tagExpr = expr4;
+      break;
+    default: assert(0);
+    }
+    return tagExpr;
   }
 
   bool MPICommOpCallExp::isMPICommOp() {
     return optype != MPICommOp::NOOP;
   }
-
-
 
   /**************************
    * MPICommAnalysisTranfer *
@@ -201,13 +169,19 @@ namespace fuse {
   }
 
   void MPICommAnalysisTransfer::visit(SgFunctionCallExp* sgn) {
+    scope("MPICommAnalysisTransfer::visit(SgFunctionCallExp* sgn)", 
+          scope::medium, attrGE("mpiCommAnalysisDebugLevel", 2));
     Function func = getFunction(sgn);
     if(isMPIFuncCall(func)) {
-      MPICommOpCallExp commOpCallExp(func, sgn, analysis);
+      MPICommOpCallExp commOpCallExp(func, sgn->get_args());
       // Check if this CFGNode is a outgoing function call cfgIndex=2
       if(Part::isOutgoingFuncCall(cn) && commOpCallExp.isMPICommOp()) {
-        // Determine the type of MPI operation
-        ValueObjectPtr bufferVO = commOpCallExp.getCommOpBufferValueObject();
+        SgExpression* buffExpr = commOpCallExp.getCommOpBufferExpr();
+        Composer* composer = analysis->getComposer();
+        MemLocObjectPtr buffML = composer->OperandExpr2MemLoc(sgn, buffExpr, part->inEdgeFromAny());
+        ValueObjectPtr  buffVO = composer->OperandExpr2Val(sgn, buffExpr, part->inEdgeFromAny());
+        dbg << "buffML=" << buffML->str();
+        dbg << "buffVO=" << buffVO->str();
       }
     }
   }
@@ -229,7 +203,7 @@ namespace fuse {
   /*******************
    * MPICommAnalysis *
    *******************/
-  MPICommAnalysis::MPICommAnalysis(ComposedAnalysis* _analysis) : analysis(_analysis) {
+  MPICommAnalysis::MPICommAnalysis() {
   }
 
   // void MPICommAnalysis::initAnalysis(set<PartPtr>& startingParts) {

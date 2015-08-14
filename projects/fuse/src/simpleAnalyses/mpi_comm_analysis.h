@@ -9,7 +9,8 @@
 
 namespace fuse {
 
-  class MPICommValueObject : public FiniteLattice, public ValueObject {
+  class MPICommValueObject : public FiniteLattice {
+
   public:
     MPICommValueObject(PartEdgePtr pedge);
     MPICommValueObject(const MPICommValueObject& that);
@@ -25,22 +26,12 @@ namespace fuse {
     bool isFullLat();
     bool isEmptyLat();
 
-    // ValueObject interface
-    bool mayEqualV(ValueObjectPtr thatV, PartEdgePtr pedge);
-    bool mustEqualV(ValueObjectPtr thatV, PartEdgePtr pedge);
-    bool equalSetV(ValueObjectPtr thatV, PartEdgePtr pedge);
-    bool subSetV(ValueObjectPtr thatV, PartEdgePtr pedge);
-    bool meetUpdateV(ValueObjectPtr thatV, PartEdgePtr pedge);
-    bool isEmptyV(PartEdgePtr pedge);
-    bool isFullV(PartEdgePtr pedge);
-    bool isConcrete();
-    SgType* getConcreteType();
-    std::set<boost::shared_ptr<SgValueExp> > getConcreteValue();
-    ValueObjectPtr copyV() const;
-
     // printable
     std::string str(std::string indent="") const;
   };
+
+  // typedef MPICommValueObject<ComposedAnalysis*, false> UnionAnalMPICommValueObject;
+  // typedef boost::shared_ptr<MPICommValueObject<ComposedAnalysis*, false> > UnionAnalMPICommValueObjectPtr;
 
   struct MPICommOp {
     enum OpType {SEND, 
@@ -48,31 +39,18 @@ namespace fuse {
                  NOOP};
   };
 
-  class MPICommAnalysis;
-
+  //! Class to process arguments of MPICommOp call expression
   class MPICommOpCallExp {
     Function mpifunc;
-    SgFunctionCallExp* callexp;
-    MPICommAnalysis* analysis;
+    SgExprListExp* argList;
     MPICommOp::OpType optype;
-
-    class Expr2ValVisitor : public ROSE_VisitorPatternDefaultBase {
-      ValueObjectPtr val;
-      MPICommAnalysis* analysis;
-    public:
-      Expr2ValVisitor() { }
-      void visit(SgCastExp* sgn);
-      void visit(SgAddressOfOp* sgn);
-      void visit(SgVarRefExp* sgn);
-      void visit(SgNode* sgn);
-    };
         
   public:
-    MPICommOpCallExp(const Function& func, SgFunctionCallExp* _callexp,  MPICommAnalysis* _analysis);
+    MPICommOpCallExp(const Function& func, SgExprListExp* arglist);
     MPICommOpCallExp(const MPICommOpCallExp& that);
-    ValueObjectPtr getCommOpBufferValueObject();
-    ValueObjectPtr getCommOpDestValueObject();
-    ValueObjectPtr getCommOpTagValueObject();
+    SgExpression* getCommOpBufferExpr();
+    SgExpression* getCommOpDestExpr();
+    SgExpression* getCommOpTagExpr();
     bool isMPICommOp();
   };
 
@@ -108,11 +86,10 @@ namespace fuse {
    *******************/
 
   class MPICommAnalysis : public FWDataflow {
-    ComposedAnalysis* analysis;
   public:
-    MPICommAnalysis(ComposedAnalysis* _analysis);
+    MPICommAnalysis();
 
-    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(analysis); }
+    ComposedAnalysisPtr copy() { return boost::make_shared<MPICommAnalysis>(); }
 
     // Initializes the state of analysis lattices at the given function, part and edge into our out of the part
     // by setting initLattices to refer to freshly-allocated Lattice objects.
