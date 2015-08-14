@@ -8,7 +8,7 @@
 
 namespace fuse {
 
-  DEBUG_LEVEL(mpiValueAnalysisDebugLevel, 2);
+  DEBUG_LEVEL(mpiValueAnalysisDebugLevel, 0);
 
   /******************
    * MPIValueObject *
@@ -395,9 +395,9 @@ namespace fuse {
       ROSE_ASSERT(mvMap);
 
       // We currently can only handle requests for the SgNode that corresponds to the current Part
-      set<CFGNode> nodes = pedge->source()->CFGNodes();
-      assert(nodes.size()==1);
-      assert(nodes.begin()->getNode() == n);
+      // set<CFGNode> nodes = pedge->source()->CFGNodes();
+      // assert(nodes.size()==1);
+      // assert(nodes.begin()->getNode() == n);
 
       // print debug info
       if(mpiValueAnalysisDebugLevel() >= 2) {
@@ -418,7 +418,10 @@ namespace fuse {
       // We currently can only handle requests for the SgNode that corresponds to the current Part
       set<CFGNode> nodes = pedge->target()->CFGNodes();
       assert(nodes.size()==1);
+      dbg << "n=" << SgNode2Str(n) << endl;
+      dbg << "node.begin()->getNode()=" << SgNode2Str(nodes.begin()->getNode()) << endl;
       assert(nodes.begin()->getNode() == n);
+
 
       // print debug info
       if(mpiValueAnalysisDebugLevel() >= 2) {
