@@ -1860,6 +1860,7 @@ bool matchAnchorPart(SgScopeStatement* scope, const CFGNode& n) {
 
 // Returns true if this object is live at the given part and false otherwise
 bool StxNamedMemRegionType::isLiveMR(PartEdgePtr pedge) {
+  return true;
   if(iname) {
     // This variable is in-scope if part.getNode() is inside the scope that contains its declaration
     SgScopeStatement* scope=NULL;
