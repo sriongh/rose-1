@@ -378,6 +378,12 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
     int mIdx=0;
     std::set<MLMapping>::const_iterator m=ml2ml.begin();
     for(; m!=ml2ml.end(); m++, mIdx++) {
+      if(AbstractObjectMapDebugLevel()>=2) {
+        scope reg("MLMapping", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2)); 
+        dbg << "m-&gtfrom=" << (m->from? m->from->str(): "NULLMemLocObjectPtr") << endl;
+        dbg << "m-&gtto=" << (m->to? m->to->str() : "NULLMemLocObjectPtr") << endl;
+      }
+      
       if(!m->from) continue;
       
       indent ind1(attrGE("AbstractObjectMapDebugLevel", 1));
@@ -420,9 +426,12 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
         }
         ml2mlAdded[mIdx]=true;
       } else if(i->first->mayEqual(m->from, fromPEdge, comp, analysis)) {
-        // Insert the value in the current ml2ml mapping immediately before the current item
-        if(AbstractObjectMapDebugLevel()>=1) dbg << "Inserting before i: "<<m->to->str()<<" => "<<i->second->str()<<endl;
-        newM->items.insert(i, make_pair(boost::static_pointer_cast<AbstractObject>(m->to), i->second));
+        // Get the exisiting value for m->to
+        // MeetUpdate with i->second
+        // insert the new lattice back into the map
+        LatticePtr lat = newM->get(m->to); assert(lat);
+        lat->meetUpdate((*i).second.get());
+        newM->insert(m->to, lat);
         ml2mlAdded[mIdx]=true;
       }
     }
