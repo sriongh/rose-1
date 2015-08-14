@@ -120,8 +120,7 @@ namespace fuse
 
       list<PartEdgePtr>::iterator peIt = succEdges.begin();
       for( ; peIt != succEdges.end(); ++peIt) {
-        if(pointsToAnalysisDebugLevel() >= 2)
-          dbg << "PartEdge=" << (*peIt)->str();
+        if(pointsToAnalysisDebugLevel() >= 2) dbg << "PartEdge=" << (*peIt)->str();
         // Create a new lattice for this edge based on incoming information
         AbstractObjectMap* newL = new AbstractObjectMap(*latticeMapIn);
         newL->setPartEdge(*peIt);
@@ -233,7 +232,7 @@ namespace fuse
                                                               pedge,
                                                               getComposer(),
                                                               this);
-    initLattices.push_back(productlattice);                                                                                                  
+    initLattices.push_back(productlattice);                 
   }
 
 
