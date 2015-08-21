@@ -1,3 +1,10 @@
+// WARNING: Changes to this file must be contributed back to Sawyer or else they will
+//          be clobbered by the next update from Sawyer.  The Sawyer repository is at
+//          github.com:matzke1/sawyer.
+
+
+
+
 #include <sawyer/GraphTraversal.h>
 #include <sstream>
 #include <string>
@@ -15,9 +22,10 @@ traversalEventName(TraversalEvent event) {
         case ENTER_EDGE:      return "ENTER_EDGE";
         case LEAVE_VERTEX:    return "LEAVE_VERTEX";
         case LEAVE_EDGE:      return "LEAVE_EDGE";
+        case FOLLOW_EDGE:     return "FOLLOW_EDGE";
     }
     std::ostringstream ss;
-    ss <<"TraversalEvent(" <<std::hex <<event <<")";
+    ss <<"TraversalEvent(0x" <<std::hex <<event <<")";
     return ss.str();
 }
 
