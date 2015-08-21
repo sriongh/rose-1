@@ -688,17 +688,16 @@ namespace fuse {
   }
 
   bool ATAnalAliasingMRType::mustEqualMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
-    return false;
-    // // check they are equal and singleton
-    // if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
-    //   return singleton() && set_equal(atype);
-    // }
-    // // for named types
-    // else if (ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)){
-    //   return singleton() && contains(ntype->getId());
-    // }
-    // // for expr and unknown types
-    // else return false;
+    // check they are equal and singleton
+    if(ATAnalAliasingMRTypePtr atype = isATAnalAliasingMRType(that)) {
+      return singleton() && set_equal(atype);
+    }
+    // for named types
+    else if (ATAnalNamedMRTypePtr ntype = isATAnalNamedMRType(that)){
+      return singleton() && contains(ntype->getId());
+    }
+    // for expr and unknown types
+    else return false;
   }
 
   bool ATAnalAliasingMRType::equalSetMRType(ATAnalMRTypePtr that, PartEdgePtr pedge) {
@@ -732,37 +731,11 @@ namespace fuse {
     return false;
   }
 
-  bool isExprInScope(SgExpression* expr, const CFGNode& n) {
-    // exprr is in-scope at n if they're inside the same statement or n is an SgIfStmt, SgForStatement, SgWhileStmt 
-    // or SgDoWhileStmt and exprr is inside its sub-statements
-    return (SageInterface::getEnclosingStatement(n.getNode()) == 
-            SageInterface::getEnclosingStatement(expr)) ||
-      (isSgIfStmt(n.getNode()) && 
-       isSgIfStmt(n.getNode())->get_conditional()==
-       SageInterface::getEnclosingStatement(expr)) ||
-      (isSgWhileStmt(n.getNode()) && 
-       isSgWhileStmt(n.getNode())->get_condition()==
-       SageInterface::getEnclosingStatement(expr)) ||
-      (isSgDoWhileStmt(n.getNode()) && 
-       isSgDoWhileStmt(n.getNode())->get_condition()==
-       SageInterface::getEnclosingStatement(expr)) ||
-      (isSgForStatement(n.getNode()) && 
-       (isSgForStatement(n.getNode())->get_for_init_stmt()==SageInterface::getEnclosingStatement(expr) ||
-        isSgForStatement(n.getNode())->get_test()         ==SageInterface::getEnclosingStatement(expr)));
-  }
-
-
   bool ATAnalAliasingMRType::isLiveMRType(PartEdgePtr pedge) {
+    // If we choose to eliminate pointer dereferencing expressions after expressions
+    // then we should keep the AbstractObjectMap updated
+    // For now aliasing objects are live for the length of the program
     return true;
-    //RULE: This expression *p is in-scope at a Part if they're inside the same statement
-    //        This rule is fairly loose but at least it is easy to compute. The right rule
-    //        would have been that the part is on some path between the expression and its
-    //        parent but this would require an expensive graph search
-    PartPtr part = pedge->target()? pedge->target() : pedge->source();
-    assert(part);
-    SgExpression* expr = isSgExpression(base);
-    boost::function<bool (const CFGNode&)> _isExprInScope = boost::bind(isExprInScope, expr, _1);
-    return part->mapCFGNodeANY<bool>(_isExprInScope);    
   }
 
   string ATAnalAliasingMRType::str(string indent) const {
@@ -961,7 +934,9 @@ namespace fuse {
   }
   
   bool FlowInSensATAnalMR::meetUpdateMR(MemRegionObjectPtr that, PartEdgePtr pedge) {
-    assert(false);
+    if(FlowInSensATAnalMRPtr thatMR = isFlowInSensATAnalMR(that)) {
+      
+    }
   }
   
   bool FlowInSensATAnalMR::isEmptyMR(PartEdgePtr pedge) {
