@@ -10,6 +10,8 @@
 
 namespace fuse {
 
+  using namespace std;
+
   DEBUG_LEVEL(addressTakenAnalysisDebugLevel, 2);
 
   /*******************

@@ -14,6 +14,10 @@
 
 namespace fuse {
 
+  typedef SPRAY::VariableIdSet VariableIdSet;
+  typedef SPRAY::VariableId VariableId;
+  typedef SPRAY::VariableIdMapping VariableIdMapping;
+
   /*******************
    * VariableIdUtils *
    *******************/
