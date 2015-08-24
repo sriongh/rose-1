@@ -695,11 +695,11 @@ class ConstantPropagationAnalysis : virtual public FWDataflow
   
   boost::shared_ptr<ValueObject> Expr2Val(SgNode* n, PartEdgePtr pedge);
   bool implementsExpr2Val() { return true; }
-  implTightness Expr2ValTightness() { return ComposedAnalysis::tight; }
+  implTightness Expr2ValTightness() { return ComposedAnalysis::loose; }
   
   boost::shared_ptr<MemLocObject> Expr2MemLoc(SgNode* n, PartEdgePtr pedge);
   bool implementsExpr2MemLoc() { return true; }
-  implTightness Expr2MemLocTightness() { return ComposedAnalysis::tight; }
+  implTightness Expr2MemLocTightness() { return ComposedAnalysis::loose; }
   
   // pretty print for the object
   std::string str(std::string indent="") const
@@ -716,6 +716,12 @@ class ConstantPropagationAnalysisTransfer : public VariableStateTransfer<CPValue
   //void transferShortCircuitLogical(SgBinaryOp *sgn);
 
   public:
+
+  //! Create a CPValueObject from the generic ValueObject
+  //! Input ValueObject should be concrete
+  CPValueObjectPtr createConcreteCPValueObject(ValueObjectPtr vo_p);
+  virtual CPValueObjectPtr getLattice(SgExpression *sgn);
+  virtual CPValueObjectPtr getLatticeOperand(SgNode *sgn, SgExpression* operand);
   //  void visit(SgNode *);
   // Values
   void visit(SgVarRefExp *vref);

@@ -955,13 +955,15 @@ CPValueKindPtr CPConcreteKind::op(SgUnaryOp* op) {
       case V_SgTypeSignedLongLong:     return doUnaryOp(boost::lambda::ll_static_cast<long long>         (boost::lambda::_1));
       case V_SgTypeSignedShort:        return doUnaryOp(boost::lambda::ll_static_cast<short>             (boost::lambda::_1));
       case V_SgTypeWchar:              return doUnaryOp(boost::lambda::ll_static_cast<wchar_t>           (boost::lambda::_1));
-        
+      case V_SgPointerType:            return boost::make_shared<CPUnknownKind>();
+      case V_SgTypedefType:            return boost::make_shared<CPUnknownKind>();
       case V_SgArrayType: case V_SgFunctionType: case V_SgJavaWildcardType: case V_SgModifierType: 
-      case V_SgNamedType: case V_SgPointerType: case V_SgQualifiedNameType: case V_SgReferenceType: 
+      case V_SgNamedType: case V_SgQualifiedNameType: case V_SgReferenceType: 
       case V_SgTemplateType: case V_SgTypeCAFTeam: case V_SgTypeCrayPointer: case V_SgTypeDefault: 
       case V_SgTypeEllipse: case V_SgTypeGlobalVoid: case V_SgTypeImaginary: case V_SgTypeLabel: 
       case V_SgTypeVoid:
       default:
+        // dbg << "type=" << isSgCastExp(op)->get_type()->class_name() << endl;
         assert(0);
     }
   } else if(isSgConjugateOp(op)) {
@@ -3251,41 +3253,101 @@ std::string CPMemLocObject::str(std::string indent) const { // pretty print for 
 // **********************************************************************
 
 // Transfer function for logical short-circuit operations: && and ||
-/*void ConstantPropagationAnalysisTransfer::transferShortCircuitLogical(SgBinaryOp *sgn)
-{
-  CPValueObjectPtr arg1Lat, arg2Lat, resLat;
-  arg1Lat = getLatticeOperand(sgn, sgn->get_lhs_operand());
-  resLat  = getLattice(sgn);
+// void ConstantPropagationAnalysisTransfer::transferShortCircuitLogical(SgBinaryOp *sgn)
+// {
+//   CPValueObjectPtr arg1Lat, arg2Lat, resLat;
+//   arg1Lat = getLatticeOperand(sgn, sgn->get_lhs_operand());
+//   resLat  = getLattice(sgn);
   
-  // If the first operand of the short-circuit operation has a known value and it is sufficient to determine
-  // the operation's outcome
-  if(arg1Lat->getLevel() == CPValueObject::constantValue &&
-     ((isSgAndOp(sgn) && !arg1Lat->getValue()) ||
-      (isSgOrOp(sgn)  &&  arg1Lat->getValue()))) {
-    resLat->setValue(arg1Lat->getValue());
-  // Otherwise, if the second value needs to be read to determine the operation's outcome
-  } else {
-    // Case 1: arg1's value was known but not sufficient
-    if(arg1Lat->getLevel() == CPValueObject::constantValue) {
-      arg2Lat = getLatticeOperand(sgn, sgn->get_rhs_operand());
-      if(arg2Lat->getLevel() == CPValueObject::constantValue) {
-        resLat->setValue(arg2Lat->getValue());
-      // If arg2's value is uninitialized, then any value is valid for the result. Use uninitialized
-      } else if(arg2Lat->getLevel() == CPValueObject::emptySet) {
-        resLat->setToEmpty();
-      // If arg2 may have multiple values, then the result may have multiple values
-      } else if(arg2Lat->getLevel() == CPValueObject::fullSet) {
-        resLat->setToFull();
-      } else assert(0);
-    // Else if, arg1's value is uninitialized, then anly value is valid for the result. Use arg2's v
-    } else if(arg1Lat->getLevel() == CPValueObject::emptySet) {
-      resLat->setToEmpty();
-    // If arg1 may have multiple values, then the result may have multiple values
-    } else if(arg1Lat->getLevel() == CPValueObject::fullSet) {
-      resLat->setToFull();
-    } else assert(0);
+//   // If the first operand of the short-circuit operation has a known value and it is sufficient to determine
+//   // the operation's outcome
+//   if(arg1Lat->getLevel() == CPValueObject::constantValue &&
+//      ((isSgAndOp(sgn) && !arg1Lat->getValue()) ||
+//       (isSgOrOp(sgn)  &&  arg1Lat->getValue()))) {
+//     resLat->setValue(arg1Lat->getValue());
+//   // Otherwise, if the second value needs to be read to determine the operation's outcome
+//   } else {
+//     // Case 1: arg1's value was known but not sufficient
+//     if(arg1Lat->getLevel() == CPValueObject::constantValue) {
+//       arg2Lat = getLatticeOperand(sgn, sgn->get_rhs_operand());
+//       if(arg2Lat->getLevel() == CPValueObject::constantValue) {
+//         resLat->setValue(arg2Lat->getValue());
+//       // If arg2's value is uninitialized, then any value is valid for the result. Use uninitialized
+//       } else if(arg2Lat->getLevel() == CPValueObject::emptySet) {
+//         resLat->setToEmpty();
+//       // If arg2 may have multiple values, then the result may have multiple values
+//       } else if(arg2Lat->getLevel() == CPValueObject::fullSet) {
+//         resLat->setToFull();
+//       } else assert(0);
+//     // Else if, arg1's value is uninitialized, then anly value is valid for the result. Use arg2's v
+//     } else if(arg1Lat->getLevel() == CPValueObject::emptySet) {
+//       resLat->setToEmpty();
+//     // If arg1 may have multiple values, then the result may have multiple values
+//     } else if(arg1Lat->getLevel() == CPValueObject::fullSet) {
+//       resLat->setToFull();
+//     } else assert(0);
+//   }
+// }
+
+CPValueObjectPtr ConstantPropagationAnalysisTransfer::createConcreteCPValueObject(ValueObjectPtr vo_p) {
+  assert(vo_p->isConcrete());
+  set<boost::shared_ptr<SgValueExp> > cvals = vo_p->getConcreteValue();
+  assert(cvals.size() > 0);
+  set<boost::shared_ptr<SgValueExp> >::iterator vIt = cvals.begin();
+  CPValueKindPtr cpvk_p = boost::make_shared<CPConcreteKind>(*vIt);
+  for(++vIt; vIt != cvals.end(); ++vIt) {
+    CPValueKindPtr vItcpvk_p = boost::make_shared<CPConcreteKind>(*vIt);
+    pair<bool, CPValueKindPtr> meetVal = cpvk_p->meetUpdateV(vItcpvk_p);
+    if(meetVal.first) cpvk_p = meetVal.second;
   }
-}*/
+  return boost::make_shared<CPValueObject>(cpvk_p, part->inEdgeFromAny());
+}
+
+CPValueObjectPtr ConstantPropagationAnalysisTransfer::getLattice(SgExpression *sgn) {
+  scope s("ConstantPropagationAnalysisTransfer::getLatticeOperand()", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 2));
+  MemLocObjectPtr p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
+  // First look up in the constant propagation lattice map
+  CPValueObjectPtr cpv_p = boost::dynamic_pointer_cast<CPValueObject>
+    (VariableStateTransfer<CPValueObject, ConstantPropagationAnalysis>::getLattice(p));
+  assert(cpv_p);
+
+  if(!cpv_p->isConcrete()) {
+    // If the lattice is uninitialized or unknown,
+    // query the composer to check if its concrete
+    ValueObjectPtr vo_p = composer->Expr2Val(sgn, part->inEdgeFromAny(), analysis);
+    if(vo_p->isConcrete()) {
+      // Create a CPValueObject from the generic ValueObject
+      cpv_p = createConcreteCPValueObject(vo_p);
+    }
+  }
+  if(constantPropagationAnalysisDebugLevel() >= 2) 
+    dbg << "ML(" << SgNode2Str(sgn) << ")=" << p->str() << ", CPValue=" << cpv_p->str() << endl;
+  return cpv_p;
+}
+
+// Returns a Lattice object that corresponds to the memory location denoted by the given operand of sgn 
+// in the current part
+CPValueObjectPtr ConstantPropagationAnalysisTransfer::getLatticeOperand(SgNode *sgn, SgExpression* operand) {
+  scope s("ConstantPropagationAnalysisTransfer::getLatticeOperand()", scope::medium, attrGE("constantPropagationAnalysisDebugLevel", 2));    
+  MemLocObjectPtr p = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis);
+  CPValueObjectPtr cpv_p = boost::dynamic_pointer_cast<CPValueObject>
+    (VariableStateTransfer<CPValueObject, ConstantPropagationAnalysis>::getLattice(p));
+  assert(cpv_p);
+
+  if(!cpv_p->isConcrete()) {
+    // If the lattice is uninitialized or unknown,
+    // query the composer to check if its concrete
+    ValueObjectPtr vo_p = composer->OperandExpr2Val(sgn, operand, part->inEdgeFromAny(), analysis);
+    if(vo_p->isConcrete()) {
+      // Create a CPValueObject from the generic ValueObject
+      cpv_p = createConcreteCPValueObject(vo_p);
+    }
+  }
+  if(constantPropagationAnalysisDebugLevel() >= 2) 
+    dbg << "ML(" << SgNode2Str(sgn) << ")=" << p->str() << ", CPValue=" << cpv_p->str() << endl;
+  return cpv_p;
+}
+
 
 void ConstantPropagationAnalysisTransfer::visit(SgVarRefExp *vref) { 
 }

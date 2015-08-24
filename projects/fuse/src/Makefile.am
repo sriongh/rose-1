@@ -1,7 +1,7 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
 include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 
-bin_PROGRAMS = fuse fuseTight fuseLayout
+bin_PROGRAMS = fuse fuseTight fuseMPI fuseLayout
 
 INCLUDES = \
 	$(ROSE_INCLUDES) \
@@ -17,6 +17,7 @@ include_HEADERS =\
 	analysis/abstract_object.h \
 	analysis/abstract_object_map.h \
 	analysis/abstract_object_set.h \
+	analysis/address_taken_analysis.h \
 	analysis/analysis.h \
 	analysis/analysis_tester.h \
 	analysis/compose.h \
@@ -39,6 +40,9 @@ include_HEADERS =\
 	simpleAnalyses/const_prop_analysis.h \
 	simpleAnalyses/dead_path_elim_analysis.h \
 	simpleAnalyses/live_dead_analysis.h \
+	simpleAnalyses/mpi_value_analysis.h \
+	simpleAnalyses/mpi_comm_context_analysis.h \
+	simpleAnalyses/mpi_comm_analysis.h \
 	simpleAnalyses/pointsToAnalysis.h \
 	simpleAnalyses/printAnalysisStates.h \
 	simpleAnalyses/saveDotAnalysis.h \
@@ -57,7 +61,9 @@ include_HEADERS =\
 	sparse/valueNumbering.h \
 	state/nodeState.h
 
-# TEST VARIABLES
+##################
+# TEST VARIABLES #
+##################
 TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
 TEST_EXIT_STATUS = $(top_srcdir)/scripts/test_exit_status
 
@@ -166,7 +172,8 @@ clean-fuse:
 #############
 # FUSETIGHT #
 #############
-fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\""
+fuseTight_SKIP_FLAGS =-DFUSE_SKIP_LIB_GLOBAL_DECLS -DFUSE_START_FROM_MAIN
+fuseTight_CXXFLAGS = $(SIGHT_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\"" $(fuseTight_SKIP_FLAGS)
 fuseTight_LDADD = -lrose
 fuseTight_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS)
 
@@ -238,6 +245,55 @@ check-fusetight: $(FUSETIGHT_CHECKS)
 .PHONY: clean-fusetight
 clean-fusetight:
 	rm -rf fuseTight fuseTight-*.o
+
+###########
+# FUSEMPI #
+###########
+
+fuseMPI_SKIP_FLAGS = -DFUSE_SKIP_MPI_HEADERS -DFUSE_SKIP_LIB_GLOBAL_DECLS -DFUSE_START_FROM_MAIN
+fuseMPI_CXXFLAGS = $(SIGHT_CFLAGS) $(ROSE_WITH_MPI_CFLAGS) -DROSE_PREFIX="\"${top_builddir}\"" $(fuseMPI_SKIP_FLAGS)
+fuseMPI_LDADD = -lrose
+fuseMPI_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LINKFLAGS) $(ROSE_WITH_MPI_CLDFLAGS)
+
+fuseMPI_DEPENDENCIES=fuseLayout
+
+fuseMPI_SOURCES = \
+	analysis/abstract_object.C \
+	analysis/abstract_object_map.C \
+	analysis/abstract_object_set.C \
+	analysis/address_taken_analysis.C \
+	analysis/analysis.C \
+	analysis/analysis_tester.C \
+	analysis/compose.C \
+	analysis/composed_analysis.C \
+	analysis/factor_trans_system.C \
+	analysis/graphIterator.C \
+	analysis/partitions.C \
+	analysis/stx_analysis.C \
+	analysis/tight_composer.C \
+	cfgUtils/CallGraphTraverse.C \
+	cfgUtils/cfgUtils.C \
+	cfgUtils/DataflowCFG.C \
+	cfgUtils/VirtualCFGIterator.C \
+	sight/widgets/ats_graph_structure.C \
+	lattice/lattice.C \
+	simpleAnalyses/call_context_sensitivity_analysis.C \
+	simpleAnalyses/const_prop_analysis.C \
+	simpleAnalyses/dead_path_elim_analysis.C \
+	simpleAnalyses/live_dead_analysis.C \
+	simpleAnalyses/mpi_comm_context_analysis.C \
+	simpleAnalyses/mpi_comm_analysis.C \
+	simpleAnalyses/mpi_value_analysis.C \
+	simpleAnalyses/pointsToAnalysis.C \
+	simpleAnalyses/printAnalysisStates.C \
+	simpleAnalyses/saveDotAnalysis.C \
+	simpleAnalyses/taintAnalysis.C \
+	state/nodeState.C \
+	fuseTestMPIAnalysis.C
+
+.PHONY: clean-fusempi
+clean-fusempi:
+	rm -rf fuseMPI fuseMPI-*.o
 
 #############
 # EXTRADIST #
@@ -492,4 +548,4 @@ clean-debug:
 clean-check:
 	rm -f *.passed *.failed *.out *.err
 
-clean-local: clean-fuse clean-fusetight clean-check clean-debug
+clean-local: clean-fuse clean-fusetight clean-fusempi clean-check clean-debug

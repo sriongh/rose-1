@@ -29,25 +29,18 @@ class VariableStateTransfer : public DFTransferVisitor
   AbstractObjectMap* prodLat;
 
   // Returns a Lattice object that corresponds to the memory location denoted by sgn in the current part
-  LatticePtr getLattice(SgExpression *sgn) {
+  virtual LatticePtr getLattice(SgExpression *sgn) {
     assert(sgn);
     // MemLocObjectPtrPair p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
     MemLocObjectPtr p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
     if(dLevel()>=1) dbg << "VariableStateTransfer::getLattice() p="<<p->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
     
     return getLattice(AbstractObjectPtr(p));
-    /*ValueObjectPtr val = composer->Expr2Val(sgn, part->inEdgeFromAny(), analysis);
-    if(dLevel()>=1) dbg << "VariableStateTransfer::getLattice() val="<<val->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
-    UnionValueObjectPtr unionVal = boost::dynamic_pointer_cast<UnionValueObject>(val);
-    assert(unionVal->getVals().size()==1);
-    LatticePtr cpVal = boost::dynamic_pointer_cast<LatticeType>(*unionVal->getVals().begin());
-    assert(cpVal);
-    return cpVal;*/
   }
   
   // Returns a Lattice object that corresponds to the memory location denoted by the given operand of sgn 
   // in the current part
-  LatticePtr getLatticeOperand(SgNode *sgn, SgExpression* operand) {
+  virtual LatticePtr getLatticeOperand(SgNode *sgn, SgExpression* operand) {
     scope s("VariableStateTransfer::getLatticeOperand()", scope::medium, attrGE(dLevelStr, 1));
     if(dLevel()>=1) {
       dbg << "sgn="<<SgNode2Str(sgn)<<endl;
@@ -58,30 +51,8 @@ class VariableStateTransfer : public DFTransferVisitor
     MemLocObjectPtr p = composer->OperandExpr2MemLoc(sgn, operand, part->inEdgeFromAny(), analysis);
     if(dLevel()>=1) dbg << "p="<<(p? p->str("&nbsp;&nbsp;&nbsp;&nbsp;"): "NULL")<<endl;
     return getLattice(p);
-    
-    /*ValueObjectPtr val = composer->OperandExpr2Val(sgn, operand, part->inEdgeFromAny(), analysis);
-    if(dLevel()>=1) dbg << "VariableStateTransfer::getLatticeOperand() val="<<val->str("&nbsp;&nbsp;&nbsp;&nbsp;")<<endl;
-    UnionValueObjectPtr unionVal = boost::dynamic_pointer_cast<UnionValueObject>(val);
-    assert(unionVal->getVals().size()==1);
-    LatticePtr cpVal = boost::dynamic_pointer_cast<LatticeType>(*unionVal->getVals().begin());
-    assert(cpVal);
-    return cpVal;*/
   }
-  
-  // Common code for getLattice() and getLatticeOperand() that returns either the lattice of the expression 
-  // or memory MemLocObject depending on the type of sgn.
-  /*LatticePtr getLatticeCommon(SgExpression* sgn, MemLocObjectPtr p) {
-    // For array index expressions, get the lattice associated with the memory location
-    // since the only content of this expression is what's stored in memory, just like with SgVarRefExp
-    // if(isSgPntrArrRefExp(sgn))
-    //   return getLattice(AbstractObjectPtr(p.expr));
-    // else
-    //   // Return the lattice associated with n's expression since that is likely to be more precise
-    //   // but if it is not available, used the memory object
-    //   return (p.expr ? getLattice(AbstractObjectPtr(p.expr)) : getLattice(AbstractObjectPtr(p.mem)));
-    return getLattice(AbstractObjectPtr(p));
-  }*/
-  
+    
   LatticePtr getLattice(const AbstractObjectPtr o) {
     LatticePtr l = boost::dynamic_pointer_cast<LatticeType>(prodLat->get(o));
     if(dLevel()>=1) dbg << "getLattice(o="<<o->strp(part->inEdgeFromAny(), "")<<", l="<<l->strp(part->inEdgeFromAny(), "")<<endl;
@@ -110,26 +81,7 @@ class VariableStateTransfer : public DFTransferVisitor
     
     setLattice(p, lat);
   }
-  
-  // Common code for getLattice() and getLatticeOperand() that returns either the lattice of the expression 
-  // or memory MemLocObject depending on the type of sgn.
-  /*void setLatticeCommon(SgNode* sgn, MemLocObjectPtr p, LatticePtr lat) {
-    // Set both p.expr and p.mem to lat 
-    // if(p.expr) {
-    //   //LatticePtr latCopy(dynamic_cast<LatticeType*>(lat->copy()));
-    //   setLattice(p.expr, lat);
-    // }
-    // if(p.mem) {
-    //   // If we've already used lat to set p.expr, we need to make a copy of it for p.mem
-    //   if(p.expr) {
-    //     LatticePtr latCopy(dynamic_cast<LatticeType*>(lat->copy()));
-    //     lat = latCopy;
-    //   }
-    //   setLattice(p.mem, lat);
-    // }
-    setLattice(p, lat);
-  }*/
-  
+   
   void setLattice(const AbstractObjectPtr o, LatticePtr lat) {
     //if(dLevel()>=1) dbg << "setLattice(o="<<o->strp(part->inEdgeFromAny(), "")<<", lat="<<lat->strp(part->inEdgeFromAny(), "")<<endl;
     updateModified(prodLat->insert(o, lat));

@@ -347,8 +347,8 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
     }
   }
   
-  if(AbstractObjectMapDebugLevel()>=1) {
-    scope reg("ml2ml", scope::medium, attrGE("AbstractObjectMapDebugLevel", 1));
+  if(AbstractObjectMapDebugLevel()>=2) {
+    scope reg("ml2ml", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
     for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++) {
       if(!m->from) continue;
       dbg << m->from.get()->str() << " =&gt; " << (m->to? m->to.get()->strp(latPEdge): "NULL") << endl;
@@ -358,96 +358,32 @@ Lattice* AbstractObjectMap::remapML(const std::set<MLMapping>& ml2ml, PartEdgePt
   
   // Copy of this map where the keys in ml2ml have been remapped to their corresponding values
   AbstractObjectMap* newM = new AbstractObjectMap(*this);
-  
-  // Vector of flags that indicate whether a given key in ml2ml has been added to newM or not
-  vector<bool> ml2mlAdded;
-  
-  // Initialize ml2mlAdded to all false
-  for(std::set<MLMapping>::const_iterator m=ml2ml.begin(); m!=ml2ml.end(); m++)
-    ml2mlAdded.push_back(false);
-  
-  if(AbstractObjectMapDebugLevel()>=2) dbg << "newM="<<newM->str()<<endl;
-  
-  // Iterate over all the mappings <key, val> n ml2ml and for each mapping consider each item in newM. If the key 
-  // mustEquals to some item newM, that item is replaced by val. If the key mayEquals some item in newM, val is 
-  // placed at the front of the list. If the key does not appear in newM at all, val is placed at the front of the list.
-  for(std::list<MapElement>::iterator i=newM->items.begin(); i!=newM->items.end(); ) {
-    indent ind0(attrGE("AbstractObjectMapDebugLevel", 1));
-    if(AbstractObjectMapDebugLevel()>=1) dbg << "i="<<i->first->str()<<endl;
-  
-    int mIdx=0;
-    std::set<MLMapping>::const_iterator m=ml2ml.begin();
-    for(; m!=ml2ml.end(); m++, mIdx++) {
-      if(!m->from) continue;
-      
-      indent ind1(attrGE("AbstractObjectMapDebugLevel", 1));
-      if(AbstractObjectMapDebugLevel()>=1) dbg << mIdx << ": m-&gt;key="<<m->from->strp(fromPEdge)<<endl;
-      
-      indent ind2(attrGE("AbstractObjectMapDebugLevel", 1));
-      // If the current item in newM may- or must-equals a key in ml2ml, record this and update newM
-      if(AbstractObjectMapDebugLevel()>=1) {
-        dbg << "i-&gt;first mustEqual m-&gt;from = "<<i->first->mustEqual(m->from, fromPEdge, comp, analysis)<<endl;
-        dbg << "i-&gt;first mayEqual m-&gt;from = "<<i->first->mayEqual(m->from, fromPEdge, comp, analysis)<<endl;
-      }
-      if(i->first->mustEqual(m->from, fromPEdge, comp, analysis) && m->replaceMapping) {
-        // If the value of the current ml2ml mapping is not-NULL
-        if(m->to) {
-          // Replace the current item in newM with the value of the current pair in ml2ml
-          *i = make_pair(boost::static_pointer_cast<AbstractObject>(m->to), i->second);
+  assert(newM);
 
-          // Advance onward in newM and remove any items that are must-equal to the value of the current ml2ml mapping
-          //scope reg("Deleting items that are must-equal to value", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2));
-          std::list<MapElement>::iterator iNext = i; iNext++;
-          for(std::list<MapElement>::iterator j=iNext; j!=newM->items.end(); ) {
-            if(AbstractObjectMapDebugLevel()>=2) {
-              dbg << "j="<<j->first<<" => "<<j->second<<endl;
-              dbg << mIdx << ": m-&gt;value="<<m->to->strp(fromPEdge)<<endl;
-              dbg << "j-&gt;first mustEqual m-&gt;to = "<<j->first->mustEqual(m->to, fromPEdge, comp, analysis)<<endl;
-            }
-            if(j->first->mustEqual(m->to, fromPEdge, comp, analysis)) {
-              if(AbstractObjectMapDebugLevel()>=2) dbg << "Erasing j="<<j->first->str()<<" => "<<j->second->str()<<endl;
-              j = newM->items.erase(j);
-              //break;
-            } else
-              j++;
-          }
-        // If the value of the current ml2ml mapping is NULL (i.e. the key is a MemLoc with a lifetime that is limited
-        // to a given function and it does not carry over across function boundaries)
-        } else {
-          // Erase this mapping
-          i = newM->items.erase(i);
-          break;
-        }
-        ml2mlAdded[mIdx]=true;
-      } else if(i->first->mayEqual(m->from, fromPEdge, comp, analysis)) {
-        // Insert the value in the current ml2ml mapping immediately before the current item
-        if(AbstractObjectMapDebugLevel()>=1) dbg << "Inserting before i: "<<m->to->str()<<" => "<<i->second->str()<<endl;
-        newM->items.insert(i, make_pair(boost::static_pointer_cast<AbstractObject>(m->to), i->second));
-        ml2mlAdded[mIdx]=true;
-      }
+  std::set<MLMapping>::const_iterator m=ml2ml.begin();
+  for( ; m != ml2ml.end(); ++m) {
+    if(AbstractObjectMapDebugLevel()>=2) {
+      scope reg("MLMapping", scope::medium, attrGE("AbstractObjectMapDebugLevel", 2)); 
+      dbg << "m-&gtfrom=" << (m->from? m->from->str(): "NULLMemLocObjectPtr") << endl;
+      dbg << "m-&gtto=" << (m->to? m->to->str() : "NULLMemLocObjectPtr") << endl;
     }
-    
-    // If we broke out early, we must have erased the current element in newM, meaning that we shouldn't advance
-    // i again. Otherwise, advance i.
-    if(m==ml2ml.end())
-      i++;
+
+    // temporary variable mappings in callee do not have a valid m->to in caller
+    if(m->to) {
+      LatticePtr mFromLat = get(m->from);
+      newM->insert(m->to, mFromLat);
+      if(AbstractObjectMapDebugLevel() >= 2) {
+        scope reg("newM::insert", scope::low, attrGE("AbstractObjectMapDebugLevel", 2));
+        dbg << "m-&gtto=" << (m->to? m->to->str() : "NULLMemLocObjectPtr") << endl;
+        dbg << "mFromLat=" << mFromLat->str() << endl;
+      }
+    }      
   }
-  
-  // Iterate through the false mappings in ml2mlAdded (ml2ml keys that were not mapped to any items in this map)
-  // and add to newM a mapping of their values to defaultLat (as long as the values are not NULL)
-  int mIdx=0;
-  for(std::set<MLMapping>::iterator m=ml2ml.begin(); m!=ml2ml.end(); m++, mIdx++) {
-    if(!m->from) continue;
-    
-    //dbg << "False mapping "<<m->from->str()<<endl;
-    // If either the key or the value of this mapping is dead within its respective part, skip it
-    if(!m->from->isLive(fromPEdge, comp, analysis) || !(m->to && m->to->isLive(latPEdge, comp, analysis))) continue;
-    
-    if(!ml2mlAdded[mIdx] && m->to)
-      newM->items.push_back(make_pair(m->to, defaultLat->copy()));
+
+  if(AbstractObjectMapDebugLevel() >= 2) {
+    dbg << "newM=" << newM->str() << endl;
   }
-  
-  return newM;
+  return newM;  
 }
 
 // Adds information about the MemLocObjects in newL to this Lattice, overwriting any information previously 

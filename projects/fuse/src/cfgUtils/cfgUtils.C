@@ -208,27 +208,51 @@ std::string SgNode2Str(SgNode* sgn)
 std::string CFGNode2Str(CFGNode n)
 {
   ostringstream oss;
-  if(isSgClassType(n.getNode()))
-    oss << "[" << isSgClassType(n.getNode())->unparseToString() << " | " << isSgClassType(n.getNode())->class_name() << " | decl="<<SgNode2Str(isSgClassDeclaration(isSgClassType(n.getNode())->get_declaration())->get_definition())<<"]";
-  else if(isSgNullStatement(n.getNode()))
+  if(isSgClassType(n.getNode())) {
+    string nodeStr;
+    nodeStr = isSgClassType(n.getNode())->unparseToString();
+    if(nodeStr.length() > 40) {
+      nodeStr.resize(40); 
+      nodeStr += "...";
+    }
+    oss << "[" << nodeStr
+        << " | " << isSgClassType(n.getNode())->class_name()
+        << " | decl="<<SgNode2Str(isSgClassDeclaration(isSgClassType(n.getNode())->get_declaration())->get_definition())<<"]";
+  }
+  else if(isSgNullStatement(n.getNode())) {
     oss << "[" << n.getNode()->class_name() << " | " << n.getIndex() << "]";
-  else if(isSgStringVal(n.getNode()))
+  }
+  else if(isSgStringVal(n.getNode())) {
     oss << "[" << isSgStringVal(n.getNode())->get_value()<<" | "<<n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  }
   else if(isSgFunctionParameterList(n.getNode())) {
+    string nodeStr;
     Function func = Function::getEnclosingFunction(n.getNode());
-    oss << "["<<func.get_name().getString()<<"(";
+    oss << "[";
+    nodeStr = func.get_name().getString() + "(";
     SgInitializedNamePtrList args = isSgFunctionParameterList(n.getNode())->get_args();
     for(SgInitializedNamePtrList::iterator a=args.begin(); a!=args.end(); a++) {
-      if(a!=args.begin()) oss << ", ";
-      oss << common::escape((*a)->unparseToString());
-    }       
-    oss << ") | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+      if(a!=args.begin()) nodeStr += ", ";
+      nodeStr += common::escape((*a)->unparseToString());
+    }
+    nodeStr += ")";
+    if(nodeStr.length() > 40) {
+      nodeStr.resize(40); 
+      nodeStr += "...";
+    }
+    oss << nodeStr << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else if(isSgVariableSymbol(n.getNode())) {
     oss << "[" << common::escape(isSgVariableSymbol(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else if(isSgInitializedName(n.getNode())) {
     oss << "[" << common::escape(isSgInitializedName(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
-  } else
-    oss << "[" << common::escape(n.getNode()->unparseToString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  } else {
+    string nodeStr = common::escape(n.getNode()->unparseToString());
+    if(nodeStr.length() > 40) {
+      nodeStr.resize(40); 
+      nodeStr += "...";
+    }
+    oss << "[" << nodeStr << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+  }
   return oss.str();
 }
 

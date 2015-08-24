@@ -7,7 +7,6 @@
 #include <boost/make_shared.hpp>
 #include "VirtualCFGIterator.h"
 
-
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
@@ -85,27 +84,57 @@ class FuncEntryExitFunctor
         
         // If this function has no definition and we have not yet added it to the data structures, do so now
         if(func.get_definition()==NULL && Func2Entry.find(func)==Func2Entry.end()) {
-          /*SgFunctionParameterList* params=SageBuilder::buildFunctionParameterList();
-          params->set_parent(decl);
-          Entry = CFGNode(params, 0);*/
+          SgFunctionDeclaration* firstNonDefiningDecl = isSgFunctionDeclaration(func.get_declaration()->get_firstNondefiningDeclaration());
 
-          SgBasicBlock* body = SageBuilder::buildBasicBlock();
-          SgFunctionDefinition* def = new SgFunctionDefinition(func.get_declaration(), body);
-          def->setAttribute("fuse:UnknownSideEffects", new UnknownSideEffectsAttribute());
-          body->set_parent(def);
-          def->set_parent(decl);
-          def->set_file_info(decl->get_file_info());
-          Exit = CFGNode(def, 3);
+          // Use SageBuilder to build a new empty definition for the function
+          // We build defining declaration first based on function type          
+          SgFunctionDeclaration* definingDecl;
+
+          switch(firstNonDefiningDecl->get_type()->variantT()) {
+          case V_SgMemberFunctionType:
+            definingDecl = SageBuilder::buildDefiningMemberFunctionDeclaration(firstNonDefiningDecl->get_name(),
+                                                                               firstNonDefiningDecl->get_type(),
+                                                                               firstNonDefiningDecl->get_parameterList(),
+                                                                               firstNonDefiningDecl->get_scope());
+            break;
+          case V_SgPartialFunctionType:
+          case V_SgPartialFunctionModifierType:
+            // Currently not supported
+            cout <<  "Line:" << __LINE__ << "ERROR: Unsupported function type\n";
+            assert(0);
+          case V_SgFunctionType:
+            definingDecl = SageBuilder::buildDefiningFunctionDeclaration(firstNonDefiningDecl->get_name(),
+                                                                         firstNonDefiningDecl->get_type(),
+                                                                         firstNonDefiningDecl->get_parameterList(),
+                                                                         firstNonDefiningDecl->get_scope());
+            break;
+          default: ROSE_ASSERT(0);
+          }
+
+          // Set the pointers of defining declaration to first non-defining and 
+          // that of first non-defining to defining appropriately.
+          // SageBuilders interface is sufficient enough to create a function with
+          // an empty body and a basic block
+          // No need for separately creating SgFunctionDefinition
+          definingDecl->set_firstNondefiningDeclaration(firstNonDefiningDecl);
+          definingDecl->set_file_info(firstNonDefiningDecl->get_file_info());
+          firstNonDefiningDecl->set_definingDeclaration(definingDecl);
+
+          // Re-initialize the Function with the new declaration
+          func.init(definingDecl);
+          ROSE_ASSERT(func.get_definition());
+
+          Exit = CFGNode(func.get_definition(), 3);
           if(stxAnalysisDebugLevel()>=2) {
             dbg << "Creating function "<<func.get_name().getString()<<endl;
-            dbg << "decl="<<decl<<"="<<SgNode2Str(decl)<<endl;
-            dbg << "def="<<def<<"="<<SgNode2Str(def)<<endl;
+            dbg << "decl="<<func.get_declaration()<<"="<<SgNode2Str(func.get_declaration())<<endl;
+            dbg << "def="<<func.get_definition()<<"="<<SgNode2Str(func.get_definition())<<endl;
           }
 
           if(stxAnalysisDebugLevel()>=3) {
             dbg << "func2 Function "<<func.get_name().getString()<<endl;
 
-            for(back_CFGIterator it(def->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
+            for(back_CFGIterator it(func.get_definition()->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
               dbg << "it="<<CFGNode2Str(*it)<<endl;
             }
           }
@@ -117,20 +146,22 @@ class FuncEntryExitFunctor
 
         // Since the function's definition now exists, find its entry point
         // Find the function's entry CFG node, which is the last SgFunctionParameterList node in the function body
-        { scope siter("Iteration", scope::low, attrGE("stxAnalysisDebugLevel", 2));
-        //for(back_CFGIterator it(func.get_definition()->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
-        for(CFGIterator it(func.get_definition()->cfgForBeginning()); it!=CFGIterator::end(); it++) {
-          if(stxAnalysisDebugLevel()>=2) dbg << "    it="<<CFGNode2Str(*it)<<endl;
-          // Look for the last SgFunctionParameterList node reachable from the start of the function
-          if(isSgFunctionParameterList((*it).getNode())) {
-            Entry = *it;
-            //break;
+        { 
+          scope siter("Iteration", scope::medium, attrGE("stxAnalysisDebugLevel", 3));
+          //for(back_CFGIterator it(func.get_definition()->cfgForEnd()); it!=back_CFGIterator::end(); it++) {
+          for(CFGIterator it(func.get_definition()->cfgForBeginning()); it!=CFGIterator::end(); it++) {
+            if(stxAnalysisDebugLevel()>=2) dbg << "    it="<<CFGNode2Str(*it)<<endl;
+            // Look for the last SgFunctionParameterList node reachable from the start of the function
+            if(isSgFunctionParameterList((*it).getNode())) {
+              Entry = *it;
+              //break;
+            }
           }
-        }}
+        }
         assert(Entry.getNode());
 
         /*dbg << func.get_name().getString()<<"() Entry="<<CFGNode2Str(Entry)<<"(cg="<<(Entry.getNode()->get_file_info()->isCompilerGenerated())<<"), "<<
-                                               "Exit="<<CFGNode2Str(Exit)<<"(cg="<<(Exit.getNode()->get_file_info()->isCompilerGenerated())<<")"<<endl;*/
+          "Exit="<<CFGNode2Str(Exit)<<"(cg="<<(Exit.getNode()->get_file_info()->isCompilerGenerated())<<")"<<endl;*/
         Func2Entry[func] = Entry;
         Func2Exit[func]  = Exit;
 
@@ -139,6 +170,17 @@ class FuncEntryExitFunctor
 
         Entry2Exit[Entry] = Exit;
         Exit2Entry[Exit]  = Entry;
+
+        if(stxAnalysisDebugLevel() >= 3) {
+          scope funcEntryExitMap("Func Entry/Exit Maps", scope::medium, attrGE("stxAnalysisDebugLevel", 3));
+          dbg << "Func2Entry[" << func.str() << "]=" << CFGNode2Str(Func2Entry[func]) << endl;
+          dbg << "Func2Exit["  << func.str() << "]=" << CFGNode2Str(Func2Exit[func]) << endl;
+          dbg << "Entry2Func[" << CFGNode2Str(Entry) << "]=" << Entry2Func[Entry].str() << endl;
+          dbg << "Exit2Func[" << CFGNode2Str(Exit) << "]=" << Exit2Func[Exit].str() << endl;
+          dbg << "Entry2Exit[" << CFGNode2Str(Entry) << "]=" << CFGNode2Str(Entry2Exit[Entry]) << endl;
+          dbg << "Exit2Entry[" << CFGNode2Str(Exit) << "]=" << CFGNode2Str(Exit2Entry[Exit]) << endl;
+        }
+
       }
     }
     return NULL;
@@ -253,6 +295,12 @@ class func2AllCallsFunctor
   
   void* operator()(SgNode* n) {
     if(SgFunctionCallExp* call=isSgFunctionCallExp(n)) {
+      // If the flag is set ignore the call sites inside MPI header files     
+#ifdef FUSE_SKIP_MPI_HEADERS
+    string mpifilename = call->get_file_info()->get_filename();
+    if(mpifilename.find("mpi.h") != string::npos ||
+       mpifilename.find("mpicxx.h") != string::npos) return NULL;
+#endif
       set<Function> callees = getAllCalleeFuncs(call);
       for(set<Function>::iterator c=callees.begin(); c!=callees.end(); c++)
         func2AllCalls[*c].insert(call);
@@ -383,9 +431,31 @@ std::set<PartPtr> SyntacticAnalysis::GetStartAStates_Spec()
 { 
   // Return the entry points into all the global VariableDeclarations
   set<PartPtr> startStates;
-  for(set<SgVariableDeclaration*>::iterator d=SyntacticAnalysis::globalDeclarations.begin(); d!=SyntacticAnalysis::globalDeclarations.end(); d++)
+
+  // If the flag is set skip global declarations from libraries (/usr/include)
+#ifdef FUSE_SKIP_LIB_GLOBAL_DECLS
+    StringUtility::FileNameClassification classification;
+    string appPath = StringUtility::stripPathFromFileName(SageInterface::getProject()->getAbsolutePathFileNames()[0]);
+#endif
+
+  for(set<SgVariableDeclaration*>::iterator d=SyntacticAnalysis::globalDeclarations.begin(); d!=SyntacticAnalysis::globalDeclarations.end(); d++) {
+    // If the flag is set skip global declarations from libraries (/usr/include)
+#ifdef FUSE_SKIP_LIB_GLOBAL_DECLS
+    string lfilename = (*d)->get_file_info()->get_filename();
+    classification = StringUtility::classifyFileName(lfilename, appPath);
+    if(classification.isLibraryCode()) continue;
+#endif
+
+    // If the flag is set omit declarations from MPI header files
+#ifdef FUSE_SKIP_MPI_HEADERS
+    string mpifilename = (*d)->get_file_info()->get_filename();
+    if(mpifilename.find("mpi.h") != string::npos ||
+       mpifilename.find("mpicxx.h") != string::npos) continue;
+#endif
+
     startStates.insert(makePtr<StxPart>((*d)->cfgForBeginning(), this, filter));
-  
+  }
+
   // If there are no global VariableDeclarations, the analysis entry points are the entries
   // into the non-static functions
   if(startStates.size()==0)
@@ -406,9 +476,21 @@ bool isExternallyCallable(const Function& func) {
 template <class ArgPartPtr>
 void SyntacticAnalysis::addFunctionEntries(set<ArgPartPtr>& states, SyntacticAnalysis* analysis) {
   initFuncEntryExit();
+
+  // If the flag is set add only main's Entry to the states and skip all other non-static functions
+#ifdef FUSE_START_FROM_MAIN
+    SgFunctionDeclaration* mainDecl = SageInterface::findMain(SageInterface::getProject());
+    if(!mainDecl) cout << "ERROR: FUSE_START_FROM_MAIN is set and main() not found!" << endl;
+    assert(mainDecl);
+    Function mainFn(mainDecl);
+    states.insert(makePtr<StxPart>(Func2Entry[mainFn], analysis, analysis->filter));
+    return;
+#endif
+
   for(map<Function, CFGNode>::iterator f=Func2Entry.begin(); f!=Func2Entry.end(); f++) {
 /*      dbg << f->first.get_name().getString()<<"() declaration="<<f->first.get_declaration()<<"="<<CFGNode2Str(f->first.get_declaration())<<", static="<<SageInterface::isStatic(f->first.get_declaration())<<", compgen="<<f->first.get_declaration()->get_file_info()->isCompilerGenerated()<<endl;
       dbg << f->first.get_name().getString()<<"() definition="<<f->first.get_definition()<<"="<<CFGNode2Str(f->first.get_definition())<<", compgen="<<f->first.get_definition()->get_file_info()->isCompilerGenerated()<<", unknown="<<f->first.get_definition()->getAttribute("fuse:UnknownSideEffects")<<endl;*/
+
     if(isExternallyCallable(f->first))
       states.insert(makePtr<StxPart>(f->second, analysis, analysis->filter));
   }
@@ -447,6 +529,17 @@ set<PartPtr> SyntacticAnalysis::GetEndAStates_Spec()
   
   initFuncEntryExit();
   scope s("EndAStates", attrGE("stxAnalysisDebugLevel", 3));
+
+// If the flag is set add only main's Exit to the states and skip all other non-static functions
+#ifdef FUSE_START_FROM_MAIN
+    SgFunctionDeclaration* mainDecl = SageInterface::findMain(SageInterface::getProject());
+    if(!mainDecl) cout << "ERROR: FUSE_START_FROM_MAIN is set and main() not found!" << endl;
+    assert(mainDecl);
+    Function mainFn(mainDecl);
+    endStates.insert(makePtr<StxPart>(Func2Exit[mainFn], this, filter));
+    return endStates;
+#endif
+
   for(map<Function, CFGNode>::iterator f=Func2Exit.begin(); f!=Func2Exit.end(); f++) {
     /*if(!SageInterface::isStatic(f->first.get_declaration()) &&
        !f->first.get_declaration()->get_file_info()->isCompilerGenerated()) {*/
@@ -1767,6 +1860,7 @@ bool matchAnchorPart(SgScopeStatement* scope, const CFGNode& n) {
 
 // Returns true if this object is live at the given part and false otherwise
 bool StxNamedMemRegionType::isLiveMR(PartEdgePtr pedge) {
+  return true;
   if(iname) {
     // This variable is in-scope if part.getNode() is inside the scope that contains its declaration
     SgScopeStatement* scope=NULL;

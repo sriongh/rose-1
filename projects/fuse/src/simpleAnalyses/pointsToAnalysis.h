@@ -1,12 +1,12 @@
 #ifndef _POINTSTOANALYSIS_H
 #define _POINTSTOANALYSIS_H
 
-/*
- * Simple  PointsTo Analysis
- * AbstractObjectMap (ProductLattice) stores an AbstractObjectSet for each MemLocObjectPtr
- * author: sriram@cs.utah.edu
- */
+/*********************************
+ * Sriram Aananthakrishnan, 2013 *
+ *********************************/
 
+/* A simple pointer analysis computing PointsTo relation
+ */
 #include "compose.h"
 #include "abstract_object_map.h"
 #include "abstract_object_set.h"
@@ -19,41 +19,62 @@ namespace fuse
    * PointsToAnalysisTransfer *
    ****************************/
 
+  typedef std::pair<MemLocObjectPtr, boost::shared_ptr<AbstractObjectSet> > PointsToRelation;
+
   //! Transfer functions for the PointsTo analysis
   class PointsToAnalysisTransfer : public DFTransferVisitor
   {
-    typedef boost::shared_ptr<AbstractObjectSet> AbstractObjectSetPtr;
-
     Composer* composer;
     PointsToAnalysis* analysis;
-    // pointer to node state of the analysis at this part
-    AbstractObjectMap* productLattice;
+    AbstractObjectMap* latticeMapIn;
     // used by the analysis to determine if the states modified or not
     bool modified;
+    friend class PointerExprTransfer;
   public:
     PointsToAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state,
                              std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
                              Composer* composer, PointsToAnalysis* analysis);                             
 
-    // Set the pointer of AbstractObjectMap at this PartEdge
-    void initLattice();
 
-    bool finish();
+    //! Visitor pattern to process sub-expressions of expressions involving pointer assignment.
+    //! Determine the set of memory locations denoted by the sub-expression.
+    class PointerExprTransfer : public ROSE_VisitorPatternDefaultBase {      
+      boost::shared_ptr<AbstractObjectSet> latElem;  //!< set to insert the MemLocObjectPtr denoted by the sub-expression
+      SgExpression* anchor;                          //!< anchor expression that the sub-expression is part of
+      PartEdgePtr pedge;
+      AbstractObjectMap* latticeMap;
+      PointsToAnalysisTransfer& pointsToAnalysisTransfer;
+      bool modified;
+    public:
+      PointerExprTransfer(boost::shared_ptr<AbstractObjectSet> latElem,
+                          SgExpression* anchor,
+                          PartEdgePtr pedge,
+                          AbstractObjectMap* latticeMap,
+                          PointsToAnalysisTransfer& pointsToAnalysisTransfer);
+      void visit(SgAddressOfOp*);
+      void visit(SgVarRefExp*);
+      void visit(SgDotExp*);
+      void visit(SgPointerDerefExp*);
 
-    // Lattice access functions from the map (product lattice)
-    AbstractObjectSetPtr getLattice(SgExpression* sgexp);
-    AbstractObjectSetPtr getLatticeOperand(SgNode* sgn, SgExpression* operand);
-    AbstractObjectSetPtr getLatticeCommon(MemLocObjectPtr ml);
-    // Lattice* getLattice(const AbstractObjectPtr o);
-
-    bool setLattice(SgExpression* sgexp, AbstractObjectSetPtr lat);
-    bool setLatticeOperand(SgNode* sgn, SgExpression* operand, AbstractObjectSetPtr lat);
-    bool setLatticeCommon(MemLocObjectPtr ml, AbstractObjectSetPtr lat);
-    // void setLattice(const AbstractObjectPtr o, Lattice* aos);
+      bool isLatElemModified() const;
+      MemLocObjectPtr getExpr2MemLoc(SgExpression* sgn, PartEdgePtr pedge);
+    };
 
     // Transfer functions
     void visit(SgAssignOp* sgn);
     void visit(SgPointerDerefExp* sgn);
+    void visit(SgFunctionCallExp* sgn);
+
+    // AbstractObjectMap access methods
+    bool updateLatticeMap(AbstractObjectMap* latticeMap, PointsToRelation& prel);
+
+    // Helper methods
+    PointsToRelation make_pointsto(MemLocObjectPtr key, boost::shared_ptr<AbstractObjectSet> latticeElem);
+    MemLocObjectPtr getLatticeMapKeyML(SgExpression* anchor, SgExpression* operand, PartEdgePtr pedge);
+    typedef std::pair<SgExpression*, SgInitializedName*> ArgParamMapping;
+    typedef std::list<ArgParamMapping> ArgParamMappingList;
+    void getArgParamMapping(SgFunctionCallExp* sgnCallExp, SgFunctionParameterList* sgnFuncEntry, ArgParamMappingList& argParamMappingList);
+    bool finish();
   };
 
   /********************
