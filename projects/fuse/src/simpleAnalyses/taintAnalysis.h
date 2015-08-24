@@ -110,7 +110,7 @@ public:
     /** String representation of the lattice vertex to which this object points.  The return value is the name of the vertex to
      *  which this object points, sans "VERTEX_" prefix, and converted to lower case.  The @p prefix is prepended to the
      *  returned string. */
-    virtual std::string str(/*const*/ std::string /*&*/prefix) /*const*/ ROSE_OVERRIDE {
+  virtual std::string str(/*const*/ std::string /*&*/prefix) /*const*/ /*override*/ const {
         return prefix + to_string();
     }
 

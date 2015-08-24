@@ -179,6 +179,7 @@ AC_SUBST(GCC_MINOR_VERSION)
   ROSE_SUPPORT_ISL
   ROSE_SUPPORT_MPI
   ROSE_SUPPORT_LIBREADLINE
+  ROSE_SUPPORT_SIGHT
 
 ##
 #########################################################################################

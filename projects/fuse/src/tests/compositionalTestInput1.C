@@ -1,4 +1,4 @@
-#pragma fuse lc(ccs, ld, oa, cp, oa, cp, oa, cp, oa, cp)
+#pragma fuse lc(ccs, cp)
 void CompDebugAssert(bool);
 int global;
 

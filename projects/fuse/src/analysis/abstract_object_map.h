@@ -11,11 +11,8 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/operators.hpp>
 #include <filteredCFG.h>
-#include "staticSingleAssignment.h"
 #include <boost/unordered_map.hpp>
-#include "dataflowCfgFilter.h"
 #include "CallGraph.h"
-#include "uniqueNameTraversal.h"
 #include "abstract_object.h"
 #include "latticeFull.h"
 #include "data_structures.h"
@@ -24,7 +21,7 @@
 #include <iostream>
 
 namespace fuse {
-  extern int AbstractObjectMapDebugLevel;
+  //extern int AbstractObjectMapDebugLevel;
   
   using namespace boost;
   using namespace std;
@@ -93,14 +90,14 @@ namespace fuse {
     bool setMLValueToFull(MemLocObjectPtr ml);
 
     // Returns whether this lattice denotes the set of all possible execution prefixes.
-    bool isFull();
+    bool isFullLat();
     // Returns whether this lattice denotes the empty set.
-    bool isEmpty();
-    
-    std::string str(std::string indent="");
+    bool isEmptyLat();
+
+    std::string str(std::string indent="") const;
     // Variant of the str method that can produce information specific to the current Part.
     // Useful since AbstractObjects can change from one Part to another.
-    std::string strp(PartEdgePtr pedge, std::string indent="");
+    std::string strp(PartEdgePtr pedge, std::string indent="") const;
     
     // -----------------
     // Lattice methods

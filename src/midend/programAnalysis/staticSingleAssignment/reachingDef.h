@@ -25,7 +25,10 @@ public:
 
         /** Definition for the parent or child of this variable. (E.g. if x.b is the variable
          * in question, this def could be for x or x.b.a). */
-        EXPANDED_DEF
+        EXPANDED_DEF,
+
+	/** Def PHI function that is corresponding to heap write operation */
+	DEF_PHI
     };
 
     typedef boost::shared_ptr<ReachingDef> ReachingDefPtr;

@@ -2,15 +2,13 @@
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
-#include "widgets.h"
-using namespace dbglog;
 
 namespace fuse {
 // Wrapper for boost:shared_ptr<Type> that can be used as keys in maps because it wraps comparison 
 // operations by forwarding them to the Type's own comparison operations. In contrast, the base 
 // boost::shared_ptr uses pointer equality.
 template <class Type>
-class CompSharedPtr : public dbglog::printable
+class CompSharedPtr : public sight::printable
 {
   //public:
   boost::shared_ptr<Type> ptr;
@@ -60,7 +58,7 @@ class CompSharedPtr : public dbglog::printable
   
   //PartPtr operator * () { return ptr; }
   
-  std::string str(std::string indent="") { return ptr->str(indent); }
+  std::string str(std::string indent="") const { return ptr->str(indent); }
 };
 
 // Returns a new instance of a CompSharedPtr that refers to an instance of CompSharedPtr<Type>
@@ -175,4 +173,3 @@ CompSharedPtr<Type> initPtr(Type* p)
 }
 
 }; // namespace fuse
-

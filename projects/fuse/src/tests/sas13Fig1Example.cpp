@@ -1,4 +1,4 @@
-#pragma fuse lc(ccs, cp, dp, pt, cp)
+#pragma fuse lc(ccs, cp, dp, cp, pt, cp)
 
 void CompDebugAssert(bool);
 

@@ -11,9 +11,7 @@ class Analysis;
 
 #include "lattice.h"
 #include "nodeState.h"
-//#include "variables.h"
 #include "partitions.h"
-//#include "varSets.h"
 #include <vector>
 #include <set>
 #include <map>
@@ -22,7 +20,8 @@ class Analysis;
 
 namespace fuse {
 
-extern int analysisDebugLevel;
+// Initializes Fuse
+void FuseInit(int argc, char **argv);
 
 // Returns a boost shared pointers to variables that should be
 // deallocated when the shared_ptr's reference count drops. Useful
@@ -92,6 +91,9 @@ class DFTransferVisitor : public ROSE_VisitorPatternDefaultBase
                          std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo)
     : part(p), cn(cn), nodeState(s), dfInfo(dfInfo)
   { }
+  
+  PartPtr getPart() const { return part; }
+  CFGNode getCFGNode() const { return cn; }
 
   virtual bool finish() = 0;
   virtual ~DFTransferVisitor() { }
