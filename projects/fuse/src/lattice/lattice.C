@@ -1,12 +1,17 @@
 #include "sage3basic.h"
-#include "latticeFull.h"
-
 #include <sstream>
 #include <iostream>
 #include <fstream>
 #include <map>
+
 using namespace std;
-using namespace dbglog;
+
+#include "latticeFull.h"
+
+#ifndef DISABLE_SIGHT
+#include "sight.h"
+using namespace sight;
+#endif
 
 namespace fuse {
   
@@ -14,6 +19,9 @@ namespace fuse {
  ********** Lattice **********
  *****************************/
   
+Lattice::~Lattice()
+{  }
+
 // Sets the PartEdge that this Lattice's information corresponds to. 
 // Returns true if this causes the edge to change and false otherwise
 bool Lattice::setPartEdge(PartEdgePtr latPEdge) { 
@@ -23,15 +31,82 @@ bool Lattice::setPartEdge(PartEdgePtr latPEdge) {
 }
 
 // Returns the PartEdge that this Lattice's information corresponds to
-PartEdgePtr Lattice::getPartEdge()
+PartEdgePtr Lattice::getPartEdge() const
 { 
 //  Dbg:: << "Lattice::getPartEdge() this->latPEdge="<<this->latPEdge<<endl;
 //  Dbg:: << "Lattice::getPartEdge() this->latPEdge="<<this->latPEdge->str()<<endl;
   return this->latPEdge; }
-  
+
+// It is often useful to create an Abstraction object that denotes the union or intersection
+// of multiple other objects. There are multiple ways to do this:
+// - We can create a copy of one of the objects to be unioned and call its meetUpdate() and
+//   intersectUpdate() methods to union/intersect the others in. This is supported for all
+//   Abstractions.
+// - We can create an object that maps some keys to Abstractions and implements all relevant operations
+//   by forwarding them to the Abstractions within it and returning the most (intersection) or least (union)
+//   conservative answer. This only works for AbstractObjects via the MappedAbstractObject class.
+//   It is made more challenging by the fact that the keys may be any type, which hidden from the users
+//   of these objects.
+// The functions below allow either of the above methods to be used to create unions and intersections.
+// They take as argument a MAOMap, which maps some unknown keys to Abstractions. This is a good choice
+// because it allows users to iterate over the mapped abstractions without knowing anything about the
+// type of the keys, and because they can return MappedAbstractObjects that contain the Abstractions
+// that are mapped inside of them MAOMap::getMappedObj().
+AbstractionPtr Lattice::genUnion(boost::shared_ptr<MAOMap> maoMap) {
+  // Use meetUpdate on all the values in maoMap to create a single union lattice
+  class AOMKindOp: public MAOMap::applyMapFunc {
+    Lattice* parent;
+    public:
+    LatticePtr accumLat;
+    AOMKindOp(Lattice* parent): parent(parent) {}
+    void operator()(boost::shared_ptr<void> curVal) {
+      LatticePtr curLat = boost::static_pointer_cast<Lattice>(curVal);
+      assert(curLat);
+      // If this is the first Lattice in maoMap, copy it to accumLat
+      if(!accumLat) accumLat = curLat->copySharedPtr();
+      else accumLat->meetUpdate(curLat);
+    }
+  };
+  AOMKindOp x(this);
+  maoMap->apply(x);
+  assert(x.accumLat);
+  return x.accumLat;
+}
+
+AbstractionPtr Lattice::genIntersection(boost::shared_ptr<MAOMap> maoMap) {
+  //scope s("Lattice::genIntersection");
+  // Use intersectUpdate on all the values in maoMap to create a single intersect lattice
+  class AOMKindOp: public MAOMap::applyMapFunc {
+    Lattice* parent;
+    public:
+    LatticePtr accumLat;
+    AOMKindOp(Lattice* parent): parent(parent) {}
+    void operator()(boost::shared_ptr<void> curVal) {
+      LatticePtr curLat = boost::static_pointer_cast<Lattice>(curVal);
+      //dbg << "curLat="<<curLat->str()<<endl;
+      assert(curLat);
+
+      // If this is the first Lattice in maoMap, copy it to accumLat
+      if(!accumLat) accumLat = curLat->copySharedPtr();
+      else {
+        accumLat->intersectUpdate(curLat);
+        //dbg << "accumLat="<<accumLat->str()<<endl;
+      }
+    }
+  };
+  AOMKindOp x(this);
+  maoMap->apply(x);
+  assert(x.accumLat);
+  return x.accumLat;
+}
+
 /********************************************
  ************** BoolAndLattice **************
  ********************************************/
+
+BoolAndLattice::~BoolAndLattice()
+{}
+
 
 // returns a copy of this lattice
 Lattice* BoolAndLattice::copy() const
@@ -50,6 +125,21 @@ void BoolAndLattice::copy(Lattice* that)
 bool BoolAndLattice::meetUpdate(Lattice* that)
 {
   int newState = (state > dynamic_cast<BoolAndLattice*>(that)->state ? state : dynamic_cast<BoolAndLattice*>(that)->state);
+  bool ret = newState != state;
+  state = newState;
+  return ret;
+}
+
+// computes the intersection of this and that and saves the result in this
+// returns true if this causes this to change and false otherwise
+bool BoolAndLattice::intersectUpdate(Lattice* that)
+{
+  int newState = state;
+  // Intersection of Full and anything is anything
+  if(state==1) newState = dynamic_cast<BoolAndLattice*>(that)->state;
+  // The intersection of two different states is the empty state
+  else if(state != dynamic_cast<BoolAndLattice*>(that)->state) newState = -1;
+
   bool ret = newState != state;
   state = newState;
   return ret;
@@ -146,7 +236,7 @@ bool BoolAndLattice::isFull()
 bool BoolAndLattice::isEmpty()
 { return state==-1; }
 
-string BoolAndLattice::str(string indent)
+string BoolAndLattice::str(string indent) const
 {
   ostringstream outs;
   if(state==-1)
@@ -183,6 +273,20 @@ bool IntMaxLattice::meetUpdate(Lattice* that)
   return ret;
 }
 
+// computes the intersection of this and that and saves the result in this
+// returns true if this causes this to change and false otherwise
+bool IntMaxLattice::intersectUpdate(Lattice* that)
+{
+  int newState = state;
+  // Intersection of Full and anything is anything
+  if(state==infinity) newState = dynamic_cast<IntMaxLattice*>(that)->state;
+  // The intersection of two different states is the empty state
+  else if(state != dynamic_cast<IntMaxLattice*>(that)->state) newState = -infinity;
+
+  bool ret = newState != state;
+  state = newState;
+  return ret;
+}
 /*// computes the meet of this and that and returns the result
 Lattice* IntMaxLattice::meet(Lattice* that)
 {
@@ -292,8 +396,8 @@ bool IntMaxLattice::setToFull()
 // Return true if this causes the object to change and false otherwise.
 bool IntMaxLattice::setToEmpty()
 {
-  bool modified = (state!=-1);
-  state = -1;
+  bool modified = (state!=-infinity);
+  state = -infinity;
   return modified;
 }
 
@@ -312,16 +416,16 @@ bool IntMaxLattice::isFull()
 
 // Returns whether this lattice denotes the empty set.
 bool IntMaxLattice::isEmpty()
-{ return state==-1; }
+{ return state==-infinity; }
 
-string IntMaxLattice::str(string indent)
+string IntMaxLattice::str(string indent) const
 {
   ostringstream outsNum;
   outsNum << state;
   string stateStr = outsNum.str();
   
   ostringstream outs;
-  outs << indent << (state==infinity? "infinity" : stateStr);
+  outs << indent << (state==infinity? "infinity" : (state==-infinity? "-infinity" : stateStr));
   return outs.str();
 }
 
@@ -443,7 +547,7 @@ bool ProductLattice::replaceML(Lattice* newL)
   return modified;
 }
 
-// computes the meet of this and that and saves the result in this
+// Computes the meet of this and that and saves the result in this
 // returns true if this causes this to change and false otherwise
 bool ProductLattice::meetUpdate(Lattice* that_arg)
 {
@@ -459,6 +563,26 @@ bool ProductLattice::meetUpdate(Lattice* that_arg)
       it!=lattices.end() && itThat!=that->lattices.end(); 
       it++, itThat++)
     modified = (*it)->meetUpdate(*itThat) || modified;
+  
+  return modified;
+}
+
+// Computes the intersection of this and that and saves the result in this
+// returns true if this causes this to change and false otherwise
+bool ProductLattice::intersectUpdate(Lattice* that_arg)
+{
+  ProductLattice* that = dynamic_cast<ProductLattice*>(that_arg);
+  
+  bool modified=false;
+  int newLevel = max(level, that->level);
+  modified = (newLevel != level) || modified;
+  level = newLevel;
+  
+  vector<Lattice*>::iterator it, itThat;
+  for(it = lattices.begin(), itThat = that->lattices.begin(); 
+      it!=lattices.end() && itThat!=that->lattices.end(); 
+      it++, itThat++)
+    modified = (*it)->intersectUpdate(*itThat) || modified;
   
   return modified;
 }
@@ -539,7 +663,7 @@ bool ProductLattice::isEmpty()
 // The string that represents this object
 // If indent!="", every line of this string must be prefixed by indent
 // The last character of the returned string should not be '\n', even if it is a multi-line string.
-string ProductLattice::str(string indent)
+string ProductLattice::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[ProductLattice: level="<<(level==uninitialized ? "uninitialized" : "initialized")<<"\n";

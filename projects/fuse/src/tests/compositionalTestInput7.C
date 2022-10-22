@@ -5,12 +5,12 @@
 #pragma fuse lc(ccs, ccs, cp)
 void CompDebugAssert(bool);
 
-int square(int arg)
+static int square(int arg)
 {
   return arg*arg;
 }
 
-int foo(int argFoo) {
+static void foo(int argFoo) {
   CompDebugAssert(square(1)==1);
   CompDebugAssert(square(2)==4);
   CompDebugAssert(square(3)==9);

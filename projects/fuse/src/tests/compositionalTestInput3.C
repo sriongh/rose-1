@@ -1,8 +1,8 @@
-#pragma fuse lc(ccs, ccs, ld, cp, dp, cp, dp, cp, oa, cp, dp, oa, cp)
+#pragma fuse lc(ccs, ld, cp, dp, cp, dp, cp, dp, cp)
 
-void CompDebugAssert(bool);
+static void CompDebugAssert(bool);
 
-int min(int a, int b)
+static int min(int a, int b)
 {
   if(a > b) {
     return b;
@@ -11,7 +11,7 @@ int min(int a, int b)
   }
 }
 
-int max(int a, int b)
+static int max(int a, int b)
 {
   if(a < b) {
     return b;
@@ -37,7 +37,7 @@ int main()
   CompDebugAssert(y==20);
   CompDebugAssert(z==20);
   array[z] = min(w,z);
-        
+  
   // ConstProp: w=15, x=10, y=20, z=20, array[20]==15
   CompDebugAssert(w==15);
   CompDebugAssert(x==10);
@@ -58,7 +58,7 @@ int main()
     CompDebugAssert(x==10);
     CompDebugAssert(y==20);
     CompDebugAssert(z==20);
-    //CompDebugAssert(array[y]!=15);
+    CompDebugAssert(array[y]!=15);
     array[z]=456;
   }
   // ConstProp: w=15, x=10, y=20, z=15, array[20]==15, array[15]=123

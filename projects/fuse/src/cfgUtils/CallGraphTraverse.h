@@ -28,6 +28,8 @@ class Function
 
   Function(SgFunctionCallExp* funcCall);
   
+  Function(SgFunctionParameterList* params);
+
   public:
   void init(SgFunctionDeclaration* sample);
 
@@ -36,8 +38,8 @@ class Function
 
   Function(const Function *that);
 
-  // Returns whether this Function object has been initialized
-  bool isInitialized() const;
+  // Returns whether the Function that this object refers to is statically known 
+  bool isKnown() const;
   
   // returns a unique SgFunctionDeclaration* that is the canonical AST node that represents the given function
   static SgFunctionDeclaration* getCanonicalDecl(SgFunctionDeclaration* decl);
@@ -63,6 +65,9 @@ class Function
   // returns one of this function's declarations. it is guaranteed to be the same each time get_declaration 
   // is called and to be the canonical declaration
   SgFunctionDeclaration* get_declaration() const;
+  
+  // Returns one of function's defining declaration
+  SgFunctionDeclaration* get_definingDeclaration() const;
 
   // returns the file_info of the definition or one of the declarations if there is no definition
   Sg_File_Info* get_file_info() const;
@@ -73,8 +78,20 @@ class Function
   // Returns the parameters of this function if it is known and NULL if it is not
   SgFunctionParameterList* get_params() const;
   
+  // Returns the function's type if it is known and NULL if it is not
+  SgFunctionType* get_type() const;
+  
   // Returns the Function object that refers to the function that contains the given SgNode
   static Function getEnclosingFunction(SgNode* n, bool includingSelf=true);
+  
+  // Add to funcs all the Functions that virtually override decl
+  static void addVirtualOverrides(SgFunctionDeclaration* decl, std::set<Function> funcs);
+
+  // Return whether the given SgFunctionType is virtual
+  static bool isVirtual(SgFunctionType* type);
+
+  // Returns the set of functions that the given SgFunctionCallExp may refer to
+  static std::set<Function> getCallees(SgFunctionCallExp* call);
 
   std::string str(std::string indent="") const;
 };

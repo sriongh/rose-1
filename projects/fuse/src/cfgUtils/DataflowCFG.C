@@ -3,7 +3,10 @@
 #include "cfgUtils.h"
 #include <cassert>
 using namespace std;
-using namespace dbglog;
+#ifndef DISABLE_SIGHT
+#include "sight.h"
+using namespace sight;
+#endif
 
 #define SgNULL_FILE Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 
@@ -12,6 +15,7 @@ namespace fuse
   // the default interesting filter
   bool defaultFilter (CFGNode cfgn)
   {
+//    scope s(txt()<<"defaultFilter("<<CFGNode2Str(cfgn)<<")");
     SgNode * node = cfgn.getNode();
     assert (node != NULL) ;
     //Keep the last index for initialized names. This way the definition of the variable doesn't
@@ -26,37 +30,51 @@ namespace fuse
       //Keep the last index for initialized names. This way the definition of the variable doesn't
       //propagate to its assign initializer.
       case V_SgInitializedName:
+//        dbg << "(cfgn == node->cfgForEnd()) = "<<((cfgn == node->cfgForEnd()))<<endl;
           return (cfgn == node->cfgForEnd());
 
       // filter out this node type
       // abstract memory object cannot be created for these nodes
       case V_SgExprListExp:
-      case V_SgNullStatement:
+//      case V_SgNullStatement:
       case V_SgExprStatement:
       case V_SgFunctionRefExp:
+//        dbg << "false"<<endl;
           return false;
 
       case V_SgFunctionCallExp:
+//        dbg << "cfgn.getIndex()="<<cfgn.getIndex()<<endl;
           return cfgn.getIndex()==2 || cfgn.getIndex()==3;
 
       case V_SgFunctionParameterList:
-          return true;
+//        dbg << "false"<<endl;
+          //return true;
+          return cfgn.getIndex()==isSgFunctionParameterList(node)->get_args().size();
           //return cfgn.getIndex()==1;*/
           
       case V_SgFunctionDefinition:
+//        dbg << "cfgn.getIndex()="<<cfgn.getIndex()<<endl;
           return cfgn.getIndex()==3;
       
       case V_SgReturnStmt:
+//        dbg << "cfgn.getIndex()="<<cfgn.getIndex()<<endl;
           return cfgn.getIndex()==1;
           
       // Filter out intermediate dot expressions. We only care about the complete ones.
-      case V_SgDotExp:
+/*      case V_SgDotExp:
+        //dbg << "isSgDotExp(node->get_parent())="<<isSgDotExp(node->get_parent())<<endl;
         //cout << "defaultFilter() node="<<cfgUtils::SgNode2Str(node)<<" node->get_parent()="<<cfgUtils::SgNode2Str(node->get_parent())<<" interesting="<<(!isSgDotExp(node->get_parent()))<<endl;
-        return !isSgDotExp(node->get_parent());
+        return !isSgDotExp(node->get_parent());*/
       /*case V_SgCastExp:
           return false;*/
       
+      // Do not filter out SgVariableDeclarations. We need index=0 (beginning) and index=1 (end)
+      // to mark the portion of the CFG devoted to SgVariableDeclarations of globals
+      case V_SgVariableDeclaration:
+        return true;
+        
       default:
+//        dbg << "cfgn.isInteresting()="<<cfgn.isInteresting()<<endl;
           return cfgn.isInteresting();
     }
   }

@@ -4,7 +4,7 @@
 #include "printAnalysisStates.h"
 #include "compose.h"
 
-using namespace dbglog;
+
 namespace fuse {
 
 printAnalysisStates::printAnalysisStates(ComposedAnalysis* creator, vector<int>& factNames, vector<int>& latticeNames, ab latSide) : 

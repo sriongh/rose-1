@@ -4,11 +4,26 @@
 #include "sage3basic.h"
 #include "CallGraphTraverse.h"
 #include "cfgUtils.h"
+#include "sageInterface.h"
+#include "midend/programAnalysis/CallGraphAnalysis/CallGraph.h"
+using namespace SageInterface;
 
 #include <set>
 using namespace std;
-using namespace dbglog;
+
 namespace fuse {
+// Points to the object that stores the entire class hierarchy of all types
+ClassHierarchyWrapper* classHierarchy=NULL;
+
+// Initializes and returns the ClassHierarchyGraph
+static ClassHierarchyWrapper* CHG() {
+  if(classHierarchy==NULL) {
+    classHierarchy = new ClassHierarchyWrapper(getProject());
+    ROSE_ASSERT(classHierarchy);
+  }
+  return classHierarchy;
+}
+
   
 /****************************
  ********* Function *********
@@ -69,17 +84,38 @@ Function::Function(SgFunctionDefinition* sample)
 
 Function::Function(SgFunctionCallExp* funcCall)
 {
+  //dbg << "Function::Function("<<SgNode2Str(funcCall)<<")"<<endl;
   //assert(isSgFunctionRefExp(funcCall->get_function()));
   // If the call's referent is known, initialize based on its declaration
-  if(isSgFunctionRefExp(funcCall->get_function()))
+  if(isSgFunctionRefExp(funcCall->get_function())) {
+    assert(isSgFunctionRefExp(funcCall->get_function())->get_symbol());
+    assert(isSgFunctionRefExp(funcCall->get_function())->get_symbol()->get_declaration());
     init(isSgFunctionRefExp(funcCall->get_function())->get_symbol()->get_declaration());
+  } else if(isSgDotExp(funcCall->get_function())) {
+    SgExpression *rhs = isSgDotExp(funcCall->get_function())->get_rhs_operand();
+    while(isSgDotExp(rhs)) rhs = isSgDotExp(rhs)->get_rhs_operand();
+    if(isSgMemberFunctionRefExp(rhs)) {
+      assert(isSgMemberFunctionRefExp(rhs)->get_symbol());
+      assert(isSgMemberFunctionRefExp(rhs)->get_symbol()->get_declaration());
+      init(isSgMemberFunctionRefExp(rhs)->get_symbol()->get_declaration());
+    } else
+      init(NULL);
+  }
   // Otherwise, set the function to NULL
   else
     init(NULL);
 }
 
+Function::Function(SgFunctionParameterList* params) {
+  init(SageInterface::getEnclosingFunctionDeclaration(params));
+}
+
 class NoSymbolExistsAttribute : public AstAttribute {
   public:
+virtual AstAttribute::OwnershipPolicy getOwnershipPolicy() const override {
+  return CONTAINER_OWNERSHIP;
+}
+
   string toString() { return "NoSymbolExistsAttribute"; }
 };
 
@@ -163,8 +199,8 @@ Function::Function(const Function *that)
   decl = that->decl;
 }
 
-// Returns whether this Function object has been initialized
-bool Function::isInitialized() const {
+// Returns whether the Function that this object refers to is statically known 
+bool Function::isKnown() const {
   return decl!=NULL;
 }
 
@@ -286,6 +322,13 @@ SgFunctionDeclaration* Function::get_declaration() const
   return decl;
 }
 
+// Returns one of function's defining declaration
+SgFunctionDeclaration* Function::get_definingDeclaration() const
+{
+  //return *(decls.begin());
+  return isSgFunctionDeclaration(decl->get_definingDeclaration());
+}
+
 // returns the file_info of the definition or one of the declarations if there is no definition
 Sg_File_Info* Function::get_file_info() const
 {
@@ -319,6 +362,15 @@ SgFunctionParameterList* Function::get_params() const
     return NULL;
 }
 
+// Returns the function's type if it is known and NULL if it is not
+SgFunctionType* Function::get_type() const
+{
+  if(decl)
+    return get_declaration()->get_type();
+  else
+    return NULL;
+}
+
 // Returns the Function object that refers to the function that contains the given SgNode
 Function Function::getEnclosingFunction(SgNode* n, bool includingSelf)
 {
@@ -344,6 +396,16 @@ string Function::str(string indent) const
   }
   oss << ")";
   return oss.str();
+}
+
+// Returns the set of functions that the given SgFunctionCallExp may refer to
+set<Function> Function::getCallees(SgFunctionCallExp* call) {
+  Rose_STL_Container<SgFunctionDeclaration*> calleeList;
+  CallTargetSet::getDeclarationsForExpression(call, CHG(), calleeList);
+  set<Function> callees;
+  for(Rose_STL_Container<SgFunctionDeclaration*>::iterator c=calleeList.begin(); c!=calleeList.end(); c++)
+    callees.insert(Function(*c));
+  return callees;
 }
 
 /******************************

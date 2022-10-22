@@ -3,138 +3,174 @@
 
 /*
  * Simple  PointsTo Analysis
- * Lattice - AbstractObjectSet
  * AbstractObjectMap (ProductLattice) stores an AbstractObjectSet for each MemLocObjectPtr
  * author: sriram@cs.utah.edu
  */
 
 #include "compose.h"
+#include "composed_analysis.h"
 #include "abstract_object_map.h"
 #include "abstract_object_set.h"
 
 namespace fuse
 {
-  extern int ptaDebugLevel;
-
   class PointsToAnalysis;
-  // Transfer functions for the PointsTo analysis
+
+  /****************************
+   * PointsToAnalysisTransfer *
+   ****************************/
+
+  //! Transfer functions for the PointsTo analysis
   class PointsToAnalysisTransfer : public DFTransferVisitor
   {
     typedef boost::shared_ptr<AbstractObjectSet> AbstractObjectSetPtr;
+
     Composer* composer;
     PointsToAnalysis* analysis;
     // pointer to node state of the analysis at this part
     AbstractObjectMap* productLattice;
     // used by the analysis to determine if the states modified or not
     bool modified;
-    int debugLevel;
   public:
-    PointsToAnalysisTransfer(PartPtr part, CFGNode cn, NodeState& state,
+    PointsToAnalysisTransfer(AnalysisParts& parts, CFGNode cn, NodeState& state,
                              std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo,
-                             Composer* composer, PointsToAnalysis* analysis, const int& _debugLevel);
+                             Composer* composer, PointsToAnalysis* analysis);
 
-    // set the pointer of AbstractObjectMap at this PartEdge
-    void setProductLattice();
+    // Set the pointer of AbstractObjectMap at this PartEdge
+    void initLattice();
 
     bool finish();
 
-    // lattice access functions from the map (product lattice)
-    // copied from VariableStateTransfer.h
+    // Lattice access functions from the map (product lattice)
     AbstractObjectSetPtr getLattice(SgExpression* sgexp);
     AbstractObjectSetPtr getLatticeOperand(SgNode* sgn, SgExpression* operand);
     AbstractObjectSetPtr getLatticeCommon(MemLocObjectPtr ml);
-    AbstractObjectSetPtr getLattice(const AbstractObjectPtr o);
-    void setLattice(SgExpression* sgexp, AbstractObjectSetPtr aos);
-    void setLatticeOperand(SgNode* sgn, SgExpression* operand, AbstractObjectSetPtr aos);
-    void setLatticeCommon(MemLocObjectPtr ml, AbstractObjectSetPtr aos);
-    void setLattice(const AbstractObjectPtr o, AbstractObjectSetPtr aos);
+    // Lattice* getLattice(const AbstractObjectPtr o);
+
+    bool setLattice(SgExpression* sgexp, AbstractObjectSetPtr lat);
+    bool setLatticeOperand(SgNode* sgn, SgExpression* operand, AbstractObjectSetPtr lat);
+    bool setLatticeCommon(MemLocObjectPtr ml, AbstractObjectSetPtr lat);
+    // void setLattice(const AbstractObjectPtr o, Lattice* aos);
 
     // Transfer functions
     void visit(SgAssignOp* sgn);
+    void visit(SgPointerDerefExp* sgn);
   };
 
-  // See definition below
-  class PointsToML;
-  typedef boost::shared_ptr<PointsToML> PointsToMLPtr;
+  /********************
+   * PointsToAnalysis *
+   ********************/
 
   class PointsToAnalysis : public virtual FWDataflow
   {
   public:
-    PointsToAnalysis() { }
-    
-    // Returns a shared pointer to a freshly-allocated copy of this ComposedAnalysis object
-    ComposedAnalysisPtr copy() { return boost::make_shared<PointsToAnalysis>(); }
+    PointsToAnalysis(bool useSSA) : FWDataflow(/*trackBase2RefinedPartEdgeMapping*/ false, useSSA) { }
 
-    void genInitLattice(PartPtr part, PartEdgePtr pedge,
+    // Returns a shared pointer to a freshly-allocated copy of this ComposedAnalysis object
+    ComposedAnalysisPtr copy() { return boost::make_shared<PointsToAnalysis>(useSSA); }
+
+    void genInitLattice(const AnalysisParts& parts, const AnalysisPartEdges& pedges,
                         std::vector<Lattice*>& initLattices);
 
-    bool transfer(PartPtr part, CFGNode cn, NodeState& state, 
+    bool transfer(AnalysisParts& parts, CFGNode cn, NodeState& state,
                   std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo) { assert(false); return false; }
 
-    boost::shared_ptr<DFTransferVisitor> 
-      getTransferVisitor(PartPtr part, CFGNode cn, NodeState& state, 
-                         std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
-    
+    boost::shared_ptr<DFTransferVisitor>
+    getTransferVisitor(AnalysisParts& parts, CFGNode cn, NodeState& state,
+                       std::map<PartEdgePtr, std::vector<Lattice*> >& dfInfo);
+
     // functions called by composer
     MemLocObjectPtr Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge);
-
-    std::string str(std::string indent); 
+    bool implementsExpr2MemLoc   () { return true; }
+    implTightness Expr2MemLocTightness()    { return loose; }
+    std::string str(std::string indent) const;
 
     friend class PointsToAnalysisTransfer;
 
     // helper function to copy elements from abstract object set
-    void copyAbstractObjectSet(const AbstractObjectSet& aos, std::list<MemLocObjectPtr>& list);
+    // void copyAbstractObjectSet(const AbstractObjectSet& aos, std::list<MemLocObjectPtr>& list);
 
     // get the pointsToSet from the given map
-    boost::shared_ptr<AbstractObjectSet> getPointsToSet(SgNode* sgn, PartEdgePtr pedge, AbstractObjectMap *aom);
+    // boost::shared_ptr<AbstractObjectSet> getPointsToSet(SgNode* sgn, PartEdgePtr pedge, AbstractObjectMap *aom);
 
     // wrap the given set PointsToMLPtr
-    PointsToMLPtr Expr2PointsToMLPtr(SgNode* sgn, PartEdgePtr pedge, boost::shared_ptr<AbstractObjectSet> aom);
+    // PointsToMLPtr Expr2PointsToMLPtr(SgNode* sgn, PartEdgePtr pedge, boost::shared_ptr<AbstractObjectSet> aom);
   };
+
+  /******************
+   * PTMemLocObject *
+   ******************/
+
+  //! MemLocObject exported by PointsToAnalysis.
+  //! PTMemLocObject is a set of locations denoted by an expression.
+  //! Locations are represented by MemLocObjects.
+  //! AbstractObjectSet is used to store the set of MemLocObjects denoted by an expression.
+  class PTMemLocObject : public MemLocObject {
+    boost::shared_ptr<AbstractObjectSet> aos_p;
+    PointsToAnalysis* ptanalysis;
+  public:
+    PTMemLocObject(PartEdgePtr pedge, Composer* composer, PointsToAnalysis* ptanalysis);
+    PTMemLocObject(const PTMemLocObject& thatPTML);
+
+    MemRegionObjectPtr getRegion() const;
+    ValueObjectPtr     getIndex() const;
+
+    // Allocates a copy of this object and returns a pointer to it
+    MemLocObjectPtr copyAOType() const;
+
+    void add(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    void add(boost::shared_ptr<AbstractObjectSet> thataos_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    const AbstractObjectSet& getMLSet() const;
+    boost::shared_ptr<AbstractObjectSet> getMLSetPtr() const;
+    Lattice* getMLSetLatticePtr() const;
+    virtual bool mayEqual(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool mustEqual(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool equalSet(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool subSet(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool isLive(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool meetUpdate(MemLocObjectPtr ml_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool isFull(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual bool isEmpty(PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis);
+    virtual MemLocObjectPtr copyML() const;
+    virtual MemLocObject* copyMLPtr() const;
+    virtual std::string str(std::string indent="") const;
+
+    // Returns whether all instances of this class form a hierarchy. Every instance of the same
+    // class created by the same analysis must return the same value from this method!
+    virtual bool isHierarchy() const { return false; }
+    // AbstractObjects that form a hierarchy must inherit from the AbstractionHierarchy class
+
+    // Returns a key that uniquely identifies this particular AbstractObject in the
+    // set hierarchy.
+    virtual const hierKeyPtr& getHierKey() const { assert(0); }
+  };
+
+  typedef boost::shared_ptr<PTMemLocObject> PTMemLocObjectPtr;
 
   // used to handle Expr2MemLoc queries by the composer
   // for various SgNode
-  class Expr2MemLocTraversal : public ROSE_VisitorPatternDefaultBase
-  {
-    Composer* composer;
-    PointsToAnalysis* analysis;
-    PartEdgePtr pedge;
-    AbstractObjectMap* aom;
-    // returned by this class for a given SgNode*
-    boost::shared_ptr<AbstractObjectSet> p_aos;
-  public:
-    Expr2MemLocTraversal(Composer* _composer, 
-                         PointsToAnalysis* _analysis,
-                         PartEdgePtr _pedge, 
-                         AbstractObjectMap* _aom) : 
-    composer(_composer), 
-    analysis(_analysis), 
-    pedge(_pedge), aom(_aom), 
-    p_aos(boost::shared_ptr<AbstractObjectSet>()) { }
-    void visit(SgPointerDerefExp* sgn);
-    void visit(SgVarRefExp* sgn);
-    void visit(SgAssignOp* sgn);
-    boost::shared_ptr<AbstractObjectSet> getPointsToSet() { return p_aos; }
-  };
-
-  // Object returned by PointsToAnalysis::Expr2MemLoc
-  // Wraps object returned by the composer
-  class PointsToML : public UnionMemLocObject
-  {
-    // NOTE: UnionMemLocObject is useful to store list
-    // of items a memory object may point to
-
-  public:
-    PointsToML(MemLocObjectPtr _mem) : MemLocObject(NULL), UnionMemLocObject(_mem) { }
-    PointsToML(std::list<MemLocObjectPtr> _lml) : MemLocObject(NULL), UnionMemLocObject(_lml) { }       
-        
-    std::string str(std::string indent)
-    {
-      std::ostringstream oss;
-      oss << "[PointsToML: " << UnionMemLocObject::str(indent) << "]";
-      return oss.str();
-    }
-  };
+  // class Expr2MemLocTraversal : public ROSE_VisitorPatternDefaultBase
+  // {
+  //   Composer* composer;
+  //   PointsToAnalysis* analysis;
+  //   PartEdgePtr pedge;
+  //   AbstractObjectMap* aom;
+  //   // returned by this class for a given SgNode*
+  //   boost::shared_ptr<AbstractObjectSet> p_aos;
+  // public:
+  //   Expr2MemLocTraversal(Composer* _composer,
+  //                        PointsToAnalysis* _analysis,
+  //                        PartEdgePtr _pedge,
+  //                        AbstractObjectMap* _aom) :
+  //   composer(_composer),
+  //   analysis(_analysis),
+  //   pedge(_pedge), aom(_aom),
+  //   p_aos(boost::shared_ptr<AbstractObjectSet>()) { }
+  //   void visit(SgPointerDerefExp* sgn);
+  //   void visit(SgVarRefExp* sgn);
+  //   void visit(SgAssignOp* sgn);
+  //   boost::shared_ptr<AbstractObjectSet> getPointsToSet() { return p_aos; }
+  // };
 };
 
 #endif

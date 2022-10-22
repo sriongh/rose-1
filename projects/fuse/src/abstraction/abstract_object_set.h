@@ -20,7 +20,7 @@
 
 namespace fuse 
 {
-  extern int AbstractObjectSetDebugLevel;
+//  extern int AbstractObjectSetDebugLevel;
   
 // Set container for AbstractMemoryObject pointers
 // use: for storing sets of AbstractMemoryObject pointers
@@ -136,10 +136,10 @@ public:
   // Returns whether this lattice denotes the empty set.
   bool isEmpty();
 
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
   // Variant of the str method that can produce information specific to the current PartEdge.
   // Useful since AbstractObjects can change from one PartEdge to another.
-  std::string strp(PartEdgePtr pedge, std::string indent="");
+  std::string strp(PartEdgePtr pedge, std::string indent="") const;
 
   // initializes this Lattice to its default state, if it is not already initialized
   void initialize();
@@ -172,9 +172,21 @@ public:
   // Returns true if the Lattice state is modified and false otherwise.
   bool replaceML(Lattice* newL);
 
-  // computes the meet of this and that and saves the result in this
+  // Computes the union or intersection of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
+  // The part of this object is to be used for AbstractObject comparisons.
+  // meet(s1, s2) : In may mode Union uses insert() to add AbstractObjects from both s1 and s2 to the result,
+  //                  and Intersect only inserts objects into the meet that must exist in both AbstractObjectSets.
+  //                In must mode the reverse happens.
+  bool unionIntersectUpdate(Lattice* thatL, uiType ui);
+
+  // Computes the union of this and that and saves the result in this.
+  // Returns true if this causes this to change and false otherwise.
   bool meetUpdate(Lattice* that);
+
+  // Computes the intersection of this and that and saves the result in this.
+  // Returns true if this causes this to change and false otherwise.
+  bool intersectUpdate(Lattice* thatL);
 
   bool operator==(Lattice* that);
   
@@ -191,7 +203,7 @@ public:
 /*protected:
     iterator begin() { return items.begin(); }
     iterator end() { return items.end(); }*/
-};
+}; // class AbstractObjectSet
 } // end namespace
 
 #endif // end _MEMORYOBJECTCONTAINER_H

@@ -73,7 +73,7 @@ public:
     TaintLattice(): vertex(VERTEX_BOTTOM) {}
 
     /** Same as default constructor. */
-    virtual void initialize() override {
+    virtual void initialize() /*override*/ {
         *this = TaintLattice();
     }
 
@@ -86,21 +86,21 @@ public:
 
 
     /** Returns a new copy of this vertex pointer. */
-    virtual Lattice *copy() const override {
+    virtual Lattice *copy() const /*override*/ {
         return new TaintLattice(*this);
     }
 
     // USABILITY: The base class defines copy() without a const argument, so we must do the same here.
     /** Assignment-like operator. Makes this object point to the same lattice vertex as the @p other object. The other object
      *  must also be a TaintLattice object. */
-    virtual void copy(/*const*/ Lattice *other_) override;
+    virtual void copy(/*const*/ Lattice *other_) /*override*/;
 
 
     // USABILITY: The base class defines '==' with non-const argument and "this", so we must do the same here.
     // USABILITY: This is not a real equality predicate since it's not reflexive.  In other words, (A==B) does not imply (B==A)
     //            for all values of A and B.
     /** Equality predicate, sort of. Beware that this is not true equality since it is not symmetric. */
-    virtual bool operator==(/*const*/ Lattice *other_) /*const*/ override;
+    virtual bool operator==(/*const*/ Lattice *other_) /*const*/ /*override*/;
 
     // USABILITY: The base class defines str() with non-const "this", so we must do the same here.  That means that if we want
     //            to use this functionality from our own methods (that have const "this") we have to distill it out to some
@@ -110,7 +110,7 @@ public:
     /** String representation of the lattice vertex to which this object points.  The return value is the name of the vertex to
      *  which this object points, sans "VERTEX_" prefix, and converted to lower case.  The @p prefix is prepended to the
      *  returned string. */
-    virtual std::string str(/*const*/ std::string /*&*/prefix) /*const*/ override {
+    virtual std::string str(/*const*/ std::string /*&*/prefix) /*const*/ /*override*/ const {
         return prefix + to_string();
     }
 
@@ -122,7 +122,7 @@ public:
 
     // USABILITY: The base class defines meetUpdate() with a non-const argument, so we must do the same here.
     /** Merges this lattice node with another and stores the result in this node.  Returns true iff this node changed. */
-    virtual bool meetUpdate(/*const*/ Lattice *other_) override;
+    virtual bool meetUpdate(/*const*/ Lattice *other_) /*override*/;
 
     friend std::ostream& operator<<(std::ostream &o, const TaintLattice &lattice);
 };
@@ -140,8 +140,8 @@ public:
     // USABILITY: Documentation as to why a live/dead analysis is used in SgnAnalysis would be nice. I tried doing it without
     //            originally to make things simpler, but it seems that the FiniteVarsExprProductLattice depends on it even
     //            though I saw commented out code and comments somewhere(?) that indicated otherwise.
-    TaintAnalysis(LiveDeadVarsAnalysis *ldv_analysis)
-        : ldv_analysis(ldv_analysis), debug(NULL) {}
+    TaintAnalysis(LiveDeadVarsAnalysis *ldv_analysis, bool useSSA)
+        :  : FWDataflow(/*trackBase2RefinedPartEdgeMapping*/ false, useSSA), ldv_analysis(ldv_analysis), debug(NULL) {}
 
     /** Accessor for debug settings.  If a non-null output stream is supplied, then debugging information will be sent to that
      *  stream; otherwise debugging information is suppressed.  Debugging is disabled by default.

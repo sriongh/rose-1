@@ -30,6 +30,8 @@ class BoolAndLattice : public FiniteLattice
   BoolAndLattice(bool state, PartEdgePtr pedge) : Lattice(pedge), FiniteLattice(pedge)
   { this->state = state; }
   
+  virtual ~BoolAndLattice();
+
   // initializes this Lattice to its default state
   void initialize()
   { state = -1; }
@@ -40,10 +42,20 @@ class BoolAndLattice : public FiniteLattice
   // overwrites the state of this Lattice with that of that Lattice
   void copy(Lattice* that);
   
+  // Propagate information from a set of defs to a single use. Return true if this causes the Lattice to change.
+  bool propagateDefs2Use(MemLocObjectPtr use, const std::set<MemLocObjectPtr>& defs) { return false; }
+
+  // Propagate information from a single defs to a set of uses. Return true if this causes the Lattice to change.
+  bool propagateDef2Uses(const std::set<MemLocObjectPtr>& uses, MemLocObjectPtr def) { return false; }
+
   // computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdate(Lattice* that);
   
+  // Computes the intersection of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool intersectUpdate(Lattice* that);
+
   // computes the meet of this and that and returns the result
   //Lattice* meet(Lattice* that);
     
@@ -85,8 +97,8 @@ class BoolAndLattice : public FiniteLattice
   // Returns whether this lattice denotes the empty set.
   bool isEmpty();
   
-  std::string str(std::string indent="");
-};
+  std::string str(std::string indent="") const;
+}; // class BoolAndLattice
 
 class IntMaxLattice : public InfiniteLattice
 {
@@ -97,7 +109,7 @@ class IntMaxLattice : public InfiniteLattice
   
   IntMaxLattice(PartEdgePtr pedge) : Lattice(pedge), InfiniteLattice(pedge)
   {
-    state = -1;
+    state = -infinity;
   }
   
   IntMaxLattice(int state, PartEdgePtr pedge) : Lattice(pedge), InfiniteLattice(pedge)
@@ -117,10 +129,20 @@ class IntMaxLattice : public InfiniteLattice
   // overwrites the state of this Lattice with that of that Lattice
   void copy(Lattice* that);
   
+  // Propagate information from a set of defs to a single use. Return true if this causes the Lattice to change.
+  bool propagateDefs2Use(MemLocObjectPtr use, const std::set<MemLocObjectPtr>& defs) { return false; }
+
+  // Propagate information from a single defs to a set of uses. Return true if this causes the Lattice to change.
+  bool propagateDef2Uses(const std::set<MemLocObjectPtr>& uses, MemLocObjectPtr def) { return false; }
+
   // computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdate(Lattice* that);
   
+  // Computes the intersection of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool intersectUpdate(Lattice* that);
+
   // computes the meet of this and that and returns the result
   //Lattice* meet(Lattice* that);
   
@@ -162,8 +184,8 @@ class IntMaxLattice : public InfiniteLattice
   // Returns whether this lattice denotes the empty set.
   bool isEmpty();
   
-  std::string str(std::string indent="");
-};
+  std::string str(std::string indent="") const;
+}; // class IntMaxLattice
 
 /*########################
   ### Utility lattices ###
@@ -222,10 +244,14 @@ class ProductLattice : public virtual Lattice
   // Returns true if the Lattice state is modified and false otherwise.
   bool replaceML(Lattice* newL);
   
-  // computes the meet of this and that and saves the result in this
+  // Computes the meet of this and that and saves the result in this
   // returns true if this causes this to change and false otherwise
   bool meetUpdate(Lattice* that);
-  
+
+  // Computes the intersection of this and that and saves the result in this
+  // returns true if this causes this to change and false otherwise
+  bool intersectUpdate(Lattice* that);
+
   // Computes the meet of this and that and returns the result
   virtual bool finiteLattice();
   
@@ -252,7 +278,7 @@ class ProductLattice : public virtual Lattice
   // The string that represents this object
   // If indent!="", every line of this string must be prefixed by indent
   // The last character of the returned string should not be '\n', even if it is a multi-line string.
-  std::string str(std::string indent="");
+  std::string str(std::string indent="") const;
 };
 
 class FiniteProductLattice : public virtual ProductLattice

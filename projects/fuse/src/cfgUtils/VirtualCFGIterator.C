@@ -55,30 +55,37 @@ bool CFGIterator::isRemaining(const CFGNode n)
 void CFGIterator::advance(bool fwDir, bool pushAllChildren)
 {
   assert(initialized);
-  /*cout << "CFGIterator::advance(fwDir="<<fwDir<<", pushAllChildren="<<pushAllChildren<<") #remainingNodes="<<remainingNodes.size()<<endl;
-  cout<<"  visited=\n";
+  /*scope s(txt()<<"CFGIterator::advance(fwDir="<<fwDir<<", pushAllChildren="<<pushAllChildren<<") #remainingNodes="<<remainingNodes.size());
+  dbg<<"  visited=\n";
   for(set<CFGNode>::iterator it=visited.begin(); it!=visited.end(); it++)
-    cout << "      "<<cfgUtils::CFGNode2Str(*it)<<"\n";*/
+    dbg << "      "<<CFGNode2Str(*it)<<"\n";*/
   if(remainingNodes.size()>0)
   {
     // pop the next CFG node from the front of the list
     CFGNode cur = remainingNodes.front();
     remainingNodes.pop_front();
-    //cout << "#remainingNodes="<<remainingNodes.size()<<" cur="<<cfgUtils::CFGNode2Str(cur)<<endl;
+    //dbg << "cur="<<CFGNode2Str(cur)<<endl;
     
     if(pushAllChildren)
     {
       // find its followers (either successors or predecessors, depending on value of fwDir), push back 
       // those that have not yet been visited
       vector<CFGEdge> nextE;
-      if(fwDir) nextE = cur.outEdges();
-      else      nextE = cur.inEdges();
-      //cout << "    #nextE="<<nextE.size()<<endl;
+      if(fwDir) {
+        /* // Do not proceed forward if we've reached the end of a function
+        if(!(isSgFunctionDefinition(cur.getNode()) && cur.getIndex()==3))*/
+        nextE = cur.outEdges();
+      } else      {
+        /* // Do not proceed backward if we've reached the end of a function
+        if(!(isSgFunctionParameterList(cur.getNode()) && cur.getIndex()==0)) */
+        nextE = cur.inEdges();
+      }
+      //dbg << "    #nextE="<<nextE.size()<<endl;
       for(vector<CFGEdge>::iterator it=nextE.begin(); it!=nextE.end(); it++)
       {
         CFGNode nextN = (fwDir ? it->target() : nextN = it->source());
-        /*cout << "    nextN="<<cfgUtils::CFGNode2Str(nextN)<<endl;
-        cout << "      CFGIterator::advance "<<(fwDir?"descendant":"predecessor")<<": "<<
+        /*dbg << "    nextN="<<CFGNode2Str(nextN)<<endl;
+        dbg << "      CFGIterator::advance "<<(fwDir?"descendant":"predecessor")<<": "<<
                "visited="<<(visited.find(nextN) != visited.end())<<
                " remaining="<<isRemaining(nextN)<<"\n";*/
         
@@ -205,11 +212,11 @@ CFGIterator::checkpoint::checkpoint(const CFGIterator::checkpoint& that)
   this->visited  = that.visited;
 }
 
-string CFGIterator::checkpoint::str(string indent)
+string CFGIterator::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[VirtualCFG::CFGIterator::checkpoint : "<<endl;
-  for(list<CFGNode>::iterator it=remainingNodes.begin();
+  for(list<CFGNode>::const_iterator it=remainingNodes.begin();
       it!=remainingNodes.end(); )
   {
     outs << indent << "&nbsp;&nbsp;&nbsp;&nbsp;["<<it->getNode()->unparseToString()<<" | "<<it->getNode()->class_name()<<"]";
@@ -241,7 +248,7 @@ void CFGIterator::restartFromChkpt(CFGIterator::checkpoint& chkpt)
   initialized = true;
 }
 
-string CFGIterator::str(string indent)
+string CFGIterator::str(string indent) const
 {
   
   ostringstream outs;
@@ -249,7 +256,7 @@ string CFGIterator::str(string indent)
   if(initialized) {
     outs << "[CFGIterator:"<<endl;
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;remainingNodes(#"<<remainingNodes.size()<<") = "<<endl;
-    for(list<CFGNode>::iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
+    for(list<CFGNode>::const_iterator it=remainingNodes.begin(); it!=remainingNodes.end(); it++)
     { outs << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["<<it->getNode()->unparseToString()<<" | "<<it->getNode()->class_name()<<"]"<<endl; }
     
     outs << "&nbsp;&nbsp;&nbsp;&nbsp;visited(#"<<visited.size()<<")  = \n";
@@ -333,7 +340,7 @@ dataflowCFGIterator::checkpoint::checkpoint(const CFGIterator::checkpoint& iChkp
 dataflowCFGIterator::checkpoint::checkpoint(const dataflowCFGIterator::checkpoint &that): 
   iChkpt(that.iChkpt), terminator(that.terminator) {}
 
-string dataflowCFGIterator::checkpoint::str(string indent)
+string dataflowCFGIterator::checkpoint::str(string indent) const
 {
   ostringstream outs;
   outs << indent << "[VirtualCFG::dataflowCFGIterator::checkpoint : \n"; 
@@ -358,7 +365,7 @@ void dataflowCFGIterator::restartFromChkpt(dataflowCFGIterator::checkpoint& chkp
   terminator = chkpt.terminator;
 }
 
-string dataflowCFGIterator::str(string indent)
+string dataflowCFGIterator::str(string indent) const
 {
   ostringstream outs;
   
@@ -386,7 +393,7 @@ void back_dataflowCFGIterator::operator ++ (int)
   advance(false, false);
 }
 
-string back_dataflowCFGIterator::str(string indent)
+string back_dataflowCFGIterator::str(string indent) const
 {
   ostringstream outs;
   

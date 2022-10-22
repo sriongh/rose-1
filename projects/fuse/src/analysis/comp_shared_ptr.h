@@ -2,65 +2,67 @@
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/make_shared.hpp>
-#include "widgets.h"
-using namespace dbglog;
 
 namespace fuse {
 // Wrapper for boost:shared_ptr<Type> that can be used as keys in maps because it wraps comparison 
 // operations by forwarding them to the Type's own comparison operations. In contrast, the base 
 // boost::shared_ptr uses pointer equality.
 template <class Type>
-class CompSharedPtr : public dbglog::printable
+class CompSharedPtr : public boost::shared_ptr<Type>//: public sight::printable
 {
   //public:
-  boost::shared_ptr<Type> ptr;
+  //boost::shared_ptr<Type> ptr;
   
   public:
   CompSharedPtr() {}
   
-  // Wraps a raw pointer of an object that has a dynamic copying method with a comparable shared pointer
-  CompSharedPtr(Type* p) {
-    Type* c = dynamic_cast<Type*>(p->copy());
+  // Wraps a raw pointer of an object with a shared pointer.
+  // copy - If true, the shared pointer will refer to a copy of the original object
+  CompSharedPtr(Type* p, bool copy=false) {
+    Type* c;
+    if(copy) c = dynamic_cast<Type*>(p->copy());
+    else     c = p;
     assert(c);
-    ptr = boost::shared_ptr<Type>(c);
+    //ptr = boost::shared_ptr<Type>(c);
+    *this = boost::shared_ptr<Type>(c);
   }
-    
+
   // Copy constructor
-  CompSharedPtr(const CompSharedPtr<Type>& o) : ptr(o.ptr) {}
+  CompSharedPtr(const CompSharedPtr<Type>& o) : boost::shared_ptr<Type>(o) {} //ptr(o.ptr) {}
   
   // Constructor for converting across CompSharedPtr wrappers of compatible types
   template <class OtherType>
-  CompSharedPtr(const CompSharedPtr<OtherType>& o) : ptr(boost::static_pointer_cast<Type>(o.ptr)) {}
+  CompSharedPtr(const CompSharedPtr<OtherType>& o) : boost::shared_ptr<Type>(boost::static_pointer_cast<Type>(o)) {} //ptr(boost::static_pointer_cast<Type>(o.ptr)) {}
   
   // Constructor for wrapping boost::shared_ptr with a CompoSharedPtr
-  CompSharedPtr(boost::shared_ptr<Type> ptr) : ptr(ptr) {}
+  CompSharedPtr(boost::shared_ptr<Type> ptr) : boost::shared_ptr<Type>(ptr) {} //ptr(ptr) {}
   
   template <class OtherType>
-  CompSharedPtr(boost::shared_ptr<OtherType> ptr) : ptr(boost::static_pointer_cast<Type>(ptr)) {}
+  CompSharedPtr(boost::shared_ptr<OtherType> ptr) : boost::shared_ptr<Type>(boost::static_pointer_cast<Type>(ptr)) {} //ptr(boost::static_pointer_cast<Type>(ptr)) {}
   
   template <class OtherType>
   friend class CompSharedPtr;
   
-  CompSharedPtr& operator=(const CompSharedPtr& o) { ptr = o.ptr; return *this; }
+  //CompSharedPtr& operator=(const CompSharedPtr& o) { ptr = o.ptr; return *this; }
   // If both ptr and o.ptr are != NULL, use their equality operator
   // If both ptr and o.ptr are == NULL, they are equal
   // If only one is == NULL but the other is not, order the NULL object as < the non-NULL object
-  bool operator==(const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) == o; else return false; } else { if(o.get()!=NULL) return false; else return true;  } }
-  bool operator< (const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) <  o; else return false; } else { if(o.get()!=NULL) return true;  else return false; } }
-  bool operator!=(const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) != o; else return true;  } else { if(o.get()!=NULL) return true;  else return false; } }
-  bool operator>=(const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) >= o; else return true;  } else { if(o.get()!=NULL) return false; else return true;  } }
-  bool operator<=(const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) <= o; else return false; } else { if(o.get()!=NULL) return true;  else return true;  } }
-  bool operator> (const CompSharedPtr<Type> & o) const { if(ptr.get()!=NULL) { if(o.get()!=NULL) return (*ptr.get()) >  o; else return true;  } else { if(o.get()!=NULL) return false; else return false; } }
+  bool operator==(const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr == returning "<<((*ptr.get()) == o)<<std::endl;*/ return (*/*ptr.*/this->get()) == o; } else return false; } else { if(o.get()!=NULL) return false; else return true;  } }
+  bool operator< (const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr <  returning "<<((*ptr.get()) <  o)<<std::endl;*/ return (*/*ptr.*/this->get()) <  o; } else return false; } else { if(o.get()!=NULL) return true;  else return false; } }
+  bool operator!=(const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr != returning "<<((*ptr.get()) != o)<<std::endl;*/ return (*/*ptr.*/this->get()) != o; } else return true;  } else { if(o.get()!=NULL) return true;  else return false; } }
+  bool operator>=(const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr >= returning "<<((*ptr.get()) >= o)<<std::endl;*/ return (*/*ptr.*/this->get()) >= o; } else return true;  } else { if(o.get()!=NULL) return false; else return true;  } }
+  bool operator<=(const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr <= returning "<<((*ptr.get()) <= o)<<std::endl;*/ return (*/*ptr.*/this->get()) <= o; } else return false; } else { if(o.get()!=NULL) return true;  else return true;  } }
+  bool operator> (const CompSharedPtr<Type> & o) const { if(/*ptr.*/this->get()!=NULL) { if(o.get()!=NULL) { /*dbg << "CompSharedPtr >  returning "<<((*ptr.get()) >  o)<<std::endl;*/ return (*/*ptr.*/this->get()) >  o; } else return true;  } else { if(o.get()!=NULL) return false; else return false; } }
   
-  Type* get() const { return ptr.get(); }
+  /*Type* get() const { return ptr.get(); }
   const Type* operator->() const { return ptr.get(); }
   Type* operator->() { return ptr.get(); }
   
-  operator bool() const { return (bool) ptr.get(); }
+  operator bool() const { return (bool) ptr.get(); }*/
   
   //PartPtr operator * () { return ptr; }
   
-  std::string str(std::string indent="") { return ptr->str(indent); }
+  std::string str(std::string indent="") const { return /*ptr->*/this->get()->str(indent); }
 };
 
 // Returns a new instance of a CompSharedPtr that refers to an instance of CompSharedPtr<Type>
@@ -168,11 +170,11 @@ CompSharedPtr<Type> makePtrFromThis(boost::shared_ptr<Type> s)
 { return CompSharedPtr<Type>(s); }
 
 // Initializes a shared pointer from a raw pointer
+// copy - If true, the shared pointer will refer to a copy of the original object
 template <class Type>
-CompSharedPtr<Type> initPtr(Type* p)
+CompSharedPtr<Type> initPtr(Type* p, bool copy=false)
 {
-  return CompSharedPtr<Type>(p);
+  return CompSharedPtr<Type>(p, false);
 }
 
 }; // namespace fuse
-
