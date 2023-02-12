@@ -3,10 +3,6 @@ using namespace std;
 
 #include "dead_path_elim_analysis.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse {
 
 #define DPEAnalDebugLevel 0
@@ -65,11 +61,11 @@ DeadPathElimPartPtr DeadPathElimPart::get_shared_this()
 
 list<PartEdgePtr> DeadPathElimPart::outEdges()
 {
-  SIGHT_VERB_DECL(scope, (txt()<<"DeadPathElimPart::outEdges("<<str()<<")"), 2, DPEAnalDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"DeadPathElimPart::outEdges("<<str()<<")"), 2, DPEAnalDebugLevel)
   //SIGHT_VERB(dbg<<"cacheInitialized_outEdges="<<cacheInitialized_outEdges<<endl, 2, DPEAnalDebugLevel)
 
   if(!cacheInitialized_outEdges) {
-  //  scope reg(txt()<<"DeadPathElimPart::outEdges()", scope::medium, attrGE("DPEAnalDebugLevel", 2));
+  //  scope reg(sight::txt()<<"DeadPathElimPart::outEdges()", scope::medium, attrGE("DPEAnalDebugLevel", 2));
     // The NodeState at the current part
     SIGHT_VERB(dbg << "getNodeStateLocPart()="<<getNodeStateLocPart()->str()<<endl, 2, DPEAnalDebugLevel)
     NodeState* outState = NodeState::getNodeState(analysis, getNodeStateLocPart());
@@ -82,7 +78,7 @@ list<PartEdgePtr> DeadPathElimPart::outEdges()
     // analysis, they are maintained separately
     const map<PartEdgePtr, vector<Lattice*> >& lattices = outState->getLatticeBelowAll(analysis);
     for(map<PartEdgePtr, vector<Lattice*> >::const_iterator i=lattices.begin(); i!=lattices.end(); ++i) {
-      SIGHT_VERB_DECL(scope, (txt()<<"be="<<i->first->str(), scope::low), 2, DPEAnalDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"be="<<i->first->str(), scope::low), 2, DPEAnalDebugLevel)
       assert(i->second.size()==1);
       SIGHT_VERB(dbg << "outState->getLatticeBelow(analysis, *be, 0) = "<<i->second[0]->str()<<endl, 2, DPEAnalDebugLevel)
 
@@ -133,7 +129,7 @@ list<PartEdgePtr> DeadPathElimPart::inEdges()
     list<PartEdgePtr> baseSuperEdges = getInput()->inEdges();
     assert(baseEdges.size() == baseSuperEdges.size());*/
 
-  //  scope reg(txt()<<"DeadPathElimPart::inEdges() #baseEdges="<<baseEdges.size(), scope::medium, attrGE("DPEAnalDebugLevel", 2));
+  //  scope reg(sight::txt()<<"DeadPathElimPart::inEdges() #baseEdges="<<baseEdges.size(), scope::medium, attrGE("DPEAnalDebugLevel", 2));
 
     // Since this is a forward analysis, information from preceding parts is aggregated under the NULL edge
     // of this part. As such, to get the parts that lead to this part we need to iterate over the incoming edges
@@ -982,7 +978,7 @@ void DeadPathElimTransfer::visit(SgOrOp *op)
 
 void DeadPathElimTransfer::visit(SgNode *sgn)
 {
-  SIGHT_VERB_DECL(scope, (txt()<<"DeadPathElimTransfer::visit("<<SgNode2Str(sgn)<<")"), 1, DPEAnalDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"DeadPathElimTransfer::visit("<<SgNode2Str(sgn)<<")"), 1, DPEAnalDebugLevel)
 
   // Get the edge that is propagated along the incoming dataflow path
   //#SA: Incoming dfInfo is associated with inEdgeFromAny
@@ -1062,7 +1058,7 @@ void DeadPathElimAnalysis::genInitLattice(const AnalysisParts& parts, const Anal
 {
   DeadPathElimPartEdge* newPartEdge = DeadPathElimPartEdge::createRaw(parts.NodeState()->inEdgeFromAny(), parts.input()->inEdgeFromAny(), this, bottom);
 
-  SIGHT_VERB_DECL(scope, (txt() << "DeadPathElimPart::genInitLattice()"), 2, DPEAnalDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt() << "DeadPathElimPart::genInitLattice()"), 2, DPEAnalDebugLevel)
   SIGHT_VERB(dbg << "parts.NodeState()="<<parts.NodeState()->str()<<endl, 2, DPEAnalDebugLevel)
   SIGHT_VERB(dbg << "pedges.NodeState()="<<pedges.NodeState()->str()<<endl, 2, DPEAnalDebugLevel)
 

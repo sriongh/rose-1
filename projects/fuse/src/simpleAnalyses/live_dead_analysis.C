@@ -5,10 +5,6 @@ using namespace std;
 #include "compose.h"
 #include <boost/make_shared.hpp>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse {
 #define liveDeadAnalysisDebugLevel 0
 
@@ -372,7 +368,7 @@ void LiveDeadMemTransfer::use(SgNode *sgn, SgExpression* operand)
 {
   //dbg << "part->outEdgeToAny()="<<part->outEdgeToAny()->str()<<endl;
   // MemLocObjectPtrPair p = composer->OperandExpr2MemLoc(sgn, operand, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::use(sgn="<<SgNode2Str(sgn)<<", operand="<<SgNode2Str(operand)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::use(sgn="<<SgNode2Str(sgn)<<", operand="<<SgNode2Str(operand)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   MemLocObjectPtr p = composer->OperandExpr2MemLoc(sgn, operand, parts.NodeState()->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
   //dbg << "LiveDeadMemTransfer::use(sgn=["<<escape(sgn->unparseToString())<<" | "<<sgn->class_name()<<"]"<<endl;
   //dbg << "p="<<p->str()<<endl;
@@ -390,7 +386,7 @@ void LiveDeadMemTransfer::use(SgNode *sgn, SgExpression* operand)
 // Note that the memory location denoted by the corresponding SgInitializedName is used
 void LiveDeadMemTransfer::useMem(SgInitializedName* name)
 {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(name)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(name)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   //dbg << "name="<<SgNode2Str(name)<<endl;
   MemLocObjectPtr p = composer->Expr2MemLoc(name, parts.NodeState()->outEdgeToAny(), ldma);
   SIGHT_VERB(dbg << "LiveDeadMemTransfer::useMem(SgInitializedName)("<<SgNode2Str(name)<<")"<<endl, 1, liveDeadAnalysisDebugLevel)
@@ -400,7 +396,7 @@ void LiveDeadMemTransfer::useMem(SgInitializedName* name)
 // Note that the memory location denoted by the corresponding SgVarRefExp is used
 void LiveDeadMemTransfer::useMem(SgVarRefExp* sgn)
 {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::useMem(name="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   // MemLocObjectPtrPair p = composer->Expr2MemLoc(sgn, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
   MemLocObjectPtr p = composer->Expr2MemLoc(sgn, parts.NodeState()->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
   SIGHT_VERB(dbg << "LiveDeadMemTransfer::useMem(SgVarRefExp)("<<SgNode2Str(sgn)<<")"<<endl, 1, liveDeadAnalysisDebugLevel)
@@ -410,7 +406,7 @@ void LiveDeadMemTransfer::useMem(SgVarRefExp* sgn)
 // Note that the memory location denoted by the corresponding SgPntrArrRefExp is used
 void LiveDeadMemTransfer::useMem(SgPntrArrRefExp* sgn)
 {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::useMem(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::useMem(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   // We use the SgPntrArrRefExp itself as well as all of its parent SgPntrArrRefExp because to reach
   // this index we need to access all the indexes that precede it in the expression, as well as the root
   // (array in array[1][2][3]) that identifies the base pointer.
@@ -473,7 +469,7 @@ dbg << "p="<<p->str()<<endl;
 
 void LiveDeadMemTransfer::visit(SgExpression *sgn)
 {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
 
   //AbstractMemoryObject::ObjSet* objset = SgExpr2ObjSet(sgn);
   // MemLocObjectPtrPair p = composer->Expr2MemLoc(sgn, part->outEdgeToAny(), ldma);//ceml->Expr2Obj(sgn);
@@ -498,7 +494,7 @@ void LiveDeadMemTransfer::visit(SgExpression *sgn)
 }
 
 void LiveDeadMemTransfer::visit(SgInitializedName *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   /*SgVarRefExp* exp = SageBuilder::buildVarRefExp(sgn);
   dbg << "LiveDeadMemTransfer::visit(SgInitializedName: sgn=["<<escape(sgn->unparseToString())<<" | "<<sgn->class_name()<<"]"<<endl;
   dbg << "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exp="<<exp<<endl;
@@ -522,7 +518,7 @@ void LiveDeadMemTransfer::visit(SgInitializedName *sgn) {
 }
 
 void LiveDeadMemTransfer::visit(SgReturnStmt *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
 /*
   WE CURRENTLY ASSUME THAT THE EXPRESSION OF A RETURN STATEMENT IS ALWAYS USED
   SHOULD ONLY ASSUME THIS FOR RETURN STA```TEMENT OF main()*/
@@ -542,7 +538,7 @@ void LiveDeadMemTransfer::visit(SgSwitchStatement *sgn) {
   //use(sgn, sgn->get_item_selector());
 }
 void LiveDeadMemTransfer::visit(SgCaseOptionStmt *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   use(sgn, sgn->get_key());
   use(sgn, sgn->get_key_range_end());
 }
@@ -558,7 +554,7 @@ void LiveDeadMemTransfer::visit(SgIfStmt *sgn) {
 }
 
 void LiveDeadMemTransfer::visit(SgForStatement *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   //dbg << "test="<<escape(sgn->get_test()->unparseToString()) << " | " << sgn->get_test()->class_name()<<endl;
   //dbg << "increment="<<escape(sgn->get_increment()->unparseToString()) << " | " << sgn->get_increment()->class_name()<<endl;
 
@@ -569,7 +565,7 @@ void LiveDeadMemTransfer::visit(SgForStatement *sgn) {
   use(sgn, sgn->get_increment());
 }
 void LiveDeadMemTransfer::visit(SgWhileStmt *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   // The operands of a while statement are automatically live since loops have an unknown
   // number of iterations that is decided based on these operands
   assert(isSgExprStatement(sgn->get_condition()));
@@ -577,7 +573,7 @@ void LiveDeadMemTransfer::visit(SgWhileStmt *sgn) {
   use(sgn, isSgExprStatement(sgn->get_condition())->get_expression());
 }
 void LiveDeadMemTransfer::visit(SgDoWhileStmt *sgn) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(sgn)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   // The operands of a do-while statement are automatically live since loops have an unknown
   // number of iterations that is decided based on these operands
   assert(isSgExprStatement(sgn->get_condition()));
@@ -585,7 +581,7 @@ void LiveDeadMemTransfer::visit(SgDoWhileStmt *sgn) {
   use(sgn, isSgExprStatement(sgn->get_condition())->get_expression());
 }
 void LiveDeadMemTransfer::visit(SgFunctionDefinition* def) {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(def)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::visit(sgn="<<SgNode2Str(def)<<")", scope::medium), 1, liveDeadAnalysisDebugLevel)
   Function func(def);
   //dbg << "Definition "<<SgNode2Str(def)<<" attributeExists="<<def->attributeExists("fuse:UnknownSideEffects")<<endl;
 
@@ -596,7 +592,7 @@ void LiveDeadMemTransfer::visit(SgFunctionDefinition* def) {
 }
 bool LiveDeadMemTransfer::finish()
 {
-  SIGHT_VERB(scope reg(txt()<<"LiveDeadMemTransfer::finish()", scope::medium), 1, liveDeadAnalysisDebugLevel)
+  SIGHT_VERB(scope reg(sight::txt()<<"LiveDeadMemTransfer::finish()", scope::medium), 1, liveDeadAnalysisDebugLevel)
 
   // First process assignments, then uses since we may assign and use the same variable
   // and in the end we want to first remove it and then re-insert it.
@@ -923,7 +919,7 @@ bool isLiveMay(MemLocObjectPtr mem, LiveDeadMemAnalysis* ldma, PartEdgePtr pedge
       PartEdge* p = lats->first.get();
       assert(p->target() == pedge.get()->target());
       AbstractObjectSet* liveL = dynamic_cast<AbstractObjectSet*>(*(lats->second.begin())); assert(liveL);
-      SIGHT_VERB(scope regAbvEdge(txt()<<"edge="<<p->str(), scope::low), 1, liveDeadAnalysisDebugLevel)
+      SIGHT_VERB(scope regAbvEdge(sight::txt()<<"edge="<<p->str(), scope::low), 1, liveDeadAnalysisDebugLevel)
       SIGHT_VERB(dbg << "liveLAbove="<<liveL->str("")<<endl, 1, liveDeadAnalysisDebugLevel)
 
       if(liveL->containsMay(mem)) {

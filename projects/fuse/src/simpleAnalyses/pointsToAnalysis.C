@@ -4,10 +4,6 @@ using namespace std;
 
 #include "pointsToAnalysis.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse
 {
   DEBUG_LEVEL(pointsToAnalysisDebugLevel, 2);
@@ -150,7 +146,7 @@ namespace fuse
   }
 
   void PointsToAnalysisTransfer::visit(SgPointerDerefExp* sgn) {
-    // scope reg(txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    // scope reg(sight::txt()<<"PointsToAnalysisTransfer::visit(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
     // AbstractObjectSetPtr operandLat = getLatticeOperand(sgn, sgn->get_operand());
     // MemLocObjectPtr opML_p = composer->OperandExpr2MemLoc(sgn, sgn->get_operand(), part->inEdgeFromAny(), analysis);
     // // MemLocObjectPtr ml_p = composer->Expr2MemLoc(sgn, part->inEdgeFromAny(), analysis);
@@ -195,7 +191,7 @@ namespace fuse
   MemLocObjectPtr PointsToAnalysis::Expr2MemLoc(SgNode* sgn, PartEdgePtr pedge)
   {
 #ifndef DISABLE_SIGHT
-    scope reg(txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2)); 
+    scope reg(sight::txt()<<"PointsToAnalysis::Expr2MemLoc(sgn=" << SgNode2Str(sgn) << ")", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2)); 
     if(pointsToAnalysisDebugLevel()>=2) {
       dbg << "pedge=" << pedge->str() << endl;
     }
@@ -334,7 +330,7 @@ namespace fuse
   // If the two sets of PTMemLocObject contain overlapping MemLocObjects
   // then the two PTMemLocObjects mayEquals.
   bool PTMemLocObject::mayEqual(MemLocObjectPtr thatML_p, PartEdgePtr pedge, Composer* comp, ComposedAnalysis* analysis) {
-    // scope reg(txt()<<"PTMemLocObject::mayEqualML", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
+    // scope reg(sight::txt()<<"PTMemLocObject::mayEqualML", scope::medium, attrGE("pointsToAnalysisDebugLevel", 2));
     PTMemLocObjectPtr thatPTML_p = boost::dynamic_pointer_cast<PTMemLocObject>(thatML_p);
     assert(thatPTML_p);
 

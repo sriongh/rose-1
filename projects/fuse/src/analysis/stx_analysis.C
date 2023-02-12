@@ -13,13 +13,6 @@ using namespace std;
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
-
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#else
-#include "sight-disable.h"
-#endif
-
 using namespace SageBuilder;
 
 //namespace bll = boost::lambda;
@@ -272,7 +265,7 @@ bool func2AllCalls_initialized=false;
 
 // Given a function call, returns the set of all functions that it may invoke
 set<Function> getAllCalleeFuncs(SgFunctionCallExp* call) {
-  SIGHT_VERB_DECL(scope, (txt()<<"getAllCalleeFuncs("<<SgNode2Str(call)<<")", scope::medium), 2, stxAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"getAllCalleeFuncs("<<SgNode2Str(call)<<")", scope::medium), 2, stxAnalysisDebugLevel)
   initFuncEntryExit();
 
   set<Function> callees;
@@ -395,7 +388,7 @@ MemRegionObjectPtr SyntacticAnalysis::Expr2MemRegion(SgNode* n, PartEdgePtr pedg
 MemRegionObjectPtr SyntacticAnalysis::Expr2MemRegionStatic(SgNode* n, PartEdgePtr pedge)
 {
   //struct timeval gopeStart, gopeEnd; gettimeofday(&gopeStart, NULL);
-  //scope s(txt()<<"SyntacticAnalysis::Expr2MemRegionStatic()");
+  //scope s(sight::txt()<<"SyntacticAnalysis::Expr2MemRegionStatic()");
   //dbg << "n="<<n<<SgNode2Str(n)<<endl;
   //dbg << "pedge="<<pedge->str()<<endl;
 
@@ -480,7 +473,7 @@ void SyntacticAnalysis::initGlobalDeclarations() {
     const SgDeclarationStatementPtrList& decls = isSgGlobal(*gs)->get_declarations();
     for(SgDeclarationStatementPtrList::const_iterator d=decls.begin(); d!=decls.end(); d++) {
       if(!(*d)->get_file_info()->isCompilerGenerated()) {
-//        scope s(txt()<<"declaration: "<<SgNode2Str(*d)<<" parent="<<(*d)->get_parent(), scope::medium, attrGE("stxAnalysisDebugLevel", 3));
+//        scope s(sight::txt()<<"declaration: "<<SgNode2Str(*d)<<" parent="<<(*d)->get_parent(), scope::medium, attrGE("stxAnalysisDebugLevel", 3));
 
         if(isSgVariableDeclaration(*d)) {
           //dbg << "definition: "<<(isSgVariableDeclaration(*d)->get_definition()? SgNode2Str(isSgVariableDeclaration(*d)->get_definition()): "NULL")<<endl;
@@ -687,7 +680,7 @@ std::string StxFuncContext::str(std::string indent) const {
 // the Syntactic Analysis interesting filter
 /*bool stxVirtualCFGFilter (CFGNode cfgn)
 {
-  scope s(txt()<<"stxVirtualCFGFilter("<<CFGNode2Str(cfgn)<<")");
+  scope s(sight::txt()<<"stxVirtualCFGFilter("<<CFGNode2Str(cfgn)<<")");
   SgNode * node = cfgn.getNode();
   assert (node != NULL) ;
 
@@ -859,7 +852,7 @@ map<StxPartEdgePtr, bool> makeClosureDF(const vector<CFGEdge>& orig, // raw in o
 
 map<StxPartEdgePtr, bool> StxPart::getOutEdges()
 {
-  SIGHT_VERB_DECL(scope, (txt()<<"StxPart::getOutEdges() ret="<<CFGNode2Str(n), scope::medium), 2, stxAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"StxPart::getOutEdges() ret="<<CFGNode2Str(n), scope::medium), 2, stxAnalysisDebugLevel)
   map<StxPartEdgePtr, bool> vStx;
   SgFunctionCallExp* call;
 
@@ -996,7 +989,7 @@ map<StxPartEdgePtr, bool> StxPart::getOutEdges()
 list<PartEdgePtr> StxPart::outEdges() {
   ostringstream oss;
   //dbg << "n=>"<<CFGNode2Str(n)<<endl;
-  //scope reg(txt()<<"StxPart::outEdges() part="<<str(), scope::medium);
+  //scope reg(sight::txt()<<"StxPart::outEdges() part="<<str(), scope::medium);
   map<StxPartEdgePtr, bool> vStx = getOutEdges();
 
   list<PartEdgePtr> v;
@@ -1010,7 +1003,7 @@ list<PartEdgePtr> StxPart::outEdges() {
 }
 
 list<StxPartEdgePtr> StxPart::outStxEdges() {
-  //scope reg(txt()<<"StxPart::outStxEdges() part="<<str(), scope::medium);
+  //scope reg(sight::txt()<<"StxPart::outStxEdges() part="<<str(), scope::medium);
   map<StxPartEdgePtr, bool> vStx = getOutEdges();
   list<StxPartEdgePtr> v;
   for(map<StxPartEdgePtr, bool>::iterator i=vStx.begin(); i!=vStx.end(); i++)
@@ -1111,7 +1104,7 @@ map<StxPartEdgePtr, bool> StxPart::getInEdges()
 
 list<PartEdgePtr> StxPart::inEdges() {
   ostringstream oss;
-  SIGHT_VERB_DECL(scope, (txt()<<"StxPart::inEdges() part="<<str()), 2, stxAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"StxPart::inEdges() part="<<str()), 2, stxAnalysisDebugLevel)
   map<StxPartEdgePtr, bool> vStx = getInEdges();
 
   SIGHT_VERB(dbg <<"#vStx="<<vStx.size()<<endl, 2, stxAnalysisDebugLevel)
@@ -2055,7 +2048,7 @@ MemRegionObjectPtr StxMemRegionObject::copyAOType() const {
 }
 
 std::string StxMemRegionObject::str(std::string indent) const { // pretty print for the object
-  return txt() << "[StxMR: "<<type->str()<<"]";
+  return sight::txt() << "[StxMR: "<<type->str()<<"]";
 }
 
 // Returns a key that uniquely identifies this particular AbstractObject in the
@@ -2234,7 +2227,7 @@ ValueObjectPtr StxExprMemRegionType::getRegionSizeAO(PartEdgePtr pedge)
 }
 
 std::string StxExprMemRegionType::str(std::string indent) const { // pretty print for the object
-  return txt() << "Expr: "<<SgNode2Str(expr);
+  return sight::txt() << "Expr: "<<SgNode2Str(expr);
 }
 
 StxNamedMemRegionTypePtr NULLStxNamedMemRegionType;
@@ -2277,7 +2270,7 @@ bool matchAnchorPart(SgScopeStatement* scopeStmt, const CFGNode& n) {
 
 // Returns true if this object is live at the given part and false otherwise
 bool StxNamedMemRegionType::isLiveAO(PartEdgePtr pedge) {
-  //scope s(txt()<<"StxNamedMemRegionType::isLiveAO("<<pedge->str()<<")");
+  //scope s(sight::txt()<<"StxNamedMemRegionType::isLiveAO("<<pedge->str()<<")");
 
   if(iname) {
 //    dbg << "iname="<<SgNode2Str(iname)<<endl;
@@ -2327,7 +2320,7 @@ ValueObjectPtr StxNamedMemRegionType::getRegionSizeAO(PartEdgePtr pedge)
 }
 
 std::string StxNamedMemRegionType::str(std::string indent) const { // pretty print for the object
-  return txt() << "Named: "<<(symbol? SgNode2Str(symbol): SgNode2Str(iname));
+  return sight::txt() << "Named: "<<(symbol? SgNode2Str(symbol): SgNode2Str(iname));
 }
 
 // Returns a freshly-allocated All memory region.
@@ -2585,7 +2578,7 @@ bool isOperand(SgNode* n, SgExpression* op) {
 // Given a vector for base VirtualCFG Nodes, get the corresponding refined Pfrom
 // this composer and add them to the given set of refined Parts
 void collectRefinedNodes(Composer* composer, std::set<PartPtr>& refined, const std::set<CFGNode>& base) {
-  //scope s(txt()<<"collectRefinedNodes() #b="<<base.size());
+  //scope s(sight::txt()<<"collectRefinedNodes() #b="<<base.size());
   for(std::set<CFGNode>::const_iterator b=base.begin(); b!=base.end(); b++) {
     StxPartPtr basePart = StxPart::create(*b, SyntacticAnalysis::instance());
     // If there's a valid syntactic node at this CFGNode

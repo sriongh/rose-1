@@ -25,10 +25,6 @@ using boost::mem_fn;
 #include <boost/make_shared.hpp>
 #include <boost/foreach.hpp>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse
 {
 
@@ -321,7 +317,7 @@ void ComposedAnalysis::runAnalysisDense()
     //for(set<PartPtr>::const_iterator i=ultimateParts.begin(); i!=ultimateParts.end(); i++) dbg << "ultimate="<<i->get()->str()<<endl;
     for(AnalysisPartSets::iterator i=ultimateParts.begin(); i!=ultimateParts.end(); ++i) dbg << "ultimate="<<i->str()<<endl;
     //for(set<PartPtr>::iterator start=startingParts.begin(); start!=startingParts.end(); start++) {
-    //scope reg(txt()<<"Starting from "<<(*start)->str(), scope::medium));
+    //scope reg(sight::txt()<<"Starting from "<<(*start)->str(), scope::medium));
   SIGHT_VERB_FI()
 #endif
 
@@ -438,7 +434,7 @@ void ComposedAnalysis::runAnalysisDense()
       // reg.attachAnchor(nextTransferAnchors[parts.NodeState()]);
 #ifndef DISABLE_SIGHT
       scope* reg;
-      SIGHT_VERB_DECL_REF(scope, (txt()<<"Cur AState "<<parts.NodeState()->str(), toAnchors[parts.NodeState()], scope::high), reg, 1, composedAnalysisDebugLevel)
+      SIGHT_VERB_DECL_REF(scope, (sight::txt()<<"Cur AState "<<parts.NodeState()->str(), toAnchors[parts.NodeState()], scope::high), reg, 1, composedAnalysisDebugLevel)
 
       SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
         scopeAnchor = reg->getAnchor();
@@ -567,7 +563,7 @@ void ComposedAnalysis::runAnalysisSSA()
     //for(set<PartPtr>::iterator i=ultimateParts.begin(); i!=ultimateParts.end(); i++) dbg << "ultimate="<<i->get()->str()<<endl;
     for(AnalysisPartSets::iterator i=ultimateParts.begin(); i!=ultimateParts.end(); i++) dbg << "ultimate="<<i->str()<<endl;
     //for(set<PartPtr>::iterator start=startingParts.begin(); start!=startingParts.end(); start++) {
-    //scope reg(txt()<<"Starting from "<<(*start)->str(), scope::medium));
+    //scope reg(sight::txt()<<"Starting from "<<(*start)->str(), scope::medium));
   SIGHT_VERB_FI()
 #endif
 
@@ -615,7 +611,7 @@ void ComposedAnalysis::runAnalysisSSA()
     SIGHT_VERB_FI()
 
     scope* reg;
-    SIGHT_VERB_DECL_REF(scope, (txt()<<"Cur AState "<<part->str(), toAnchors[part], scope::high), reg, 1, composedAnalysisDebugLevel)
+    SIGHT_VERB_DECL_REF(scope, (sight::txt()<<"Cur AState "<<part->str(), toAnchors[part], scope::high), reg, 1, composedAnalysisDebugLevel)
 
     SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
       scopeAnchor = reg->getAnchor();
@@ -727,7 +723,7 @@ void ComposedAnalysis::transferAStateDense(ComposedAnalysis* analysis,
     //struct timeval preStart, preEnd; gettimeofday(&preStart, NULL);
 
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"Current CFGNode "<<CFGNode2Str(*c), scope::medium), 1, composedAnalysisDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"Current CFGNode "<<CFGNode2Str(*c), scope::medium), 1, composedAnalysisDebugLevel)
 #endif
 
     // =================== Copy incoming lattices to outgoing lattices ===================
@@ -912,7 +908,7 @@ void ComposedAnalysis::transferPropagateAStateSSA(ComposedAnalysis* analysis,
   // to all of them
 
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"Current CFGNode "<<CFGNode2Str(cn), scope::medium), 1, composedAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"Current CFGNode "<<CFGNode2Str(cn), scope::medium), 1, composedAnalysisDebugLevel)
 
   SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
       scope s("dfInfo Before");
@@ -1233,7 +1229,7 @@ void ComposedAnalysis::propagateDF2DescDense(ComposedAnalysis* analysis,
                                             "SgNode*",     sgn,
                                             "#desc",       (int)descendants.size()))), moduleProfile)
 
-  SIGHT_VERB_DECL(scope, (txt()<<"Propagating/Merging the outgoing  Lattice to all descendant nodes("<<descEdges.size()<<")", scope::medium), 1, composedAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"Propagating/Merging the outgoing  Lattice to all descendant nodes("<<descEdges.size()<<")", scope::medium), 1, composedAnalysisDebugLevel)
   //SIGHT_VERB(dbg << "current State="<<state->str()<<endl, 1, composedAnalysisDebugLevel)
 #endif
 
@@ -1244,7 +1240,7 @@ void ComposedAnalysis::propagateDF2DescDense(ComposedAnalysis* analysis,
 
 #ifndef DISABLE_SIGHT
   SIGHT_VERB_IF(2, composedAnalysisDebugLevel)
-    scope s(txt()<<"descendants(#"<<descendants.size()<<")");
+    scope s(sight::txt()<<"descendants(#"<<descendants.size()<<")");
     for(list<PartPtr>::iterator d = descendants.begin(); d!=descendants.end(); ++d)
       dbg << "    "<<(*d)->str()<<endl;
   SIGHT_VERB_FI()
@@ -1274,7 +1270,7 @@ void ComposedAnalysis::propagateDF2DescDense(ComposedAnalysis* analysis,
       assert(nextParts.NodeState());
 
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"Descendant: "<<nextParts.str(), scope::low), 1, composedAnalysisDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"Descendant: "<<nextParts.str(), scope::low), 1, composedAnalysisDebugLevel)
     SIGHT_VERB(dbg << NodeState::str(dfInfo) << endl, 1, composedAnalysisDebugLevel)
 #endif
     //{scope s("dfInfo"); dbg <<NodeState::str(dfInfo)<<endl; }
@@ -1603,7 +1599,7 @@ void ComposedAnalysis::setDescendantLatticeLocationsDense(
   //assert(descEdges.size() == descSupersetEdges.size());
   {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"Descendant Edges (#"<<descEdges.size()<<")"), 1, composedAnalysisDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"Descendant Edges (#"<<descEdges.size()<<")"), 1, composedAnalysisDebugLevel)
 #endif
 
       for(list<PartEdgePtr>::iterator e=descEdges.begin()/*, eSuper=descSupersetEdges.begin()*/;
@@ -1612,7 +1608,7 @@ void ComposedAnalysis::setDescendantLatticeLocationsDense(
         AnalysisPartEdges edge = NodeState2All(*e);
     
 #ifndef DISABLE_SIGHT
-        SIGHT_VERB_DECL(scope, (txt()<<"edge "<<(*e)->str()), 1, composedAnalysisDebugLevel)
+        SIGHT_VERB_DECL(scope, (sight::txt()<<"edge "<<(*e)->str()), 1, composedAnalysisDebugLevel)
 #endif
 
           for(vector<Lattice*>::iterator l=dfInfoPost[edge.index()].begin(); l!=dfInfoPost[edge.index()].end(); l++) {
@@ -1863,7 +1859,7 @@ void BWDataflow::remapML(PartEdgePtr fromPEdge, vector<Lattice*>& lat) {
 //!                used as a supersetPart until after the analysis has finished processing and its ATS is completed.
 void FWDataflow::initNodeState(/*PartPtr part, PartPtr supersetPart*/ AnalysisParts& parts) {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"FWDataflow::initNodeState()"), 2, composedAnalysisDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"FWDataflow::initNodeState()"), 2, composedAnalysisDebugLevel)
   SIGHT_VERB_IF(2, composedAnalysisDebugLevel)
   /*dbg << "part="<<part->str()<<endl;
   dbg << "supersetPart="<<supersetPart->str()<<endl;*/

@@ -9,10 +9,6 @@ using namespace std;
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse {
 /***********************
  *** SaveDotAnalysis ***
@@ -425,7 +421,7 @@ std::ostream & ats2dot(std::ostream &o, std::string graphName, set<PartPtr>& sta
     PartPtr part = state.getPart();
     
 #ifndef DISABLE_SIGHT
-    scope reg2(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    scope reg2(sight::txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
     if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "context="<<part->getContext()->str()<<endl;
       dbg << "pedge="<<state.getPartEdge()->str()<<endl;
@@ -537,7 +533,7 @@ std::ostream & ats2dot_bw(std::ostream &o, std::string graphName, set<PartPtr>& 
     PartPtr part = state.getPart();
 //cout << "==== part="<<part->str()<<endl;
 #ifndef DISABLE_SIGHT
-    scope reg(txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
+    scope reg(sight::txt()<<"ats2dot: part="<<getPartUID(partInfo, part)<<"="<<part->str(), scope::medium, attrGE("saveDotAnalysisDebugLevel", 1));
     if(saveDotAnalysisDebugLevel()>=1) {
       dbg << "state="<<state.str()<<endl;
       dbg << "*state="<<part->str()<<" context="<<part->getContext()->str()<<endl;

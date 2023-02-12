@@ -3,11 +3,7 @@ using namespace std;
 
 #include "graphIterator.h"
 #include <boost/make_shared.hpp>
-
-#ifndef DISABLE_SIGHT
 #include "sight.h"
-using namespace sight;
-#endif
 
 #include <list>
 #include <vector>

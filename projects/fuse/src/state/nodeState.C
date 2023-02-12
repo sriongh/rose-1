@@ -6,10 +6,6 @@ using namespace std;
 #include "compose.h"
 #include <boost/make_shared.hpp>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse {
 #define nodeStateDebugLevel 0
 
@@ -101,7 +97,7 @@ const std::map<PartEdgePtr, std::vector<Lattice*> >& NodeState::getLatticeBelowA
 {
   if(dfInfoBelow.find(analysis) == dfInfoBelow.end()) {
 #ifndef DISABLE_SIGHT
-    scope s(txt()<<"ERROR: no entry for analysis "<<(dynamic_cast<ComposedAnalysis*>(analysis))->str());
+    scope s(sight::txt()<<"ERROR: no entry for analysis "<<(dynamic_cast<ComposedAnalysis*>(analysis))->str());
     dbg << "Entries exist for:"<<endl;
     for(map<Analysis*, std::map<PartEdgePtr, std::vector<Lattice*> > >::const_iterator i=dfInfoBelow.begin(); i!=dfInfoBelow.end(); ++i)
       dbg << (dynamic_cast<ComposedAnalysis*>(i->first))->str()<<endl;
@@ -726,7 +722,7 @@ map<PartPtr, NodeState*> NodeState::getNodeStateMap(ComposedAnalysis* analysis) 
 // Returns the NodeState object associated with the given Part from the given analysis.
 NodeState* NodeState::getNodeState(ComposedAnalysis* analysis, PartPtr p)
 {
-  /*scope s(txt()<<"NodeState::getNodeState())");
+  /*scope s(sight::txt()<<"NodeState::getNodeState())");
   dbg << "analysis="<<analysis->str()<<" p="<<p->str()<<endl;
 
   { scope s("nodeStateMap");

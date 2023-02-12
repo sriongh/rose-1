@@ -5,10 +5,6 @@ using namespace std;
 #include "analysis_tester.h"
 #include "factor_trans_system.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse {
 
 //int analysisTesterDebugLevel=1;
@@ -677,7 +673,7 @@ class compareHE : public HierEdgeMapFunctor<PartEdgePtr> {
     int idx=0;
     for(std::list<PartEdgePtr>::const_iterator i=hpe.begin(); i!=hpe.end(); i++, idx++) {
 #ifndef DISABLE_SIGHT
-      indent ind(txt()<<idx<":   ");
+      indent ind(sight::txt()<<idx<":   ");
       dbg << i->get()->str()<<endl;
 #endif
     }

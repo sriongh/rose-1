@@ -11,10 +11,6 @@ using namespace std;
 #include <boost/lambda/casts.hpp>
 #include "sageInterface.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 using namespace SageInterface;
 
 #include <cwchar>
@@ -980,7 +976,7 @@ size_t getArrayElementCount_GB(SgArrayType* t, SgPntrArrRefExp* ref)
 // Returns the offset of the given SgPntrArrRefExp relative to the starting point of its parent expression,
 // which may be a SgVarRefExp, SgDotExp, SgPntrArrRefExp or other expressions
 long long getPntrArrRefOffset(SgPntrArrRefExp* ref, ConcreteExactKindPtr that) {
-  //scope s(txt()<<"getPntrArrRefOffset("<<SgNode2Str(ref));
+  //scope s(sight::txt()<<"getPntrArrRefOffset("<<SgNode2Str(ref));
   /*cout << "----------------------------------"<<endl;
   cout << "getPntrArrRefOffset("<<SgNode2Str(ref)<<endl;
   cout << "rhs="<<SgNode2Str(ref->get_rhs_operand())<<endl;
@@ -2235,7 +2231,7 @@ bool ConcreteExactKind::isFullAO(PartEdgePtr pedge) { return false; }
 bool ConcreteExactKind::isEmptyAO(PartEdgePtr pedge) { return false; }
 
 std::string ConcreteExactKind::str(std::string indent) const
-{ return txt()<<"[ConcreteExactKind: val="<<(exp? SgNode2Str(exp.get()): "NULL")<<"]"; }
+{ return sight::txt()<<"[ConcreteExactKind: val="<<(exp? SgNode2Str(exp.get()): "NULL")<<"]"; }
 
 
 /**********************************
@@ -2483,7 +2479,7 @@ ConcreteValueKindPtr ConcreteOffsetListKind::op(SgBinaryOp* op, ConcreteValueKin
         assert(rhsVarDecl || rhsFuncDecl);
 
         for(SgDeclarationStatementPtrList::const_iterator m=members.begin(); m!=members.end(); m++) {
-          //scope s2(txt()<<memberIdx<<":    member ="<<SgNode2Str(*m));
+          //scope s2(sight::txt()<<memberIdx<<":    member ="<<SgNode2Str(*m));
           if(isSgVariableDeclaration(*m)) {
             const SgInitializedNamePtrList& decls = isSgVariableDeclaration(*m)->get_variables();
             for(SgInitializedNamePtrList::const_iterator d=decls.begin(); d!=decls.end(); d++) {

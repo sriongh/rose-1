@@ -10,17 +10,9 @@
 #include <utility>
 #include <iostream>
 #include <boost/make_shared.hpp>
-
+#include "sight.h"
 
 using namespace std;
-
-#ifndef DISABLE_SIGHT
-#include "sight.h"
-using namespace sight;
-#else
-#include "sight-disable.h"
-#endif
-
 
 namespace fuse
 {
@@ -212,7 +204,7 @@ std::string SgNode2Str(SgNode* sgn)
     for(SgInitializedNamePtrList::iterator a=args.begin(); a!=args.end(); a++) {
       if(a!=args.begin()) oss << ", ";
 #ifndef DISABLE_SIGHT
-      oss << common::escape((*a)->unparseToString());
+      oss << sight::common::escape((*a)->unparseToString());
 #else
       oss << (*a)->unparseToString();
 #endif
@@ -220,12 +212,12 @@ std::string SgNode2Str(SgNode* sgn)
     oss << ") | " << sgn->class_name() << "]";
   } else if(isSgVariableSymbol(sgn)) {
 #ifndef DISABLE_SIGHT
-    oss << "[" << common::escape(isSgVariableSymbol(sgn)->get_name().getString()) << " | " << sgn->class_name() << "]";
+    oss << "[" << sight::common::escape(isSgVariableSymbol(sgn)->get_name().getString()) << " | " << sgn->class_name() << "]";
 #else
 #endif
   } else if(isSgInitializedName(sgn)) {
 #ifndef DISABLE_SIGHT
-    oss << "[" << common::escape(isSgInitializedName(sgn)->get_qualified_name().getString()) << " | " << sgn->class_name() << "]";
+    oss << "[" << sight::common::escape(isSgInitializedName(sgn)->get_qualified_name().getString()) << " | " << sgn->class_name() << "]";
 #else
     oss << "[" << isSgInitializedName(sgn)->get_qualified_name().getString() << " | " << sgn->class_name() << "]";
 #endif   
@@ -257,7 +249,7 @@ std::string CFGNode2Str(const CFGNode& n)
     for(SgInitializedNamePtrList::iterator a=args.begin(); a!=args.end(); a++) {
       if(a!=args.begin()) oss << ", ";
 #ifndef DISABLE_SIGHT
-      oss << common::escape((*a)->unparseToString());
+      oss << sight::common::escape((*a)->unparseToString());
 #else
       oss << (*a)->unparseToString();
 #endif
@@ -265,19 +257,19 @@ std::string CFGNode2Str(const CFGNode& n)
     oss << ") | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
   } else if(isSgVariableSymbol(n.getNode())) {
 #ifndef DISABLE_SIGHT
-    oss << "[" << common::escape(isSgVariableSymbol(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << sight::common::escape(isSgVariableSymbol(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #else
     oss << "[" << isSgVariableSymbol(n.getNode())->get_name().getString() << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #endif
   } else if(isSgInitializedName(n.getNode())) {
 #ifndef DISABLE_SIGHT
-    oss << "[" << common::escape(isSgInitializedName(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << sight::common::escape(isSgInitializedName(n.getNode())->get_name().getString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #else
     oss << "[" << isSgInitializedName(n.getNode())->get_name().getString() << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #endif
   } else
 #ifndef DISABLE_SIGHT
-    oss << "[" << common::escape(n.getNode()->unparseToString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
+    oss << "[" << sight::common::escape(n.getNode()->unparseToString()) << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #else
   oss << "[" << n.getNode()->unparseToString() << " | " << n.getNode()->class_name() << " | " << n.getIndex() << "]";
 #endif

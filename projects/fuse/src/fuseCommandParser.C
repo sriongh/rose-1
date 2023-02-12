@@ -11,10 +11,6 @@ using namespace std;
 #include "fuseCommandParser.h"
 #include "const_prop_count.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 using namespace boost::xpressive;
 
 namespace fuse {

@@ -11,10 +11,6 @@ using namespace std;
 using namespace SageInterface;
 using namespace SageBuilder;
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 #define dynMonDL 0
 
 namespace fuse {
@@ -338,7 +334,7 @@ std::set<SSAMemLocObjectPtr> DynamicMonitor::collectReachingDefs(SSAMemLocObject
 #ifndef DISABLE_SIGHT
     {scope s("frontier");
       for(map<SSAMemLocObjectPtr, set<SSAMemLocObjectPtr> >::iterator f=frontier.begin(); f!=frontier.end(); ++f) {
-        scope s2(txt()<<"Use "<<f->first->str());
+        scope s2(sight::txt()<<"Use "<<f->first->str());
         BOOST_FOREACH(const SSAMemLocObjectPtr& d, f->second) {
           dbg << d->str()<<endl;
         }
@@ -372,7 +368,7 @@ std::set<SSAMemLocObjectPtr> DynamicMonitor::collectReachingDefs(SSAMemLocObject
       if(f == frontier.end()) continue;
 
       map<SSAMemLocObjectPtr, set<SSAMemLocObjectPtr> > reachingUse2Defs;
-      SIGHT_VERB_DECL(scope, (txt()<<"Entry "<<f->first->str()), 1, dynMonDL)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"Entry "<<f->first->str()), 1, dynMonDL)
 
       if(f->first->getAccess()==SSAMemLocObject::def) {
         ROSE_ASSERT(f->second.size()==0);
@@ -386,9 +382,9 @@ std::set<SSAMemLocObjectPtr> DynamicMonitor::collectReachingDefs(SSAMemLocObject
       }
 
       for(map<SSAMemLocObjectPtr, set<SSAMemLocObjectPtr> >::iterator u2rd=reachingUse2Defs.begin(); u2rd!=reachingUse2Defs.end(); ++u2rd) {
-        SIGHT_VERB_DECL(scope, (txt()<<"Use "<<u2rd->first->str()), 1, dynMonDL)
+        SIGHT_VERB_DECL(scope, (sight::txt()<<"Use "<<u2rd->first->str()), 1, dynMonDL)
         BOOST_FOREACH(const SSAMemLocObjectPtr& rd, u2rd->second) {
-          SIGHT_VERB_DECL(scope, (txt()<<rd->str()), 1, dynMonDL);
+          SIGHT_VERB_DECL(scope, (sight::txt()<<rd->str()), 1, dynMonDL);
 
           // If this def is definite, replace the original def with this one
           if(rd->getAccess()==SSAMemLocObject::def) {
@@ -467,10 +463,10 @@ std::set<SSAMemLocObjectPtr> DynamicMonitor::collectReachingDefs(SSAMemLocObject
 //      BOOST_FOREACH(const SSAMemLocObjectPtr& d, f->second) {
 //        // For each frontier def look for the definitions that reach it
 //        //if(d->getAccess() == SSAMemLocObject::def) {
-//          scope s2(txt()<<"def "<<d->str());
+//          scope s2(sight::txt()<<"def "<<d->str());
 //          const set<SSAMemLocObjectPtr>& reachingUses = ssa->getUses(d->getLoc());
 //          BOOST_FOREACH(const SSAMemLocObjectPtr& u, reachingUses) {
-//            scope s3(txt()<<"use "<<u->str());
+//            scope s3(sight::txt()<<"use "<<u->str());
 //            const set<SSAMemLocObjectPtr>& reachingDefs = ssa->getDefs(u);
 //
 //            BOOST_FOREACH(const SSAMemLocObjectPtr& rd, reachingDefs) {
@@ -562,7 +558,7 @@ std::set<SSAMemLocObjectPtr> DynamicMonitor::collectReachingDefs(SSAMemLocObject
 #ifndef DISABLE_SIGHT
   {scope s("frontier");
     for(map<SSAMemLocObjectPtr, set<SSAMemLocObjectPtr> >::iterator f=frontier.begin(); f!=frontier.end(); ++f) {
-      scope s2(txt()<<"Use "<<f->first->str());
+      scope s2(sight::txt()<<"Use "<<f->first->str());
       BOOST_FOREACH(const SSAMemLocObjectPtr& d, f->second) {
         dbg << d->str()<<endl;
       }
@@ -749,7 +745,7 @@ void DynamicMonitor::runAnalysis() {
   map<SgExpression*, list<SgScopeStatement*> > trackInsertionsScope;
 
   for(map<SSAMemLocObjectPtr, int>::iterator rd=rdIdx.begin(); rd!=rdIdx.end(); ++rd) {
-    SIGHT_VERB_DECL(scope, (txt()<<"RD="<<rd->first->str()), 1, dynMonDL)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"RD="<<rd->first->str()), 1, dynMonDL)
     //cout<<"RD="<<rd->first->str()<<endl;
     // Prepare the current reaching def for new tracking statements to be inserted
     // immediately after the SgNode that denotes its reference. Make sure to do this
@@ -810,7 +806,7 @@ void DynamicMonitor::runAnalysis() {
     }
 
     if(insertTargetIdentified) {*/
-    { SIGHT_VERB_DECL(scope, (txt()<< "rd2targets["<<rd->first->str()), 1, dynMonDL)
+    { SIGHT_VERB_DECL(scope, (sight::txt()<< "rd2targets["<<rd->first->str()), 1, dynMonDL)
     // For each target that this def reaches, add a call to track this reaching def in the
     // target's data structure
     for(set<SSAMemLocObjectPtr>::iterator t=rd2targets[rd->first].begin(); t!=rd2targets[rd->first].end(); ++t) {
@@ -865,7 +861,7 @@ void DynamicMonitor::runAnalysis() {
     SIGHT_VERB_DECL(scope, ("t"), 1, dynMonDL)
     SIGHT_VERB(dbg << "t->first->getBase()="<<t->first->getBase()<<"="<<SgNode2Str(t->first->getBase())<<endl, 1, dynMonDL)
 
-    /*SgAssignInitializer *tgtInit = splitExpression ((SgExpression*)t->first->getBase(), string(txt()<<"targetDef"<<t->second));
+    /*SgAssignInitializer *tgtInit = splitExpression ((SgExpression*)t->first->getBase(), string(sight::txt()<<"targetDef"<<t->second));
     SgInitializedName* newTgtName = isSgInitializedName(tgtInit->get_parent());
     ROSE_ASSERT(newTgtName);
     SgVariableDeclaration* newTgtDecl = isSgVariableDeclaration(newTgtName->get_declaration());

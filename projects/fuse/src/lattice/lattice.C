@@ -7,11 +7,7 @@
 using namespace std;
 
 #include "latticeFull.h"
-
-#ifndef DISABLE_SIGHT
 #include "sight.h"
-using namespace sight;
-#endif
 
 namespace fuse {
   

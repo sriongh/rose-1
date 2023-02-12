@@ -8,11 +8,7 @@ using namespace std;
 #include <boost/foreach.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/topological_sort.hpp>
-
-#ifndef DISABLE_SIGHT
 #include "sight.h"
-using namespace sight;
-#endif
 
 using namespace boost;
 
@@ -61,7 +57,7 @@ void MLRemapper::init(const PartEdgePtr pedge, ComposedAnalysis* client)
   if(initialized.find(client) != initialized.end()) return;
   initialized.insert(client);
 
-  //scope reg(txt()<<"MLRemapper::init() pedge=" << pedge.get()->str()<<" client="<<client->str(), scope::medium);
+  //scope reg(sight::txt()<<"MLRemapper::init() pedge=" << pedge.get()->str()<<" client="<<client->str(), scope::medium);
   // Record the given PartEdge and ensure that it is consistent
   if(this->pedge) assert(this->pedge == pedge);
   else            this->pedge = pedge;
@@ -281,7 +277,7 @@ void setArgParamMap(PartEdgePtr callEdge, SgFunctionCallExp* call,
   dbg << "func definition="<<(func.get_definition()? SgNode2Str(func.get_definition()): "NULL")<<endl;
 
   std::set<CFGNode> funcNodes = callEdge->target()->CFGNodes();
-  { scope s(txt()<<"nodes of "<<callEdge->target()->str());
+  { scope s(sight::txt()<<"nodes of "<<callEdge->target()->str());
   for(std::set<CFGNode>::iterator f=funcNodes.begin(); f!=funcNodes.end(); f++) {
     dbg << SgNode2Str(f->getNode())<<endl;
     if(isSgFunctionParameterList(f->getNode())) {
@@ -641,7 +637,7 @@ Part::Part(const Part& that) :
 
 Part::~Part()
 {
-  /*scope reg(txt()<<"Deleting Part "<<this, scope::medium);*/
+  /*scope reg(sight::txt()<<"Deleting Part "<<this, scope::medium);*/
 }
 
 // Returns the NodeState where the Lattices computed by the analysis that implements this Part
@@ -1253,7 +1249,7 @@ std::list<PartEdgePtr> PartEdge::getOperandPartEdge(SgNode* anchor, SgNode* oper
       // rare enough that we don't optimize for it).
       for(list<PartEdgePtr>::iterator be=baseEdges.begin(); be!=baseEdges.end(); be++) {
         SIGHT_VERB_IF(3, partitionsDebugLevel)
-          SIGHT_VERB_DECL(scope, (txt()<<"baseEdge="<<be->get()->str(), scope::low), 3, partitionsDebugLevel)
+          SIGHT_VERB_DECL(scope, (sight::txt()<<"baseEdge="<<be->get()->str(), scope::low), 3, partitionsDebugLevel)
           dbg << "it.getPartEdge()->getInputPartEdge()->source()==NULLPart="<<(it.getPartEdge()->getInputPartEdge()->source()==NULLPart)<<", "<<
                  "it.getPartEdge()->getInputPartEdge()->target()==(*be)->target()="<<(it.getPartEdge()->getInputPartEdge()->target()==(*be)->target())<<", "<<
                  "it.getPartEdge()->getInputPartEdge()->target()==NULLPart="<<(it.getPartEdge()->getInputPartEdge()->target()==NULLPart)<<", "<<
@@ -1583,7 +1579,7 @@ std::list<PartEdgePtr> IntersectionPart::outEdges()
     // Group these edges according to their common parent edge
     {
 #ifndef DISABLE_SIGHT
-      scope s(txt()<<"outEdges #out="<<out.size());
+      scope s(sight::txt()<<"outEdges #out="<<out.size());
 #endif
     for(list<PartEdgePtr>::iterator e=out.begin(); e!=out.end(); e++) {
 #ifndef DISABLE_SIGHT
@@ -1802,7 +1798,7 @@ set<CFGNode> IntersectionPart::CFGNodes() const {
 // its corresponding return/call, respectively.
 set<PartPtr> IntersectionPart::matchingCallParts() const {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"IntersectionPart::matchingCallParts()"), 1, partitionsDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"IntersectionPart::matchingCallParts()"), 1, partitionsDebugLevel)
   SIGHT_VERB(dbg<<"this="<<str()<<endl, 1, partitionsDebugLevel)
 #endif
   assert(initialized);
@@ -1817,7 +1813,7 @@ set<PartPtr> IntersectionPart::matchingCallParts() const {
 #endif
   for(map<ComposedAnalysis*, PartPtr>::const_iterator part=parts.begin(); part!=parts.end(); ++part) {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"part="<<part->second->str()), 1, partitionsDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"part="<<part->second->str()), 1, partitionsDebugLevel)
 #endif
     set<PartPtr> matchParts = part->second->matchingCallParts();
 #ifndef DISABLE_SIGHT
@@ -1893,7 +1889,7 @@ set<PartPtr> IntersectionPart::matchingCallParts() const {
   // its corresponding exit/entry, respectively.
 set<PartPtr> IntersectionPart::matchingEntryExitParts() const {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"IntersectionPart::matchingEntryExitParts()"), 1, partitionsDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"IntersectionPart::matchingEntryExitParts()"), 1, partitionsDebugLevel)
   SIGHT_VERB(dbg<<"this="<<str()<<endl, 1, partitionsDebugLevel)
 #endif
   assert(initialized);
@@ -1908,7 +1904,7 @@ set<PartPtr> IntersectionPart::matchingEntryExitParts() const {
 #endif
   for(map<ComposedAnalysis*, PartPtr>::const_iterator part=parts.begin(); part!=parts.end(); ++part) {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"part="<<part->second->str()), 1, partitionsDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"part="<<part->second->str()), 1, partitionsDebugLevel)
 #endif
     set<PartPtr> matchParts = part->second->matchingEntryExitParts();
 #ifndef DISABLE_SIGHT
@@ -2076,7 +2072,7 @@ bool IntersectionPart::equal(const PartPtr& that_arg) const
 bool IntersectionPart::less(const PartPtr& that_arg) const
 {
   assert(initialized);
-  /*scope s(txt()<<"IntersectionPart::less()");
+  /*scope s(sight::txt()<<"IntersectionPart::less()");
   dbg << "this="<<str()<<endl;
   dbg << "that="<<that_arg->str()<<endl;*/
   IntersectionPartPtr that = dynamicPtrCast<IntersectionPart>(that_arg);
@@ -2300,12 +2296,12 @@ PartPtr IntersectionPartEdge::target() const {
 //    it returns a list of PartEdges that partition O.
 /*std::list<PartEdgePtr> IntersectionPartEdge::getOperandPartEdge(SgNode* anchor, SgNode* operand)
 {
-  scope s(txt()<<"IntersectionPartEdge::getOperandPartEdge(isInEdgeFromAny="<<isInEdgeFromAny<<")");
+  scope s(sight::txt()<<"IntersectionPartEdge::getOperandPartEdge(isInEdgeFromAny="<<isInEdgeFromAny<<")");
   if(isInEdgeFromAny) {
     list<PartEdgePtr> in = cachedTarget->inEdges();
     set<PartEdgePtr> resS;
     for(list<PartEdgePtr>::iterator i=in.begin(); i!=in.end(); ++i) {
-      scope s2(txt()<<"InEdge "<<(*i)->str());
+      scope s2(sight::txt()<<"InEdge "<<(*i)->str());
       list<PartEdgePtr> ope = (*i)->getOperandPartEdge(anchor, operand);
       for(list<PartEdgePtr>::iterator j=ope.begin(); j!=ope.end(); ++j)
         resS.insert(*j);
@@ -2322,7 +2318,7 @@ PartPtr IntersectionPartEdge::target() const {
    // For each part in parts, maps the parent part of each operand part edge to the set of parts that share this parent
   map<PartEdgePtr, map<ComposedAnalysis*, set<PartEdgePtr> > > parent2OPE;
   for(map<ComposedAnalysis*, PartEdgePtr>::iterator edge=edges.begin(); edge!=edges.end(); edge++) {
-    scope s3(txt()<<"edge "<<edge->second->str());
+    scope s3(sight::txt()<<"edge "<<edge->second->str());
     // Get this part's outgoing edges
     list<PartEdgePtr> ope = edge->second->getOperandPartEdge(anchor, operand);
 
@@ -2741,7 +2737,7 @@ bool IdentityPart::less(const PartPtr& that_arg) const
 }
 
 std::string IdentityPart::str(std::string indent) const
-{ return string(txt()<<"[IdentityPart:"<<base->str(indent)<<"]"); }
+{ return string(sight::txt()<<"[IdentityPart:"<<base->str(indent)<<"]"); }
 
 
 / ****************************
@@ -2878,7 +2874,7 @@ Lattice* IdentityPartEdge::backwardRemapML(Lattice* lat, PartEdgePtr fromPEdge_a
 }
 
 std::string IdentityPartEdge::str(std::string indent) const
-{ return string(txt()<<"[IdentityPartEdge:"<<base->str(indent)<<"]"); }
+{ return string(sight::txt()<<"[IdentityPartEdge:"<<base->str(indent)<<"]"); }
 */
 
 

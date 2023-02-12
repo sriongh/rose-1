@@ -10,9 +10,6 @@ using namespace std;
 #include "sageInterface.h"
 #include "AnalysisAstAttribute.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
 
 #define CPDebugLevel 0
 using namespace SageInterface;
@@ -234,7 +231,7 @@ CPValueLattice::str(string indent) const
 //       this in the parent CPValueLattice's list, return that.
 CPValueLatticePtr CPValueLattice::op(SgUnaryOp* op) {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"CPValueLattice::op(SgUnaryOp "<<SgNode2Str(op)<<")", scope::medium), 1, CPDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"CPValueLattice::op(SgUnaryOp "<<SgNode2Str(op)<<")", scope::medium), 1, CPDebugLevel)
   SIGHT_VERB(dbg << "this="<<str()<<endl, 1, CPDebugLevel)
 #endif
   return boost::make_shared<CPValueLattice>(kind->op(op), getPartEdge());
@@ -242,7 +239,7 @@ CPValueLatticePtr CPValueLattice::op(SgUnaryOp* op) {
 
 CPValueLatticePtr CPValueLattice::op(SgBinaryOp* op, CPValueLatticePtr that) {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"CPValueLattice::op(SgBinaryOp "<<SgNode2Str(op)<<")", scope::medium), 1, CPDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"CPValueLattice::op(SgBinaryOp "<<SgNode2Str(op)<<")", scope::medium), 1, CPDebugLevel)
   SIGHT_VERB_IF(1, CPDebugLevel)
     dbg << "this="<<str()<<endl;
     dbg << "that="<<(that? that->str(): "NULL")<<endl;
@@ -1240,7 +1237,7 @@ void ConstantPropagationAnalysis::genInitLattice(const AnalysisParts& parts, con
                                                  vector<Lattice*>& initLattices)
 {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"ConstantPropagationAnalysis::genInitLattice(parts.NodeState()="<<parts.NodeState()->str()<<")", scope::medium), 1, CPDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"ConstantPropagationAnalysis::genInitLattice(parts.NodeState()="<<parts.NodeState()->str()<<")", scope::medium), 1, CPDebugLevel)
 #endif
   AbstractObjectMap* ml2val = new AbstractObjectMap(boost::make_shared<CPValueLattice>(pedges.NodeState()),
                                                     pedges.NodeState(),
@@ -1308,7 +1305,7 @@ ConstantPropagationAnalysis::getTransferVisitor(AnalysisParts& parts, CFGNode cn
 ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedge)
 {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"ConstantPropagationAnalysis::Expr2Val(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")", scope::medium), 1, CPDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"ConstantPropagationAnalysis::Expr2Val(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")", scope::medium), 1, CPDebugLevel)
 #endif
 
   //MemLocObjectPtr ml = getComposer()->Expr2MemLoc(n, pedge, this);
@@ -1380,7 +1377,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
       PartEdgePtr indexEdge = lats->first;
       assert(indexEdge->source() == pedges.index()->source());
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"edge "<<lats->first.get()->str(), scope::medium), 1, CPDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"edge "<<lats->first.get()->str(), scope::medium), 1, CPDebugLevel)
 #endif
 
       // Get the value map at the current edge
@@ -1447,7 +1444,7 @@ ValueObjectPtr ConstantPropagationAnalysis::Expr2Val(SgNode* n, PartEdgePtr pedg
 
 MemLocObjectPtr ConstantPropagationAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr pedge) {
 #ifndef DISABLE_SIGHT
-  SIGHT_VERB_DECL(scope, (txt()<<"ConstantPropagationAnalysis::Expr2MemLoc(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")", scope::medium), 1, CPDebugLevel)
+  SIGHT_VERB_DECL(scope, (sight::txt()<<"ConstantPropagationAnalysis::Expr2MemLoc(n="<<SgNode2Str(n)<<", pedge="<<pedge->str()<<")", scope::medium), 1, CPDebugLevel)
 #endif
 
   //struct timeval gopeStart, gopeEnd; gettimeofday(&gopeStart, NULL);
@@ -1489,7 +1486,7 @@ MemLocObjectPtr ConstantPropagationAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr 
 
   if(pedges.NodeState()->source()) {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"Source: "<<pedges.NodeState()->source()->str(), scope::medium), 2, CPDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"Source: "<<pedges.NodeState()->source()->str(), scope::medium), 2, CPDebugLevel)
 #endif
     NodeState* state = NodeState::getNodeState(this, pedges.NodeState()->source());
 #ifndef DISABLE_SIGHT
@@ -1499,7 +1496,7 @@ MemLocObjectPtr ConstantPropagationAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr 
 
   if(pedges.NodeState()->target()) {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_DECL(scope, (txt()<<"Target: "<<pedges.NodeState()->target()->str(), scope::medium), 2, CPDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"Target: "<<pedges.NodeState()->target()->str(), scope::medium), 2, CPDebugLevel)
 #endif
     NodeState* state = NodeState::getNodeState(this, pedges.NodeState()->target());
 #ifndef DISABLE_SIGHT
@@ -1555,7 +1552,7 @@ MemLocObjectPtr ConstantPropagationAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr 
     CPMemLocObjectPtr mergedML;
     for(map<PartEdgePtr, vector<Lattice*> >::iterator lats=e2lats.begin(); lats!=e2lats.end(); lats++) {
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"edge "<<lats->first.get()->str(), scope::medium), 1, CPDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"edge "<<lats->first.get()->str(), scope::medium), 1, CPDebugLevel)
 #endif
       PartEdgePtr indexEdge = lats->first;
       assert(indexEdge.get()->source() == pedges.index()->source());
@@ -1654,7 +1651,7 @@ MemLocObjectPtr ConstantPropagationAnalysis::Expr2MemLoc(SgNode* n, PartEdgePtr 
     assert(e2lats.size()>=1);
     CPMemLocObjectPtr mergedML;
     for(map<PartEdgePtr, vector<Lattice*> >::iterator lats=e2lats.begin(); lats!=e2lats.end(); lats++) {
-      scope sEdge(txt()<<"edge "<<lats->first.get()->str(), scope::medium, attrGE("CPDebugLevel", 1));
+      scope sEdge(sight::txt()<<"edge "<<lats->first.get()->str(), scope::medium, attrGE("CPDebugLevel", 1));
       PartEdge* edgePtr = lats->first.get();
       assert(edgePtr->source() == pedge.get()->source());
 

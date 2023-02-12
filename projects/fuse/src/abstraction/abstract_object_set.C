@@ -5,10 +5,6 @@ using namespace std;
 #include <ostream>
 #include <typeinfo>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 namespace fuse
 {  
 #define AbstractObjectSetDebugLevel 0

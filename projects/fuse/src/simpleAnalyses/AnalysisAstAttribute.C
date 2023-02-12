@@ -13,10 +13,7 @@ using namespace std;
 
 namespace fuse {
 
-#define AnalysisAstAttributeDL 2
-#if AnalysisAstAttributeDL==0
-#define DISABLE_SIGHT
-#endif
+#define AnalysisAstAttributeDL 0
   
   /***************************
    * FuseMultiCPAstAttribute *

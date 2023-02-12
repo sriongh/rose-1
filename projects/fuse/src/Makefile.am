@@ -5,7 +5,7 @@ ROSE_PREFIX=$(top_builddir)
 if ROSE_WITH_SIGHT
   include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
 else
-  SIGHT_CFLAGS=-DDISABLE_SIGHT
+  SIGHT_CFLAGS=-DDISABLE_SIGHT -I$(srcdir)/sight
   SIGHT_LINKFLAGS=
 endif
 

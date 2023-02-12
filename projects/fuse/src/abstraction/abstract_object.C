@@ -5,12 +5,9 @@ using namespace std;
 
 #include "abstract_object.h"
 #include <iostream>
-#ifndef DISABLE_SIGHT
 #include "sight.h"
-#endif
 
 #include "compose.h"
-
 
 namespace fuse {
 

@@ -17,10 +17,6 @@ using namespace std;
 #include <boost/make_shared.hpp>
 #include "sight.h"
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 /* GB 2012-10-23: DESIGN NOTE
  * At the start of an intra-procedural analysis of a given function the function's initial dataflow state is copied
  * from the special NodeState from inside the function's FunctionState object to the function's starting/ending Part.

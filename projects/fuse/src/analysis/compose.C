@@ -14,10 +14,6 @@ using namespace std;
 #include <set>
 #include <queue>
 
-#ifndef DISABLE_SIGHT
-using namespace sight;
-#endif
-
 using namespace boost;
 namespace fuse {
 
@@ -476,7 +472,7 @@ namespace fuse {
                                                 ComposedAnalysis* client,
                                                 // Flag that indicates whether the operation's invocation should be logged in detail
                                                 bool verbose) {
-    SIGHT_DECL(scope, (txt()<<"ChainComposer::callServerAnalysisFunc() "<<opName<<" #doneAnalyses="<<doneAnalyses.size()<<" client="<<(client? client->str(): "NULL"), scope::medium), verbose);
+    SIGHT_DECL(scope, (sight::txt()<<"ChainComposer::callServerAnalysisFunc() "<<opName<<" #doneAnalyses="<<doneAnalyses.size()<<" client="<<(client? client->str(): "NULL"), scope::medium), verbose);
     //          attrGE("composerDebugLevel", 1));
     assert(doneAnalyses.size()>0);
     //assert(serverCache.find(client) != serverCache.end());
@@ -627,9 +623,9 @@ namespace fuse {
    // Returns a string representation of the result of the operation
    boost::function<string (RetPtrType, string)> ret2Str)
   {
-    SIGHT_VERB_DECL(scope, (txt()<<"ChainComposer::Operand"<<OpName, scope::medium), 2, composerDebugLevel)
+    SIGHT_VERB_DECL(scope, (sight::txt()<<"ChainComposer::Operand"<<OpName, scope::medium), 2, composerDebugLevel)
       SIGHT_VERB(dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl<< "pedge="<<pedge->str()<<endl, 2, composerDebugLevel)
-      /*  scope reg(txt()<<"ChainComposer::Operand"<<OpName, scope::medium, attrGE("composerDebugLevel", 2));
+      /*  scope reg(sight::txt()<<"ChainComposer::Operand"<<OpName, scope::medium, attrGE("composerDebugLevel", 2));
           if(composerDebugLevel()>=2) dbg << "n="<<SgNode2Str(n)<<endl << "operand("<<operand<<")="<<SgNode2Str(operand)<<endl << "pedge="<<pedge->str()<<endl;*/
 
       // Get the parts of the execution prefixes that terminate at the operand before continuing directly
@@ -1268,7 +1264,7 @@ namespace fuse {
   // Given a Part implemented by the entire composer, returns the set of refined Parts implemented
   // by the composer or the NULLPart if this relationship was not tracked.
   const set<PartPtr>& ChainComposer::getRefinedParts(PartPtr basePart) const {
-    //scope s(txt()<<"ChainComposer::getRefinedParts("<<basePart->str()<<")");
+    //scope s(sight::txt()<<"ChainComposer::getRefinedParts("<<basePart->str()<<")");
     // If we don't ygetRefinedPartset have the edges that refine base in the cache, compute them and add one
     map<PartPtr, std::set<PartPtr> >::const_iterator i=base2RefinedPart.find(basePart);
     if(i == base2RefinedPart.end()) {
@@ -1308,7 +1304,7 @@ namespace fuse {
   // Given a PartEdge implemented by the entire composer, returns the set of refined PartEdges implemented
   // by the composer or the NULLPartEdge if this relationship was not tracked.
   const set<PartEdgePtr>& ChainComposer::getRefinedPartEdges(PartEdgePtr basePedge) const {
-    //scope s(txt()<<"ChainComposer::getRefinedPartEdges("<<base->str()<<")");
+    //scope s(sight::txt()<<"ChainComposer::getRefinedPartEdges("<<base->str()<<")");
     map<PartEdgePtr, std::set<PartEdgePtr> >::const_iterator i=base2RefinedPartEdge.find(basePedge);
     if(i == base2RefinedPartEdge.end()) {
       //dbg << "    not cached. #doneAnalyses="<<doneAnalyses.size()<<endl;
@@ -1388,7 +1384,7 @@ namespace fuse {
       //contextAttrs.push_back("ReqType");
       //trace opTimesT("OpTimes", contextAttrs, trace::showEnd, trace::boxplot);
 
-      //scope s(txt()<<"Analysis "<<i<<": "<<currentAnalysis<<" : "<<currentAnalysis->str(""), scope::medium);
+      //scope s(sight::txt()<<"Analysis "<<i<<": "<<currentAnalysis<<" : "<<currentAnalysis->str(""), scope::medium);
       //cout << "ChainComposer Analysis "<<i<<": "<<currentAnalysis<<" : "<<currentAnalysis->str("") << endl;
 
       // Create a CCQueryServers object to route queries from the upcoming analysis to the corresponding servers
@@ -1403,7 +1399,7 @@ namespace fuse {
 
       currentAnalysis = *a;
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"ChainComposer Running Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str(""), scope::high), 1, composerDebugLevel);
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"ChainComposer Running Analysis "<<i<<": "<<(*a)<<" : "<<(*a)->str(""), scope::high), 1, composerDebugLevel);
 #endif
 
       //if(doneAnalyses.size()>0 && composerDebugLevel()>=1) {
@@ -1888,9 +1884,9 @@ namespace fuse {
     // Run all the analyses without any interactions between them
     int i=1;
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++, i++) {
-      //scope reg(txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, attrGE("composerDebugLevel", 1));
+      //scope reg(sight::txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high), 1, composerDebugLevel);
+      SIGHT_VERB_DECL(scope, (sight::txt()<< "LooseParallelComposer Running Analysis "<<i<<": "<<(*a)->str(""), scope::high), 1, composerDebugLevel);
 #endif
 
       (*a)->runAnalysis();
@@ -1928,9 +1924,9 @@ namespace fuse {
     list<ValueObjectPtr> vals;
 
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      //scope reg(txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+      //scope reg(sight::txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"Expr2Val  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
 #endif
 
         try {
@@ -1963,9 +1959,9 @@ namespace fuse {
     list<CodeLocObjectPtr> cls;
 
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      //scope reg(txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+      //scope reg(sight::txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"Expr2CodeLoc  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
 #endif
 
         try {
@@ -1996,9 +1992,9 @@ namespace fuse {
     list<MemRegionObjectPtr> mrs;
 
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      //scope reg(txt()<<"Expr2MemRegion  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+      //scope reg(sight::txt()<<"Expr2MemRegion  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"Expr2MemRegion  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"Expr2MemRegion  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
 #endif
 
         try {
@@ -2030,9 +2026,9 @@ namespace fuse {
     list<MemLocObjectPtr> mls;
 
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-      //scope reg(txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+      //scope reg(sight::txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-      SIGHT_VERB_DECL(scope, (txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"Expr2MemLoc  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
 #endif
 
         try {
@@ -2157,7 +2153,7 @@ namespace fuse {
     // that at least one implements or if we don't yet know if any do
     if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+    scope reg(sight::txt()<<"GetStartAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
     try {
     PartPtr part = (*a)->GetStartAState();
@@ -2230,9 +2226,9 @@ namespace fuse {
     // that at least one implements or if we don't yet know if any do
     if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
       for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-        //scope reg(txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+        //scope reg(sight::txt()<<funcName<<"  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 #ifndef DISABLE_SIGHT
-        SIGHT_VERB_DECL(scope, (txt()<<funcName<<"  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
+        SIGHT_VERB_DECL(scope, (sight::txt()<<funcName<<"  : " << (*a)->str(""), scope::medium), 1, composerDebugLevel)
 #endif
 
           try {
@@ -2334,7 +2330,7 @@ namespace fuse {
     // that at least one implements or if we don't yet know if any do
     if(subAnalysesImplementPartitions==True || subAnalysesImplementPartitions==Unknown) {
     for(list<ComposedAnalysis*>::iterator a=allAnalyses.begin(); a!=allAnalyses.end(); a++) {
-    scope reg(txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
+    scope reg(sight::txt()<<"GetEndAState  : " << (*a)->str(""), scope::medium, attrGE("composerDebugLevel", 1));
 
     try {
     set<PartPtr> curParts = (*a)->GetEndAStates();
