@@ -1,10 +1,27 @@
 include $(top_srcdir)/config/Makefile.for.ROSE.includes.and.libs
-#include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
+
+ROSE_PREFIX=$(top_builddir)
+
+if ROSE_WITH_SIGHT
+  include $(ROSE_WITH_SIGHT_INSTALL_PATH)/Makefile.extern
+else
+  SIGHT_CFLAGS=-DDISABLE_SIGHT
+  SIGHT_LINKFLAGS=
+endif
 
 bin_PROGRAMS = fuse
 
-fuse_CXXFLAGS = -g -O0 -std=c++14 -DDISABLE_SIGHT -DFUSE_START_FROM_MAIN -DFUSE_SKIP_LIB_GLOBAL_DECLS
-fuse_LDADD = -lrose
+if ROSE_WITH_SIGHT
+  bin_PROGRAMS += fuseLayout
+  fuseLayout_CXXFLAGS = $(SIGHT_CFLAGS)
+  fuseLayout_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH) $(SIGHT_LAYOUT_DYNAMIC_LINKFLAGS)
+  fuseLayout_SOURCES = sight/widgets/ats_graph_layout.C
+  fuse_DEPENDENCIES = fuseLayout
+endif
+
+
+fuse_CXXFLAGS = -g -O0 -std=c++14 -DROSE_PREFIX="$(ROSE_PREFIX)" -DFUSE_START_FROM_MAIN -DFUSE_SKIP_LIB_GLOBAL_DECLS $(SIGHT_CFLAGS)
+fuse_LDADD = -lrose $(SIGHT_LINKFLAGS)
 fuse_LDFLAGS = $(ROSE_LIBS) $(LIBS_WITH_RPATH)
 
 AM_CPPFLAGS = \
@@ -13,11 +30,9 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/abstraction \
 	-I$(srcdir)/cfgUtils \
 	-I$(srcdir)/sight/widgets \
-	-I$(srcdir)/sight/ \
 	-I$(srcdir)/lattice \
 	-I$(srcdir)/simpleAnalyses \
-	-I$(srcdir)/state \
-	-I$(srcdir)/sight
+	-I$(srcdir)/state
 
 include_HEADERS =\
         fuse.h \
@@ -41,7 +56,6 @@ include_HEADERS =\
 	cfgUtils/cfgUtils.h \
 	cfgUtils/DataflowCFG.h \
 	cfgUtils/VirtualCFGIterator.h \
-	sight/sight.h \
 	lattice/lattice.h \
 	lattice/latticeFull.h \
 	simpleAnalyses/AnalysisAstAttribute.h \
@@ -59,6 +73,10 @@ include_HEADERS =\
 	simpleAnalyses/defsAnalysis.h \
 	simpleAnalyses/VariableStateTransfer.h \
 	fuseCommandParser.h
+
+if ROSE_WITH_SIGHT
+  include_HEADERS += sight/widgets/ats_graph_structure.h
+endif
 
 # TEST VARIABLES
 TESTS_DIR = $(top_srcdir)/projects/fuse/src/tests
@@ -99,6 +117,10 @@ fuse_SOURCES = \
 	state/nodeState.C \
 	fuseCommandParser.C \
 	compositionalTestAnalysis.C
+
+if ROSE_WITH_SIGHT
+  fuse_SOURCES += sight/widgets/ats_graph_structure.C
+endif
 
 # for .C files
 FUSE_C_TESTS = \

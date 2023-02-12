@@ -3,13 +3,11 @@
 
 using namespace std;
 
-#ifndef DISABLE_SIGHT
-#include "sight.h"
-using namespace sight;
-#endif
-
 #include "abstract_object.h"
 #include <iostream>
+#ifndef DISABLE_SIGHT
+#include "sight.h"
+#endif
 
 #include "compose.h"
 

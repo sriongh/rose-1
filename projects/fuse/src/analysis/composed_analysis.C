@@ -1,13 +1,8 @@
 #include "sage3basic.h"
 using namespace std;
 
-#define composedAnalysisDebugLevel 0
+#define composedAnalysisDebugLevel 1
 #define moduleProfile false
-#if (composedAnalysisDebugLevel==0) && (moduleProfile==false)
-#ifndef DISABLE_SIGHT
-#define DISABLE_SIGHT
-#endif
-#endif
 
 #include "analysis.h"
 #include "composed_analysis.h"
@@ -16,8 +11,8 @@ using namespace std;
 
 #ifndef DISABLE_SIGHT
 #include "ats_graph_structure.h"
-
 #endif
+
 #include <memory>
 using std::auto_ptr;
 
@@ -348,16 +343,16 @@ void ComposedAnalysis::runAnalysisDense()
 
 #ifndef DISABLE_SIGHT
   // Maps each Abstract State to the anchors associated with each visit to this part by the worklist algorithm
-  boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors = boost::make_shared<std::map<PartPtr, std::list<anchor> > >();
+  boost::shared_ptr<std::map<PartPtr, std::list<sight::structure::anchor> > > partAnchors = boost::make_shared<std::map<PartPtr, std::list<sight::structure::anchor> > >();
 
   // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-  map<PartPtr, set<anchor> > toAnchors;
+  map<PartPtr, set<sight::structure::anchor> > toAnchors;
   // Maps each Abstract State to the anchors of the AStates that lead to it, as well as the AStates themselves
-  map<PartPtr, set<pair<anchor, PartPtr> > > fromAnchors;
+  map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > > fromAnchors;
   // Maps each Abstract State to the anchor of the last instance of a transfer function executed at this AState
-  map<PartPtr, anchor> lastTransferAnchors;
+  map<PartPtr, sight::structure::anchor> lastTransferAnchors;
   // Maps each Abstract State to the anchor of the next instance of a transfer function executed at this AState
-  map<PartPtr, anchor> nextTransferAnchors;
+  map<PartPtr, sight::structure::anchor> nextTransferAnchors;
 #endif
 
   // graph widget that visualizes the flow of the worklist algorithm
@@ -432,7 +427,7 @@ void ComposedAnalysis::runAnalysisDense()
       }
 
 #ifndef DISABLE_SIGHT
-      anchor scopeAnchor = anchor::noAnchor;
+      sight::structure::anchor scopeAnchor = sight::structure::anchor::noAnchor;
       SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
       // If we have previously invoked this transfer function on this Abstract State, attach the link from it to this scope
       if(nextTransferAnchors.find(parts.NodeState()) != nextTransferAnchors.end())
@@ -450,7 +445,7 @@ void ComposedAnalysis::runAnalysisDense()
 
         if(fromAnchors.size()>0) {
           scope backedges("Incoming Edges", scope::low);
-          for(set<pair<anchor, PartPtr> >::iterator a=fromAnchors[parts.NodeState()].begin(); a!=fromAnchors[parts.NodeState()].end(); a++)
+          for(set<pair<sight::structure::anchor, PartPtr> >::iterator a=fromAnchors[parts.NodeState()].begin(); a!=fromAnchors[parts.NodeState()].end(); a++)
           { a->first.linkImg(a->second.get()->str()); dbg<<endl; }
         }
 
@@ -461,7 +456,7 @@ void ComposedAnalysis::runAnalysisDense()
         lastTransferAnchors[parts.NodeState()] = reg->getAnchor();
 
         // Set up a link to the next visit, if any
-        anchor nextVisitA;
+        sight::structure::anchor nextVisitA;
         nextTransferAnchors[parts.NodeState()] = nextVisitA;
         nextVisitA.linkImg("Next visit");
 
@@ -587,16 +582,16 @@ void ComposedAnalysis::runAnalysisSSA()
 
 #ifndef DISABLE_SIGHT
   // Maps each Abstract State to the anchors associated with each visit to this part by the worklist algorithm
-  boost::shared_ptr<std::map<PartPtr, std::list<anchor> > > partAnchors = boost::make_shared<std::map<PartPtr, std::list<anchor> > >();
+  boost::shared_ptr<std::map<PartPtr, std::list<sight::structure::anchor> > > partAnchors = boost::make_shared<std::map<PartPtr, std::list<sight::structure::anchor> > >();
 
   // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-  map<PartPtr, set<anchor> > toAnchors;
+  map<PartPtr, set<sight::structure::anchor> > toAnchors;
   // Maps each Abstract State to the anchors of the AStates that lead to it, as well as the AStates themselves
-  map<PartPtr, set<pair<anchor, PartPtr> > > fromAnchors;
+  map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > > fromAnchors;
   // Maps each Abstract State to the anchor of the last instance of a transfer function executed at this AState
-  map<PartPtr, anchor> lastTransferAnchors;
+  map<PartPtr, sight::structure::anchor> lastTransferAnchors;
   // Maps each Abstract State to the anchor of the next instance of a transfer function executed at this AState
-  map<PartPtr, anchor> nextTransferAnchors;
+  map<PartPtr, sight::structure::anchor> nextTransferAnchors;
 
   // graph widget that visualizes the flow of the worklist algorithm
   //SIGSSAGraphatsGraph worklistGraph((getDirection() == fw? startingParts: ultimateParts), partAnchors, getDirection() == fw), 1, composedAnalysisDebugLevel)
@@ -612,7 +607,7 @@ void ComposedAnalysis::runAnalysisSSA()
     }
 
 #ifndef DISABLE_SIGHT
-    anchor scopeAnchor = anchor::noAnchor;
+    sight::structure::anchor scopeAnchor = sight::structure::anchor::noAnchor;
     SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
     // If we have previously invoked this transfer function on this Abstract State, attach the link from it to this scope
     if(nextTransferAnchors.find(part) != nextTransferAnchors.end())
@@ -627,7 +622,7 @@ void ComposedAnalysis::runAnalysisSSA()
 
       if(fromAnchors.size()>0) {
         scope backedges("Incoming Edges", scope::low);
-        for(set<pair<anchor, PartPtr> >::iterator a=fromAnchors[part].begin(); a!=fromAnchors[part].end(); a++)
+        for(set<pair<sight::structure::anchor, PartPtr> >::iterator a=fromAnchors[part].begin(); a!=fromAnchors[part].end(); a++)
         { a->first.linkImg(a->second.get()->str()); dbg<<endl; }
       }
 
@@ -638,7 +633,7 @@ void ComposedAnalysis::runAnalysisSSA()
       lastTransferAnchors[part] = reg->getAnchor();
 
       // Set up a link to the next visit, if any
-      anchor nextVisitA;
+      sight::structure::anchor nextVisitA;
       nextTransferAnchors[part] = nextVisitA;
       nextVisitA.linkImg("Next visit");
 
@@ -673,13 +668,13 @@ void ComposedAnalysis::transferAStateDense(ComposedAnalysis* analysis,
                                            AnalysisPartSets& ultimateParts
 #ifndef DISABLE_SIGHT
                                            ,
-                                           anchor curPartAnchor,
+                                           sight::structure::anchor curPartAnchor,
                                            // graph widget that visualizes the flow of the worklist algorithm
                                            graph& worklistGraph,
                                            // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                           map<PartPtr, set<anchor> >& toAnchors,
+                                           map<PartPtr, set<sight::structure::anchor> >& toAnchors,
                                            // Maps each Abstract state to the anchors of the Parts that lead to it, as well as the Parts themselves
-                                           map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                           map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                            )
 {
@@ -874,13 +869,13 @@ void ComposedAnalysis::transferPropagateAStateSSA(ComposedAnalysis* analysis,
                                                   dataflowPartEdgeIterator* curNodeIt
 #ifndef DISABLE_SIGHT
                                                   ,
-                                                  anchor curPartAnchor,
+                                                  sight::structure::anchor curPartAnchor,
                                                   // graph widget that visualizes the flow of the worklist algorithm
                                                   graph& worklistGraph,
                                                   // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                                  map<PartPtr, set<anchor> >& toAnchors,
+                                                  map<PartPtr, set<sight::structure::anchor> >& toAnchors,
                                                   // Maps each Abstract state to the anchors of the Parts that lead to it, as well as the Parts themselves
-                                                  map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                                  map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                                   )
 {
@@ -1210,13 +1205,13 @@ void ComposedAnalysis::propagateDF2DescDense(ComposedAnalysis* analysis,
 #ifndef DISABLE_SIGHT
                                              ,
                                              // anchor that denotes the current abstract state in the debug output
-                                             anchor curPartAnchor,
+                                             sight::structure::anchor curPartAnchor,
                                              // graph widget that visualizes the flow of the worklist algorithm
                                              graph& worklistGraph,
                                              // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                             map<PartPtr, set<anchor> >& toAnchors,
+                                             map<PartPtr, set<sight::structure::anchor> >& toAnchors,
                                              // Maps each Abstract state to the anchors of the Parts that lead to it, as well as the Parts themselves
-                                             map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                             map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                              )
 {
@@ -1290,7 +1285,7 @@ void ComposedAnalysis::propagateDF2DescDense(ComposedAnalysis* analysis,
     // Add an anchor to toAnchors from the current Abstract State to its current descendant
 #ifndef DISABLE_SIGHT
     SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
-    anchor toAnchor;
+    sight::structure::anchor toAnchor;
     toAnchor.linkImg(); dbg <<endl;
     worklistGraph.addDirEdge(curPartAnchor, toAnchor);
     toAnchors[nextParts.NodeState()].insert(toAnchor);
@@ -1436,13 +1431,13 @@ void ComposedAnalysis::propagateDF2DescSSA(ComposedAnalysis* analysis,
 #ifndef DISABLE_SIGHT
                                            ,
                                            // anchor that denotes the current abstract state in the debug output
-                                           anchor curPartAnchor,
+                                           sight::structure::anchor curPartAnchor,
                                            // graph widget that visualizes the flow of the worklist algorithm
                                            graph& worklistGraph,
                                            // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                           map<PartPtr, set<anchor> >& toAnchors,
+                                           map<PartPtr, set<sight::structure::anchor> >& toAnchors,
                                            // Maps each Abstract state to the anchors of the Parts that lead to it, as well as the Parts themselves
-                                           map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                           map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                            )
 {
@@ -1552,7 +1547,7 @@ void ComposedAnalysis::propagateDF2DescSSA(ComposedAnalysis* analysis,
 
       // Add an anchor to toAnchors from the current Abstract State to its current descendant
       SIGHT_VERB_IF(1, composedAnalysisDebugLevel)
-      anchor toAnchor;
+      sight::structure::anchor toAnchor;
       toAnchor.linkImg(); dbg <<endl;
       worklistGraph.addDirEdge(curPartAnchor, toAnchor);
       toAnchors[*p].insert(toAnchor);
@@ -1916,13 +1911,13 @@ void FWDataflow::propagateDF2DescDense(/*PartPtr part, PartPtr supersetPart*/ An
 #ifndef DISABLE_SIGHT
                                        ,                                       
                                        // anchor that denotes the current abstract state in the debug output
-                                       anchor curPartAnchor,
+                                       sight::structure::anchor curPartAnchor,
                                        // graph widget that visualizes the flow of the worklist algorithm
                                        graph& worklistGraph,
                                        // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                       std::map<PartPtr, std::set<anchor> >& toAnchors,
+                                       std::map<PartPtr, std::set<sight::structure::anchor> >& toAnchors,
                                        // Maps each Abstract state to the anchors of the AStates that lead to it, as well as the AStates themselves
-                                       std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors
+                                       std::map<PartPtr, std::set<std::pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                        ) {
   ComposedAnalysis::propagateDF2DescDense(this, /*part, supersetPart,*/parts,
@@ -1944,13 +1939,13 @@ void BWDataflow::propagateDF2DescDense(/*PartPtr part, PartPtr supersetPart*/ An
 #ifndef DISABLE_SIGHT
                                        ,
                                        // anchor that denotes the current abstract state in the debug output
-                                       anchor curPartAnchor,
+                                       sight::structure::anchor curPartAnchor,
                                        // graph widget that visualizes the flow of the worklist algorithm
                                        graph& worklistGraph,
                                        // Maps each Abstract State to the anchors of outgoing links that target it from the last visit to its predecessors
-                                       std::map<PartPtr, std::set<anchor> >& toAnchors,
+                                       std::map<PartPtr, std::set<sight::structure::anchor> >& toAnchors,
                                        // Maps each Abstract state to the anchors of the AStates that lead to it, as well as the AStates themselves
-                                       std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors
+                                       std::map<PartPtr, std::set<std::pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                        ) {
   ComposedAnalysis::propagateDF2DescDense(this, /*part, supersetPart,*/ parts,
@@ -1970,9 +1965,9 @@ void FWDataflow::transferAStateDense(/*PartPtr part, PartPtr supersetPart*/ Anal
                                      AnalysisPartSets& ultimateParts
 #ifndef DISABLE_SIGHT
                                      ,
-                                     anchor curPartAnchor,
-                                     graph& worklistGraph,std::map<PartPtr, std::set<anchor> >& toAnchors,
-                                     std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors
+                                     sight::structure::anchor curPartAnchor,
+                                     graph& worklistGraph,std::map<PartPtr, std::set<sight::structure::anchor> >& toAnchors,
+                                     std::map<PartPtr, std::set<std::pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                      ) {
   ComposedAnalysis::transferAStateDense(this, /*part, supersetPart, */ parts,
@@ -1990,9 +1985,9 @@ void FWDataflow::transferPropagateAStateSSA(PartPtr part, set<PartPtr>& visited,
                                             dataflowPartEdgeIterator* curNodeIt
 #ifndef DISABLE_SIGHT
                                             ,                                            
-                                            anchor curPartAnchor, graph& worklistGraph,
-                                            map<PartPtr, set<anchor> >& toAnchors,
-                                            map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                            sight::structure::anchor curPartAnchor, graph& worklistGraph,
+                                            map<PartPtr, set<sight::structure::anchor> >& toAnchors,
+                                            map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                             ) {
   ComposedAnalysis::transferPropagateAStateSSA(this, part, visited, firstVisit, initialized, curNodeIt
@@ -2011,9 +2006,9 @@ void BWDataflow::transferAStateDense(/*PartPtr part, PartPtr supersetPart*/ Anal
                                      AnalysisPartSets& ultimateParts
 #ifndef DISABLE_SIGHT
                                      ,
-                                     anchor curPartAnchor,
-                                     graph& worklistGraph,std::map<PartPtr, std::set<anchor> >& toAnchors,
-                                     std::map<PartPtr, std::set<std::pair<anchor, PartPtr> > >& fromAnchors
+                                     sight::structure::anchor curPartAnchor,
+                                     graph& worklistGraph,std::map<PartPtr, std::set<sight::structure::anchor> >& toAnchors,
+                                     std::map<PartPtr, std::set<std::pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                      ) {
   ComposedAnalysis::transferAStateDense(this, /*part, supersetPart, */parts,
@@ -2031,9 +2026,9 @@ void BWDataflow::transferPropagateAStateSSA(PartPtr part, set<PartPtr>& visited,
                                             dataflowPartEdgeIterator* curNodeIt
 #ifndef DISABLE_SIGHT
                                             ,
-                                            anchor curPartAnchor, graph& worklistGraph,
-                                            map<PartPtr, set<anchor> >& toAnchors,
-                                            map<PartPtr, set<pair<anchor, PartPtr> > >& fromAnchors
+                                            sight::structure::anchor curPartAnchor, graph& worklistGraph,
+                                            map<PartPtr, set<sight::structure::anchor> >& toAnchors,
+                                            map<PartPtr, set<pair<sight::structure::anchor, PartPtr> > >& fromAnchors
 #endif
                                             ) {
   ComposedAnalysis::transferPropagateAStateSSA(this, part, visited, firstVisit, initialized, curNodeIt

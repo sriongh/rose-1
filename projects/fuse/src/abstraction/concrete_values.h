@@ -36,7 +36,7 @@ typedef boost::shared_ptr<ConcreteValueObject> ConcreteValueObjectPtr;
 //       of integral constant offsets (in terms of bytes) or where padding makes this unknown, rank values
 //       that denote the position of a given location relative to others.
 //   - ConcreteUnknownKind: denotes the set of all values
-class ConcreteValueKind: public printable, public boost::enable_shared_from_this<ConcreteValueKind> {
+class ConcreteValueKind: public sight::printable, public boost::enable_shared_from_this<ConcreteValueKind> {
   public:
 
   // The different kinds of ConcreteValueObjects
@@ -427,7 +427,7 @@ class ConcreteOffsetListKind : public ConcreteValueKind {
       //  ROSE_ASSERT(0);
       //}
     }
-    std::string str(std::string indent="") const { return txt()<<"[type="<<(t==rankT?"rankT":(t==offsetT?"offsetT":"NULL"))<<", v="<<v<<"]"; }
+    std::string str(std::string indent="") const { return sight::txt()<<"[type="<<(t==rankT?"rankT":(t==offsetT?"offsetT":"NULL"))<<", v="<<v<<"]"; }
   }; // class intWrap
   typedef boost::shared_ptr<intWrap> intWrapPtr;
 
