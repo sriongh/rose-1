@@ -11,6 +11,8 @@ using namespace std;
 #include <string>
 #include <iostream>
 
+#define graphIteratorDebugLevel 0
+
 namespace fuse {
 
 // Checks the environment for any variable that specified the best iteration order to use for dataflow analysis and returns it
@@ -1046,6 +1048,9 @@ boost::shared_ptr<GEIteratorWorklist<GraphEdgePtr, GraphNodePtr> >
 // which iteration starts.
 template <class GraphEdgePtr, class GraphNodePtr>
 void GETopoOrderIteratorWorklist<GraphEdgePtr, GraphNodePtr>::initGivenStart(const set<GraphEdgePtr>& startEdges) {
+  SIGHT_VERB_DECL(scope, (sight::txt() << "GETopoOrderIteratorWorklist::initGivenStart()",
+                          scope::medium),
+                  2, graphIteratorDebugLevel)
 //  cout << "##########################################"<<endl;
 //  cout << "initGivenStart()"<<endl;
   // The set of edges that are on the current frontier of edges that have not yet
