@@ -378,6 +378,8 @@ void ComposedAnalysis::runAnalysisDense()
     while(curNodeIt && !curNodeIt->isEnd())
     {
 #ifndef DISABLE_SIGHT
+      SIGHT_VERB_DECL(scope, (sight::txt()<<"curNodeIt", scope::medium),
+                      3, composedAnalysisDebugLevel)
       SIGHT_VERB(dbg << "curNodeIt="<<curNodeIt->str()<<endl, 2, composedAnalysisDebugLevel)
 #endif
       //PartPtr part = curNodeIt->grabPart();
@@ -408,7 +410,7 @@ void ComposedAnalysis::runAnalysisDense()
         SIGHT_VERB(dbg << "#matchingParts="<<matchingParts.size()<<endl, 2, composedAnalysisDebugLevel)
 #endif
         for(set<PartPtr>::iterator p=matchingParts.begin(); p!=matchingParts.end(); p++) {
-#ifdef DISABLE_SIGHT
+#ifndef DISABLE_SIGHT
           SIGHT_VERB(dbg << "Adding to unmatchedEntryExitParts: "<<(*p)->str()<<endl, 2, composedAnalysisDebugLevel)
 #endif
           unmatchedEntryExitParts.insert(*p);
@@ -766,7 +768,9 @@ void ComposedAnalysis::transferAStateDense(ComposedAnalysis* analysis,
       NodeState::copyLatticesOW(dfInfoPost, dfInfoAnte);
     }
     //gettimeofday(&preEnd, NULL); cout << "transferAStateDense pre\t"<<(((preEnd.tv_sec*1000000 + preEnd.tv_usec) - (preStart.tv_sec*1000000 + preStart.tv_usec)) / 1000000.0)<<endl;
-
+    if(dfInfoPost.size() == 0) {
+      assert(false);
+    }
     // <<<<<<<<<<<<<<<<<<< TRANSFER FUNCTION <<<<<<<<<<<<<<<<<<<
     modified = transferCFGNodeDense(analysis, /*part, supersetPart, */ parts, *c, sgn,
                                     *state, dfInfoPost,
