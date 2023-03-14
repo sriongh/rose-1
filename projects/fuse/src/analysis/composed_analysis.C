@@ -1,7 +1,7 @@
 #include "sage3basic.h"
 using namespace std;
 
-#define composedAnalysisDebugLevel 1
+#define composedAnalysisDebugLevel 0
 #define moduleProfile false
 
 #include "analysis.h"
