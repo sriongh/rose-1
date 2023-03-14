@@ -125,7 +125,7 @@ namespace fuse {
       // cout << "analysis=deadpath" << endl;
     }
     else if(boost::xpressive::regex_match(analysis_s, callcontext)) {
-      cc.push_back(new CallContextSensitivityAnalysis(1, CallContextSensitivityAnalysis::callSite, false));
+      cc.push_back(new CallContextSensitivityAnalysis(2, CallContextSensitivityAnalysis::callSite, false));
     }
     else if(boost::xpressive::regex_match(analysis_s, constcount)) {
       cc.push_back(new ConstPropCountAnalysis());
