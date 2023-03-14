@@ -860,6 +860,7 @@ void NodeState::copyLattices(map<PartEdgePtr, vector<Lattice*> >& dfInfoTo,
 void NodeState::copyLatticesOW(map<PartEdgePtr, vector<Lattice*> >& dfInfoTo,
                          const map<PartEdgePtr, vector<Lattice*> >& dfInfoFrom)
 {
+  SIGHT_VERB_DECL(scope, (" NodeState::copyLatticesOW"), 1, nodeStateDebugLevel)
   // First, empty out dfInfoTo if needed
   for(map<PartEdgePtr, vector<Lattice*> >::iterator eTo=dfInfoTo.begin(); eTo!=dfInfoTo.end(); eTo++) {
     for(vector<Lattice*>::iterator lTo=eTo->second.begin(); lTo!=eTo->second.end(); lTo++) {
@@ -870,9 +871,17 @@ void NodeState::copyLatticesOW(map<PartEdgePtr, vector<Lattice*> >& dfInfoTo,
 
   //scope s("copyLatticesOW");
   for(map<PartEdgePtr, vector<Lattice*> >::const_iterator eFrom=dfInfoFrom.begin(); eFrom!=dfInfoFrom.end(); eFrom++) {
+    SIGHT_VERB(dbg
+               << "eFrom="
+               << (eFrom->first)->str() << "\n",
+               1, nodeStateDebugLevel);               
     for(vector<Lattice*>::const_iterator lFrom=eFrom->second.begin(); lFrom!=eFrom->second.end(); lFrom++) {
       //dbg << "lFrom="<<(*lFrom)->str()<<endl;
+      SIGHT_VERB(dbg << "lFrom="<<(*lFrom)->str()<<endl, 1, nodeStateDebugLevel);
+      SIGHT_VERB(dbg << "lTo="<<(*lFrom)->str()<<endl, 1, nodeStateDebugLevel);
       Lattice *lTo = (*lFrom)->copy();
+      lTo->setPartEdge(eFrom->first);
+      SIGHT_VERB(dbg << "lTo="<<(*lFrom)->str()<<endl, 1, nodeStateDebugLevel);
       //dbg << "lTo="<<lTo->str()<<endl;
       //dbg << "lFrom="<<(*lFrom)->str()<<endl;
       dfInfoTo[eFrom->first].push_back(lTo);
