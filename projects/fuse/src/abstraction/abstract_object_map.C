@@ -188,15 +188,22 @@ bool AbstractObjectMap::isEmpty() {
 }
 
 std::string AbstractObjectMap::str(std::string indent) const {
-  if(mapState == full)  return sight::txt()<<"[AbstractObjectMap: FULL, pedge = "<<(latPEdge? latPEdge->str(): "NULL")<<"]";
-  else if(mapState == empty) return sight::txt()<<"[AbstractObjectMap: EMPTY, pedge = "<<(latPEdge? latPEdge->str(): "NULL")<<"]";
+  std::ostringstream oss;
+  oss << "[AbstractOcjectMap: addr=" << this;
+  oss << ", pedge="
+      << (latPEdge? latPEdge->str(): "NULL");
+  if(mapState == full)  {
+    oss <<", FULL]";
+    return oss.str();
+  }
+  else if(mapState == empty) {
+    oss <<", EMPTY]";
+    return oss.str();
+  }
   else {
     ROSE_ASSERT(implementation);
-    /*cout << "AOM(this="<<this<<", latPEdge="<<latPEdge->str()<<")"<<endl;
-    ostringstream s;
-    s << "AOM(this="<<this<<", latPEdge="<<latPEdge->str()<<")"<<endl<<implementation->str(indent);
-    return s.str();*/
-    return implementation->str(indent);
+    oss << ", " << implementation->str(indent) << "]\n";
+    return oss.str();
   }
 }
 
@@ -223,7 +230,7 @@ void AbstractObjectMap::initialize() {
 
 // returns a copy of this lattice
 Lattice* AbstractObjectMap::copy() const {
-  return new AbstractObjectMap(*this);
+   return new AbstractObjectMap(*this);
 }
 
 // overwrites the state of this Lattice with that of that Lattice
@@ -1473,6 +1480,7 @@ bool HierarchicalAOM::insert(AbstractObjectPtr obj_arg, AbstractionPtr val, bool
   SIGHT_VERB_IF(1, AOMDebugLevel)
 #ifndef DISABLE_SIGHT
     indent ind;
+    dbg << parent->str() << endl;
     dbg << "obj(live="<<obj_arg->isLive(parent->latPEdge, parent->comp, parent->analysis)<<")="<<obj_arg->strp(parent->latPEdge, "")<<endl;
     dbg << "    key="<<obj->getHierKey()<<endl;
     dbg << "lattice(empty="<<val->isEmpty(parent->latPEdge, parent->comp, parent->analysis)<<")="<<val->str("    ")<<endl;
