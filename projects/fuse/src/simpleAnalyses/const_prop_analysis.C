@@ -1242,6 +1242,8 @@ void ConstantPropagationAnalysis::genInitLattice(const AnalysisParts& parts, con
   AbstractObjectMap* ml2val = new AbstractObjectMap(boost::make_shared<CPValueLattice>(pedges.NodeState()),
                                                     pedges.NodeState(),
                                                     getComposer(), this);
+  SIGHT_VERB(dbg << ml2val->str(),
+            1, CPDebugLevel);
   /*dbg << "ConstantPropagationAnalysis::initializeState, analysis="<<returning l="<<l<<" n=<"<<escape(p.getNode()->unparseToString())<<" | "<<p.getNode()->class_name()<<" | "<<p.getIndex()<<">\n";
   dbg << "    l="<<l->str("    ")<<endl;*/
   initLattices.push_back(ml2val);
