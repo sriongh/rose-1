@@ -8,9 +8,7 @@ using namespace std;
 namespace fuse
 {
 
-#ifndef DISABLE_SIGHT
 #define callContextSensitivityDebugLevel 0
-#endif
 
 /* ###########################
    ##### CallPartContext #####
@@ -377,10 +375,17 @@ set<PartPtr> CallCtxSensPart::matchingCallParts() const {
 // If this Part corresponds to a function entry/exit, returns the set of Parts that contain
 // its corresponding exit/entry, respectively.
 set<PartPtr> CallCtxSensPart::matchingEntryExitParts() const {
+#ifndef DISABLE_SIGHT
+  SIGHT_VERB_DECL(scope,
+                  ("CallCtxSensPart::matchingEntryExitParts", scope::medium),
+                  1,
+                  callContextSensitivityDebugLevel);
+#endif
   if(!cacheInitialized_matchingEntryExitParts) {
     // Wrap the parts returned by the call to the parent Part with DeadPathElimPart
     set<PartPtr> parentMatchParts = getInputPart()->matchingEntryExitParts();
     for(set<PartPtr>::iterator mp=parentMatchParts.begin(); mp!=parentMatchParts.end(); mp++) {
+      SIGHT_VERB(dbg << (*mp)->str() << endl, 1, callContextSensitivityDebugLevel);
       const_cast<CallCtxSensPart*>(this)->cache_matchingEntryExitParts.insert(CallCtxSensPart::create(*mp, *this, analysis));
     }
     const_cast<CallCtxSensPart*>(this)->cacheInitialized_matchingEntryExitParts=true;
@@ -1255,7 +1260,10 @@ bool CallContextSensitivityAnalysis::transfer(AnalysisParts& parts, CFGNode cn, 
     dbg << "    "<<(df->first?df->first->str():"NULL")<<": #"<<df->second.size()<<endl;*/
 
   assert(dfInfo[parts.index()->inEdgeFromAny()].size()==1);
-  SIGHT_VERB_DECL(scope, ("CallContextSensitivityAnalysis::transfer()", scope::medium), 1, callContextSensitivityDebugLevel)
+  SIGHT_VERB_DECL(scope,
+                  ("CallContextSensitivityAnalysis::transfer()", scope::medium),
+                  1,
+                  callContextSensitivityDebugLevel)
   CallCtxSensLattice* oldCCSLat = dynamic_cast<CallCtxSensLattice*>(dfInfo[parts.index()->inEdgeFromAny()][0]);
   assert(oldCCSLat);
   //dbg << "oldCCSLat="<<oldCCSLat->str()<<endl;
