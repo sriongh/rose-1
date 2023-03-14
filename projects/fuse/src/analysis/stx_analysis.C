@@ -1419,7 +1419,7 @@ StxValueObject::StxValueObject(SgNode* n) : ValueObject(n)//, AbstractionHierarc
   // If a valid node is passed, check if it is an SgValue
   if(n) {
 #ifndef DISABLE_SIGHT
-    SIGHT_VERB_IF(1, stxAnalysisDebugLevel)
+    SIGHT_VERB_IF(2, stxAnalysisDebugLevel)
       dbg << "StxValueObject::StxValueObject("<<SgNode2Str(n)<<")";
       dbg << " isSgCastExp(n)="<<isSgCastExp(n)<<" unwrapCasts(isSgCastExp(n))="<<(isSgCastExp(n) ? SgNode2Str(unwrapCasts(isSgCastExp(n))) : "NULL")<<" iscast="<<(isSgCastExp(n) ? isSgValueExp(unwrapCasts(isSgCastExp(n))) : 0)<<endl;
     SIGHT_VERB_FI()
@@ -2113,6 +2113,17 @@ StxExprMemRegionTypePtr StxExprMemRegionType::getInstance(SgNode* n) {
 bool enc (SgExpression* expr, const CFGNode& n) {
   // expr is in-scope at n if they're inside the same statement or n is an SgIfStmt, SgForStatement, SgWhileStmt
   // or SgDoWhileStmt and exprr is inside its sub-statements
+  SIGHT_VERB(dbg
+             << "expr=" << SgNode2Str(expr) << ",n="
+             << CFGNode2Str(n) << std::endl,
+             1, stxAnalysisDebugLevel);
+  SIGHT_VERB(dbg
+             << "Enclosing(expr)="
+             << SgNode2Str(SageInterface::getEnclosingStatement(expr)) << "\n"
+             << "Enclosing(n)="
+             << SgNode2Str(SageInterface::getEnclosingStatement(n.getNode()))
+             << std::endl,
+             1, stxAnalysisDebugLevel);
   return (SageInterface::getEnclosingStatement(n.getNode()) ==
           SageInterface::getEnclosingStatement(expr)) ||
          (isSgIfStmt(n.getNode()) &&
@@ -2154,7 +2165,10 @@ bool StxExprMemRegionType::isLiveAO(PartEdgePtr pedge) {
   dbg << "expr="<<SgNode2Str(expr)<<endl;
   if(pedge->source()) dbg << "is at source="<<pedge->source()->mapCFGNodeANY<bool>(boost::bind(enc, expr, _1))<<endl;
   if(pedge->target()) dbg << "is at target="<<pedge->target()->mapCFGNodeANY<bool>(boost::bind(enc, expr, _1))<<endl;*/
-
+  SIGHT_VERB_DECL(scope, ("StxExprMemRegionType::isLiveAO", scope::medium), 1, stxAnalysisDebugLevel);
+  SIGHT_VERB(dbg
+             << "pedge=" << pedge->str(),
+             1, stxAnalysisDebugLevel);
   return (pedge->source() ? pedge->source()->mapCFGNodeANY<bool>(boost::bind(enc, expr, _1)): false) ||
          (pedge->target() ? pedge->target()->mapCFGNodeANY<bool>(boost::bind(enc, expr, _1)): false);
 
